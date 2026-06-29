@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route } from 'react-router-dom';  // ✅ BrowserRouter hatao
 import Dashboard from "../pages/Dashboard";
 import Clients from "../pages/Clients";
 import Users from "../pages/Users";
@@ -12,56 +12,50 @@ import ContractDetails from "../pages/ContractDetails";
 
 const AppRoutes = () => {
   return (
-    <Routes>
-
+    <Routes>  {/* ✅ Sirf Routes, BrowserRouter nahi */}
       <Route path="/" element={
-    <ProtectedRoute>
-      <Dashboard />
-    </ProtectedRoute>
-  }
-/>
+        <ProtectedRoute>
+          <Dashboard />
+        </ProtectedRoute>
+      } />
 
-      <Route
-        path="/clients"
-        element={<ProtectedRoute>
-      <Clients />
-    </ProtectedRoute>}
-      />
+      <Route path="/clients" element={
+        <ProtectedRoute>
+          <Clients />
+        </ProtectedRoute>
+      } />
 
-      <Route
-        path="/users"
-        element={<ProtectedRoute>
-      <Users />
-    </ProtectedRoute>}
-      />   
-       <Route path="/login" element={<Login />}/>
+      <Route path="/users" element={
+        <ProtectedRoute>
+          <Users />
+        </ProtectedRoute>
+      } />   
 
-      <Route path="/client/:id" element={<ClientDetails />}/>
-     
+      <Route path="/login" element={<Login />} />
 
-    <Route path="/search" element={<ProtectedRoute>
-      <SearchResults/>
-    </ProtectedRoute>}
-/>
+      <Route path="/client/:id" element={<ClientDetails />} />
 
-<Route
-  path="/profile"
-  element={<ProtectedRoute>
-      <Profile/>
-    </ProtectedRoute>}
-/>
+      <Route path="/search" element={
+        <ProtectedRoute>
+          <SearchResults />
+        </ProtectedRoute>
+      } />
 
-<Route
-  path="/clients/:id/registration/:registrationId"
-  element={<RegistrationDetails />}
-/>
+      <Route path="/profile" element={
+        <ProtectedRoute>
+          <Profile />
+        </ProtectedRoute>
+      } />
 
-<Route
-  path="/clients/:id/contract/:contractId"
-  element={<ContractDetails />}
-/>
+      <Route path="/dashboard" element={
+  <ProtectedRoute>
+    <Dashboard />
+  </ProtectedRoute>
+} />
 
+      <Route path="/clients/:id/registration/:registrationId" element={<RegistrationDetails />} />
 
+      <Route path="/clients/:id/contract/:contractId" element={<ContractDetails />} />
     </Routes>
   );
 };
