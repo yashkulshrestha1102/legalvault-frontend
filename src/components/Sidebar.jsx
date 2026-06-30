@@ -12,7 +12,7 @@ import {
   useLocation,
 } from "react-router-dom";
 
-import { useContext, useEffect } from "react";
+import { useContext, useEffect, useState } from "react"; // ✅ useState import karo
 import AuthContext from '../context/AuthContext';
 import { ThemeContext } from "../context/ThemeContext";
 import { SidebarContext } from "../context/SidebarContext";
@@ -30,10 +30,27 @@ const ALL_FOLDERS = [
 ];
 
 function Sidebar() {
-  const { user } = useContext(AuthContext);
-  const { logout } = useContext(AuthContext);
+  const { user: contextUser, logout } = useContext(AuthContext);
   const { theme } = useContext(ThemeContext);
   const { collapsed, toggleSidebar, mobileOpen, setMobileOpen } = useContext(SidebarContext);
+
+  // ✅ Fallback: localStorage se user load karo (page refresh ke liye)
+  const [user, setUser] = useState(contextUser);
+
+  useEffect(() => {
+    if (contextUser) {
+      setUser(contextUser);
+    } else {
+      const savedUser = localStorage.getItem('user');
+      if (savedUser) {
+        try {
+          setUser(JSON.parse(savedUser));
+        } catch (e) {
+          console.error('Error parsing user from localStorage:', e);
+        }
+      }
+    }
+  }, [contextUser]);
 
   // ✅ Debug logs
   console.log('👤 Sidebar - User:', user);
@@ -63,7 +80,7 @@ function Sidebar() {
     role === 'admin' || permissions.includes(f.id)
   );
 
-  console.log('📂 Accessible Folders:', accessibleFolders); // ✅ Debug
+  console.log('📂 Accessible Folders:', accessibleFolders);
 
   // ✅ Base menu items
   const menuItems = [

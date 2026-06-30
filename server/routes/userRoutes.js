@@ -22,7 +22,7 @@ router.get('/', [auth, admin], async (req, res) => {
   }
 });
 
-// POST - Create user (WITH FORCED PERMISSIONS)
+// POST - Create user
 router.post('/', [auth, admin], async (req, res) => {
   try {
     console.log('📥 POST /api/users - Request body:', req.body);
@@ -46,12 +46,12 @@ router.post('/', [auth, admin], async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // ✅ FORCE: Valid permissions ensure karo
+    // ✅ Filter valid folder permissions
     let validPermissions = [];
     if (folderPermissions && Array.isArray(folderPermissions)) {
       validPermissions = folderPermissions.filter(f => ALLOWED_FOLDERS.includes(f));
     }
-    console.log('✅ Valid permissions (forced):', validPermissions);
+    console.log('✅ Valid permissions:', validPermissions);
 
     const user = new User({
       name,
@@ -61,7 +61,7 @@ router.post('/', [auth, admin], async (req, res) => {
       role: role || 'user',
       status: status || 'Active',
       phone: phone || '',
-      folderPermissions: validPermissions  // ✅ FORCE
+      folderPermissions: validPermissions
     });
 
     await user.save();

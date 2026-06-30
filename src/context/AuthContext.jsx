@@ -6,15 +6,17 @@ const AuthContext = createContext();
 
 // 2. AuthProvider Component
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => {
+    // ✅ Page refresh par localStorage se user load karo
+    const savedUser = localStorage.getItem('user');
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
   const [authToken, setAuthToken] = useState(localStorage.getItem('token') || null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-   const API_URL = 'https://legalvault-jm2n.onrender.com';
-  console.log('API_URL:', API_URL); // ✅ Console mein check karo
-
+  const API_URL = 'https://legalvault-jm2n.onrender.com';
+  console.log('API_URL:', API_URL);
 
   // Login Function
   const login = async (email, password) => {
@@ -27,7 +29,13 @@ export const AuthProvider = ({ children }) => {
       });
       
       const { token, user } = response.data;
+      console.log('✅ Login response - User:', user);
+      console.log('📁 Folder Permissions:', user?.folderPermissions);
+      
+      // ✅ Token aur user dono localStorage mein save karo
       localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
+      
       setAuthToken(token);
       setUser(user);
       return { success: true };
@@ -43,6 +51,7 @@ export const AuthProvider = ({ children }) => {
   // Logout Function
   const logout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('user'); // ✅ User bhi hatao
     setAuthToken(null);
     setUser(null);
   };
