@@ -31,7 +31,6 @@ router.post('/', [auth, admin], async (req, res) => {
     
     console.log('📥 folderPermissions received:', folderPermissions);
 
-    // ✅ VALIDATION
     if (!password) {
       return res.status(400).json({ message: 'Password is required' });
     }
@@ -47,14 +46,13 @@ router.post('/', [auth, admin], async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // ✅ FORCE: Valid permissions ko ensure karo
+    // ✅ FORCE: Valid permissions ensure karo
     let validPermissions = [];
     if (folderPermissions && Array.isArray(folderPermissions)) {
       validPermissions = folderPermissions.filter(f => ALLOWED_FOLDERS.includes(f));
     }
     console.log('✅ Valid permissions (forced):', validPermissions);
 
-    // ✅ FORCE: User create karte time folderPermissions set karo
     const user = new User({
       name,
       email,
