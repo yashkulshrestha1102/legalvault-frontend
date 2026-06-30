@@ -2,41 +2,6 @@ const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
-// Register
-exports.register = async (req, res) => {
-  try {
-    const { name, email, password, role } = req.body;
-    
-    console.log('📝 Register attempt:', { name, email, role });
-
-    // Check if user exists
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      console.log('❌ User already exists:', email);
-      return res.status(400).json({ message: 'User already exists' });
-    }
-
-    // Hash password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    const user = new User({ 
-      name, 
-      email, 
-      password: hashedPassword, 
-      role: role || 'user' 
-    });
-    await user.save();
-
-    console.log('✅ User registered successfully:', email);
-    res.status(201).json({ message: 'User registered successfully' });
-  } catch (error) {
-    console.error('❌ Register error:', error);
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// Login
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -47,15 +12,11 @@ exports.login = async (req, res) => {
     console.log('👤 User found:', user ? 'Yes' : 'No');
     
     if (!user) {
-      console.log('❌ User not found:', email);
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
-    console.log('🔑 Password match:', isMatch ? '✅ Yes' : '❌ No');
-    
     if (!isMatch) {
-      console.log('❌ Invalid password for:', email);
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
@@ -66,13 +27,16 @@ exports.login = async (req, res) => {
     );
 
     console.log('✅ Login successful:', email);
+    console.log('📁 Folder Permissions from DB:', user.folderPermissions);
+
     res.json({
       token,
       user: { 
         id: user._id, 
         name: user.name, 
         email: user.email, 
-        role: user.role 
+        role: user.role,
+        folderPermissions: user.folderPermissions || []  // ✅ Ensure this is sent
       }
     });
   } catch (error) {

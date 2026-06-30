@@ -5,6 +5,13 @@ const admin = require('../middleware/admin');
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 
+console.log('✅ userRoutes.js loaded - Production Fix');
+
+const ALLOWED_FOLDERS = [
+  'registrations', 'contracts', 'policies', 'corporate-secretariat',
+  'hr', 'gst', 'income-tax', 'financials'
+];
+
 // GET - All users
 router.get('/', [auth, admin], async (req, res) => {
   try {
@@ -15,17 +22,19 @@ router.get('/', [auth, admin], async (req, res) => {
   }
 });
 
-// POST - Create user
+// POST - Create user (WITH FORCED PERMISSIONS)
 router.post('/', [auth, admin], async (req, res) => {
   try {
-    const { name, email, password, department, role, status, phone } = req.body;
+    console.log('📥 POST /api/users - Request body:', req.body);
+
+    const { name, email, password, department, role, status, phone, folderPermissions } = req.body;
     
-    // ✅ Password required validation
+    console.log('📥 folderPermissions received:', folderPermissions);
+
+    // ✅ VALIDATION
     if (!password) {
       return res.status(400).json({ message: 'Password is required' });
     }
-
-    // ✅ Password length validation
     if (password.length < 6) {
       return res.status(400).json({ message: 'Password must be at least 6 characters' });
     }
@@ -38,6 +47,14 @@ router.post('/', [auth, admin], async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
+    // ✅ FORCE: Valid permissions ko ensure karo
+    let validPermissions = [];
+    if (folderPermissions && Array.isArray(folderPermissions)) {
+      validPermissions = folderPermissions.filter(f => ALLOWED_FOLDERS.includes(f));
+    }
+    console.log('✅ Valid permissions (forced):', validPermissions);
+
+    // ✅ FORCE: User create karte time folderPermissions set karo
     const user = new User({
       name,
       email,
@@ -45,12 +62,13 @@ router.post('/', [auth, admin], async (req, res) => {
       department: department || 'General',
       role: role || 'user',
       status: status || 'Active',
-      phone: phone || ''  // ✅ Phone field add karo
+      phone: phone || '',
+      folderPermissions: validPermissions  // ✅ FORCE
     });
 
     await user.save();
+    console.log('✅ User saved with permissions:', user.folderPermissions);
     
-    // ✅ Password hide karke response bhejo
     const userResponse = user.toObject();
     delete userResponse.password;
     
@@ -59,6 +77,7 @@ router.post('/', [auth, admin], async (req, res) => {
       user: userResponse 
     });
   } catch (error) {
+    console.error('❌ POST error:', error);
     res.status(500).json({ message: error.message });
   }
 });
@@ -66,15 +85,18 @@ router.post('/', [auth, admin], async (req, res) => {
 // PUT - Update user
 router.put('/:id', [auth, admin], async (req, res) => {
   try {
-    const { name, email, department, role, status, phone } = req.body;
+    const { name, email, department, role, status, phone, folderPermissions } = req.body;
     
-    // ✅ Check if user exists
     const existingUser = await User.findById(req.params.id);
     if (!existingUser) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // ✅ Update only provided fields
+    let validPermissions = [];
+    if (folderPermissions && Array.isArray(folderPermissions)) {
+      validPermissions = folderPermissions.filter(f => ALLOWED_FOLDERS.includes(f));
+    }
+
     const updatedUser = await User.findByIdAndUpdate(
       req.params.id,
       { 
@@ -83,13 +105,15 @@ router.put('/:id', [auth, admin], async (req, res) => {
         department, 
         role, 
         status,
-        phone: phone || existingUser.phone 
+        phone: phone || existingUser.phone,
+        folderPermissions: validPermissions
       },
       { new: true, runValidators: true }
     ).select('-password');
     
     res.json(updatedUser);
   } catch (error) {
+    console.error('❌ PUT error:', error);
     res.status(500).json({ message: error.message });
   }
 });
@@ -97,13 +121,11 @@ router.put('/:id', [auth, admin], async (req, res) => {
 // DELETE - Delete user
 router.delete('/:id', [auth, admin], async (req, res) => {
   try {
-    // ✅ Check if user exists
     const user = await User.findById(req.params.id);
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // ✅ Prevent deleting the last admin
     const adminCount = await User.countDocuments({ role: 'admin' });
     if (user.role === 'admin' && adminCount <= 1) {
       return res.status(400).json({ message: 'Cannot delete the last admin user' });
