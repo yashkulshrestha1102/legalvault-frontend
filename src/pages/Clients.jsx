@@ -8,10 +8,12 @@ import { addNotification } from "../utils/notifications";
 import { addActivity } from "../utils/activityLogger";
 import { exportClientsPDF, exportClientsExcel } from "../utils/reportExport";
 
+// ✅ Hardcoded Render URL (AuthContext ke same)
+const API_URL = 'https://legalvault-jm2n.onrender.com';
+
 function Clients() {
   const navigate = useNavigate();
 
-  // States
   const [openModal, setOpenModal] = useState(false);
   const [clients, setClients] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -19,17 +21,17 @@ function Clients() {
   const [editData, setEditData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Backend se clients fetch karo
   useEffect(() => {
     const fetchClients = async () => {
       try {
         const token = localStorage.getItem('token');
-        const response = await axios.get('http://localhost:5000/api/clients', {
+        console.log('📋 Fetching clients from:', `${API_URL}/api/clients`);
+        const response = await axios.get(`${API_URL}/api/clients`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setClients(response.data);
       } catch (error) {
-        console.error('Error fetching clients:', error);
+        console.error('❌ Error fetching clients:', error);
         const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
         if (savedClients.length > 0) {
           setClients(savedClients);
@@ -68,7 +70,6 @@ function Clients() {
     fetchClients();
   }, []);
 
-  // Add Client
   const addClient = (newClient) => {
     const clientWithId = {
       ...newClient,
@@ -89,7 +90,6 @@ function Clients() {
     addActivity(`Client Added`);
   };
 
-  // Delete Client
   const deleteClient = (indexToDelete) => {
     const clientName = clients[indexToDelete]?.name || 'Unknown';
     const updatedClients = clients.filter((_, index) => index !== indexToDelete);
@@ -99,7 +99,6 @@ function Clients() {
     addActivity(`Client Deleted`);
   };
 
-  // Update Client
   const updateClient = (updatedClient) => {
     const updatedClients = [...clients];
     updatedClients[editIndex] = updatedClient;
@@ -130,7 +129,6 @@ function Clients() {
         <div className="absolute bottom-20 right-20 w-96 h-96 bg-purple-500/20 rounded-full blur-[140px]" />
       </div>
 
-      {/* Header */}
       <div className="glass relative overflow-hidden p-4 md:p-6 mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="absolute right-0 top-0 w-60 h-60 bg-cyan-500/10 blur-[120px]" />
         <h1 className="text-3xl font-bold">Clients</h1>
@@ -147,7 +145,6 @@ function Clients() {
         </div>
       </div>
 
-      {/* Table */}
       <div className="glass-card p-4 md:p-6 overflow-hidden">
         <input
           type="text"
@@ -228,7 +225,6 @@ function Clients() {
         </div>
       </div>
 
-      {/* Add Client Modal */}
       <AddClientModal
         open={openModal}
         onClose={() => {
@@ -239,7 +235,6 @@ function Clients() {
         editData={editData}
       />
 
-      {/* Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
         <div className="glass-card p-4 md:p-5">
           <p className="text-gray-400">Total Clients</p>

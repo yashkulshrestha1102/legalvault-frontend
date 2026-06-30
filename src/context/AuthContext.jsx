@@ -11,7 +11,8 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+  // const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+   const API_URL = 'https://legalvault-jm2n.onrender.com';
   console.log('API_URL:', API_URL); // ✅ Console mein check karo
 
 

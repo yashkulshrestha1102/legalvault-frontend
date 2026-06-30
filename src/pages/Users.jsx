@@ -16,7 +16,8 @@ import {
 import { useState, useEffect } from "react";
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+// ✅ Hardcoded Render URL (AuthContext ke same)
+const API_URL = 'https://legalvault-jm2n.onrender.com';
 
 function Users() {
   const [openModal, setOpenModal] = useState(false);
@@ -29,17 +30,16 @@ function Users() {
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
 
-  // ✅ Fetch Users from Backend
   const fetchUsers = async () => {
     try {
       const token = localStorage.getItem('token');
+      console.log('👥 Fetching users from:', `${API_URL}/api/users`);
       const response = await axios.get(`${API_URL}/api/users`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setUsers(response.data);
     } catch (error) {
-      console.error('Error fetching users:', error);
-      // Fallback: Local storage se load karo
+      console.error('❌ Error fetching users:', error);
       const savedUsers = JSON.parse(localStorage.getItem("users")) || [];
       if (savedUsers.length > 0) {
         setUsers(savedUsers);
@@ -76,34 +76,30 @@ function Users() {
     fetchUsers();
   }, []);
 
-  // ✅ Add User (Backend)
   const addUser = async (newUser) => {
     try {
       const token = localStorage.getItem('token');
       await axios.post(`${API_URL}/api/users`, newUser, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      fetchUsers(); // Refresh list
+      fetchUsers();
     } catch (error) {
-      console.error('Error adding user:', error);
-      // Fallback: Local storage mein save karo
+      console.error('❌ Error adding user:', error);
       const updatedUsers = [...users, { ...newUser, id: Date.now() }];
       setUsers(updatedUsers);
       localStorage.setItem("users", JSON.stringify(updatedUsers));
     }
   };
 
-  // ✅ Update User (Backend)
   const updateUser = async (updatedUser) => {
     try {
       const token = localStorage.getItem('token');
       await axios.put(`${API_URL}/api/users/${updatedUser.id}`, updatedUser, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      fetchUsers(); // Refresh list
+      fetchUsers();
     } catch (error) {
-      console.error('Error updating user:', error);
-      // Fallback: Local storage mein update karo
+      console.error('❌ Error updating user:', error);
       const updatedUsers = users.map((user) =>
         user.id === updatedUser.id ? updatedUser : user
       );
@@ -112,7 +108,6 @@ function Users() {
     }
   };
 
-  // ✅ Delete User (Backend)
   const deleteUser = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -120,10 +115,9 @@ function Users() {
       await axios.delete(`${API_URL}/api/users/${userId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      fetchUsers(); // Refresh list
+      fetchUsers();
     } catch (error) {
-      console.error('Error deleting user:', error);
-      // Fallback: Local storage se delete karo
+      console.error('❌ Error deleting user:', error);
       const updatedUsers = users.filter((_, index) => index !== selectedIndex);
       setUsers(updatedUsers);
       localStorage.setItem("users", JSON.stringify(updatedUsers));
@@ -150,7 +144,6 @@ function Users() {
 
   return (
     <MainLayout>
-      {/* HEADER */}
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-4xl font-black">User Management</h1>
         <button
@@ -161,7 +154,6 @@ function Users() {
         </button>
       </div>
 
-      {/* STATS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
         <StatsCard
           title="Total Users"
@@ -183,7 +175,6 @@ function Users() {
         />
       </div>
 
-      {/* TABLE */}
       <div className="glass p-6">
         <input
           type="text"
@@ -288,7 +279,6 @@ function Users() {
         </div>
       </div>
 
-      {/* Modals */}
       <AddUserModal
         open={openModal}
         onClose={() => setOpenModal(false)}
