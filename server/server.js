@@ -9,16 +9,9 @@ const connectDB = require('./config/db');
 
 const app = express();
 
-// upload wala code
-app.use('/api/upload', require('./routes/uploadRoutes'));
-app.use('/api/registrations', require('./routes/registrationRoutes'));
-app.use('/api/contracts', require('./routes/contractRoutes'));
-
-
-
-
-
-// ✅ CORS
+// ==========================================
+// ✅ 1. CORS (Sabse pehle)
+// ==========================================
 app.use(cors({
   origin: '*',
   credentials: true,
@@ -26,7 +19,11 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// ✅ Rate Limiting
+// ==========================================
+// ✅ 2. Security & Rate Limiting
+// ==========================================
+app.use(helmet());
+
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
@@ -34,38 +31,49 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-// ✅ Security
-app.use(helmet());
-
-// ✅ Body Parser
+// ==========================================
+// ✅ 3. Body Parser
+// ==========================================
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// ✅ Connect to MongoDB
+// ==========================================
+// ✅ 4. Connect to MongoDB
+// ==========================================
 connectDB();
 
-// ✅ Routes
+// ==========================================
+// ✅ 5. Routes (CORS ke BAAD)
+// ==========================================
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/clients', require('./routes/clientRoutes'));
 app.use('/api/dashboard', require('./routes/dashboardRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
+app.use('/api/registrations', require('./routes/registrationRoutes'));
+app.use('/api/contracts', require('./routes/contractRoutes'));
+app.use('/api/upload', require('./routes/uploadRoutes'));
 
-// ✅ Health Check
+// ==========================================
+// ✅ 6. Health Check & Root
+// ==========================================
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'OK', timestamp: new Date() });
 });
 
-// ✅ Root
 app.get('/', (req, res) => {
   res.send('LegalVault API is running');
 });
 
-// ✅ 404 Handler
+// ==========================================
+// ✅ 7. 404 Handler
+// ==========================================
 app.use((req, res) => {
   res.status(404).json({ message: 'Route not found' });
 });
 
-// ✅ Global Error Handler
+// ==========================================
+// ✅ 8. Global Error Handler
+// ==========================================
 app.use((err, req, res, next) => {
   console.error('Error:', err.stack);
   res.status(err.status || 500).json({
@@ -74,6 +82,9 @@ app.use((err, req, res, next) => {
   });
 });
 
+// ==========================================
+// ✅ 9. Start Server
+// ==========================================
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
