@@ -43,21 +43,35 @@ function ClientDetails() {
     fetchClient();
   }, [id]);
 
-  // ✅ Fetch registrations from backend (with debug logs)
+// ✅ Fetch registrations from backend
 const fetchRegistrations = async () => {
   try {
     const token = localStorage.getItem('token');
-    console.log('📋 Fetching registrations for client:', id);
+    if (!id) {
+      console.error('❌ Client ID is undefined!');
+      return;
+    }
+    console.log('📋 Fetching registrations for client ID:', id);
     const response = await axios.get(`${API_URL}/api/registrations/client/${id}`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     console.log('✅ Registrations fetched:', response.data);
-    console.log('📊 Number of registrations:', response.data.length);
     setRegistrations(response.data);
   } catch (error) {
     console.error('❌ Error fetching registrations:', error.response?.data || error.message);
   }
 };
+
+// ✅ Load registrations and contracts on mount
+useEffect(() => {
+  if (id) {
+    console.log('🔄 Loading data for client ID:', id);
+    fetchRegistrations();
+    fetchContracts();
+  } else {
+    console.error('❌ No client ID available');
+  }
+}, [id]);
 
   // ✅ Fetch contracts from backend
   const fetchContracts = async () => {
