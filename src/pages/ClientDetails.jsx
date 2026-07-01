@@ -43,56 +43,51 @@ function ClientDetails() {
     fetchClient();
   }, [id]);
 
-// ✅ Fetch registrations from backend
-const fetchRegistrations = async () => {
-  try {
-    const token = localStorage.getItem('token');
-    if (!id) {
-      console.error('❌ Client ID is undefined!');
-      return;
+  // ✅ Fetch registrations from backend
+  const fetchRegistrations = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!id) {
+        console.error('❌ Client ID is undefined!');
+        return;
+      }
+      console.log('📋 Fetching registrations for client ID:', id);
+      const response = await axios.get(`${API_URL}/api/registrations/client/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      console.log('✅ Registrations fetched:', response.data);
+      setRegistrations(response.data);
+    } catch (error) {
+      console.error('❌ Error fetching registrations:', error.response?.data || error.message);
     }
-    console.log('📋 Fetching registrations for client ID:', id);
-    const response = await axios.get(`${API_URL}/api/registrations/client/${id}`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    console.log('✅ Registrations fetched:', response.data);
-    setRegistrations(response.data);
-  } catch (error) {
-    console.error('❌ Error fetching registrations:', error.response?.data || error.message);
-  }
-};
-
-// ✅ Load registrations and contracts on mount
-useEffect(() => {
-  if (id) {
-    console.log('🔄 Loading data for client ID:', id);
-    fetchRegistrations();
-    fetchContracts();
-  } else {
-    console.error('❌ No client ID available');
-  }
-}, [id]);
+  };
 
   // ✅ Fetch contracts from backend
   const fetchContracts = async () => {
     try {
       const token = localStorage.getItem('token');
+      console.log('📋 Fetching contracts for client ID:', id);
       const response = await axios.get(`${API_URL}/api/contracts/client/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      console.log('✅ Contracts fetched:', response.data);
       setContracts(response.data);
     } catch (error) {
-      console.error('Error fetching contracts:', error);
+      console.error('❌ Error fetching contracts:', error.response?.data || error.message);
     }
   };
 
-  // ✅ Load registrations and contracts on mount
+  // ✅ Load registrations and contracts on mount (only once)
   useEffect(() => {
     if (id) {
+      console.log('🔄 Loading data for client ID:', id);
       fetchRegistrations();
       fetchContracts();
+    } else {
+      console.error('❌ No client ID available');
     }
-  }, [id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]); // ✅ Only run when id changes
 
   // ✅ Upload PDF function
   const uploadPDF = async (file) => {
@@ -135,7 +130,7 @@ useEffect(() => {
           headers: { Authorization: `Bearer ${token}` }
         });
       }
-      fetchRegistrations();
+      fetchRegistrations(); // Refresh list
       setEditRegistration(null);
       setOpenModal(false);
     } catch (error) {
@@ -179,7 +174,7 @@ useEffect(() => {
           headers: { Authorization: `Bearer ${token}` }
         });
       }
-      fetchContracts();
+      fetchContracts(); // Refresh list
       setEditContract(null);
       setOpenContractModal(false);
     } catch (error) {
@@ -218,6 +213,13 @@ useEffect(() => {
   const handleEditContract = (contract) => {
     setEditContract(contract);
     setOpenContractModal(true);
+  };
+
+  // ✅ View PDF using Google Docs Viewer
+  const viewPDF = (pdfUrl) => {
+    if (!pdfUrl) return;
+    const viewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(pdfUrl)}&embedded=true`;
+    window.open(viewerUrl, '_blank');
   };
 
   // ✅ User permissions
@@ -367,9 +369,12 @@ useEffect(() => {
                       </td>
                       <td className="p-4">
                         {item.pdf ? (
-                          <a href={item.pdf} target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:underline">
+                          <button
+                            onClick={() => viewPDF(item.pdf)}
+                            className="text-cyan-400 hover:underline"
+                          >
                             📄 View PDF
-                          </a>
+                          </button>
                         ) : "-"}
                       </td>
                       <td className="p-4 flex gap-3">
@@ -441,9 +446,12 @@ useEffect(() => {
                       <td className="p-4">{item.endDate}</td>
                       <td className="p-4">
                         {item.pdf ? (
-                          <a href={item.pdf} target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:underline">
+                          <button
+                            onClick={() => viewPDF(item.pdf)}
+                            className="text-cyan-400 hover:underline"
+                          >
                             📄 View PDF
-                          </a>
+                          </button>
                         ) : "-"}
                       </td>
                       <td className="p-4 flex gap-3">

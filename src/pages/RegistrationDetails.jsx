@@ -10,19 +10,7 @@ function RegistrationDetails() {
   const navigate = useNavigate();
   const [registration, setRegistration] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [pdfPreviewUrl, setPdfPreviewUrl] = useState("");
 
-
-
-
-  // ✅ PDF view function
-const viewPDF = (pdfUrl) => {
-  // Cloudinary raw URL ko viewable banane ke liye Google Docs Viewer
-  const viewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(pdfUrl)}&embedded=true`;
-  window.open(viewerUrl, '_blank');
-};
-
-  // ✅ Fetch registration from backend
   useEffect(() => {
     const fetchRegistration = async () => {
       try {
@@ -50,18 +38,13 @@ const viewPDF = (pdfUrl) => {
     fetchRegistration();
   }, [id, registrationId]);
 
-  // ✅ PDF preview for base64 (fallback)
-  useEffect(() => {
-    if (registration?.pdf && registration.pdf.startsWith('data:application/pdf')) {
-      fetch(registration.pdf)
-        .then((res) => res.blob())
-        .then((blob) => {
-          const blobUrl = URL.createObjectURL(blob);
-          setPdfPreviewUrl(blobUrl);
-        })
-        .catch((err) => console.log('PDF Preview Error', err));
-    }
-  }, [registration]);
+  // ✅ View PDF - Google Docs Viewer se open karo
+  const viewPDF = (pdfUrl) => {
+    if (!pdfUrl) return;
+    // Cloudinary raw URL ko Google Docs Viewer se open karo
+    const viewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(pdfUrl)}&embedded=true`;
+    window.open(viewerUrl, '_blank');
+  };
 
   if (loading) {
     return (
@@ -155,31 +138,27 @@ const viewPDF = (pdfUrl) => {
               <p className="text-gray-400 text-sm">PDF Document</p>
               {registration.pdf ? (
                 <div className="mt-2">
-                  <a
-                    href={registration.pdf}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-cyan-400 hover:underline block mb-2 break-all text-sm"
-                  >
-                    📄 {registration.pdf.split('/').pop() || 'View PDF'}
-                  </a>
-                  <div className="flex gap-3">
-                    // ✅ PDF View button mein
-<button
-  onClick={() => viewPDF(registration.pdf)}
-  className="glass-card px-4 py-2 hover:scale-105 transition"
->
-  View PDF
-</button>
-
-// ✅ Download button
-<a
-  href={registration.pdf}
-  download
-  className="glass-card px-4 py-2 hover:scale-105 transition"
->
-  Download PDF
-</a>
+                  <p className="text-sm text-gray-400 break-all mb-2">
+                    {registration.pdf.split('/').pop() || 'PDF Document'}
+                  </p>
+                  <div className="flex gap-3 flex-wrap">
+                    {/* ✅ View PDF - Google Docs Viewer */}
+                    <button
+                      onClick={() => viewPDF(registration.pdf)}
+                      className="glass-card px-4 py-2 text-cyan-400 hover:scale-105 transition"
+                    >
+                      📄 View PDF
+                    </button>
+                    {/* ✅ Download PDF - Direct download */}
+                    <a
+                      href={registration.pdf}
+                      download
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="glass-card px-4 py-2 text-green-400 hover:scale-105 transition"
+                    >
+                      ⬇️ Download PDF
+                    </a>
                   </div>
                 </div>
               ) : (
@@ -187,19 +166,6 @@ const viewPDF = (pdfUrl) => {
               )}
             </div>
           </div>
-
-          {pdfPreviewUrl && (
-            <div className="mt-8">
-              <h2 className="text-xl font-semibold mb-4">PDF Preview</h2>
-              <iframe
-                src={pdfPreviewUrl}
-                width="100%"
-                height="700"
-                title="PDF Preview"
-                className="rounded-xl border border-white/10"
-              />
-            </div>
-          )}
         </div>
       </div>
     </MainLayout>
