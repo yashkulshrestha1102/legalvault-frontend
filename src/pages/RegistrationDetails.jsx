@@ -32,29 +32,36 @@ function RegistrationDetails() {
 
   // ✅ Fix: Cloudinary URL ko viewable aur downloadable banayein
   const getCloudinaryUrl = (pdfUrl, action) => {
-    if (!pdfUrl || !pdfUrl.includes('cloudinary.com')) return pdfUrl;
+    if (!pdfUrl) return '';
     
-    // raw/upload ko upload mein convert karo
-    let url = pdfUrl.replace('/raw/upload/', '/upload/');
+    let url = pdfUrl;
     
-    if (action === 'download') {
-      // Download: fl_attachment flag
+    // Agar raw/upload hai toh upload karo
+    if (url.includes('raw/upload')) {
+      url = url.replace('/raw/upload/', '/upload/');
+    }
+    
+    // Download ke liye fl_attachment flag
+    if (action === 'download' && url.includes('/upload/')) {
       url = url.replace('/upload/', '/upload/fl_attachment:/');
     }
+    
     return url;
   };
 
-  // ✅ View PDF - Direct Cloudinary URL
+  // ✅ View PDF
   const viewPDF = (pdfUrl) => {
     if (!pdfUrl) return;
     const viewableUrl = getCloudinaryUrl(pdfUrl, 'view');
+    console.log('📄 View PDF URL:', viewableUrl);
     window.open(viewableUrl, '_blank');
   };
 
-  // ✅ Download PDF - Direct download
+  // ✅ Download PDF
   const downloadPDF = (pdfUrl) => {
     if (!pdfUrl) return;
     const downloadUrl = getCloudinaryUrl(pdfUrl, 'download');
+    console.log('⬇️ Download PDF URL:', downloadUrl);
     window.open(downloadUrl, '_blank');
   };
 

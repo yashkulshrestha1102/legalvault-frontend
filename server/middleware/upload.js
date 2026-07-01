@@ -6,10 +6,9 @@ const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
     folder: 'legalvault/pdfs',
-    resource_type: 'raw',  // ✅ 'raw' explicitly set karo
+    resource_type: 'auto',  // ✅ 'raw' ki jagah 'auto'
     format: async (req, file) => 'pdf',
-    public_id: (req, file) => `${Date.now()}-${file.originalname.split('.')[0]}`,
-    upload_preset: 'mycloud'
+    public_id: (req, file) => `${Date.now()}-${file.originalname.split('.')[0]}`
   }
 });
 
