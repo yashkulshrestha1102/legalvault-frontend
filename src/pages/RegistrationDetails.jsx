@@ -72,6 +72,18 @@ function RegistrationDetails() {
     );
   }
 
+// ✅ Download PDF function
+const downloadPDF = (pdfUrl) => {
+  if (!pdfUrl) return;
+  let downloadUrl = pdfUrl;
+  if (pdfUrl.includes('cloudinary.com')) {
+    downloadUrl = pdfUrl.replace('/upload/', '/upload/fl_attachment:/');
+  }
+  window.open(downloadUrl, '_blank');
+};
+
+
+
   const getDaysLeft = (endDate) => {
     const today = new Date();
     const expiry = new Date(endDate);
@@ -150,15 +162,13 @@ function RegistrationDetails() {
                       📄 View PDF
                     </button>
                     {/* ✅ Download PDF - Direct download */}
-                    <a
-                      href={registration.pdf}
-                      download
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="glass-card px-4 py-2 text-green-400 hover:scale-105 transition"
-                    >
-                      ⬇️ Download PDF
-                    </a>
+                    // ✅ Download button mein
+<button
+  onClick={() => downloadPDF(registration.pdf)}
+  className="glass-card px-4 py-2 text-green-400 hover:scale-105 transition"
+>
+  ⬇️ Download PDF
+</button>
                   </div>
                 </div>
               ) : (

@@ -11,6 +11,16 @@ const PDFViewer = ({ pdfUrl, onUpload, onDownload }) => {
     window.open(viewerUrl, '_blank');
   };
 
+  // ✅ Download PDF - Cloudinary fl_attachment flag
+  const downloadPDF = (url) => {
+    if (!url) return;
+    let downloadUrl = url;
+    if (url.includes('cloudinary.com')) {
+      downloadUrl = url.replace('/upload/', '/upload/fl_attachment:/');
+    }
+    window.open(downloadUrl, '_blank');
+  };
+
   return (
     <div className="flex items-center gap-3 flex-wrap">
       {/* Upload Button */}
@@ -41,19 +51,16 @@ const PDFViewer = ({ pdfUrl, onUpload, onDownload }) => {
 
       {/* Download Button */}
       {pdfUrl && (
-        <a
-          href={pdfUrl}
-          download
-          target="_blank"
-          rel="noopener noreferrer"
+        <button
+          onClick={() => downloadPDF(pdfUrl)}
           className="glass-card px-3 py-2 text-green-400 hover:scale-105 transition"
         >
           <FaDownload className="inline mr-2" />
           Download PDF
-        </a>
+        </button>
       )}
 
-      {/* PDF Preview Modal - Google Docs Viewer */}
+      {/* PDF Preview Modal */}
       {showPreview && pdfUrl && (
         <div className="fixed inset-0 bg-black/80 z-50 flex justify-center items-center p-4">
           <div className="bg-white rounded-lg w-full max-w-4xl h-[80vh] relative">

@@ -43,6 +43,18 @@ function ClientDetails() {
     fetchClient();
   }, [id]);
 
+  // ✅ Download PDF function
+const downloadPDF = (pdfUrl) => {
+  if (!pdfUrl) return;
+  // Cloudinary raw URL ko download link mein convert karo
+  let downloadUrl = pdfUrl;
+  if (pdfUrl.includes('cloudinary.com')) {
+    // fl_attachment flag add karo
+    downloadUrl = pdfUrl.replace('/upload/', '/upload/fl_attachment:/');
+  }
+  window.open(downloadUrl, '_blank');
+};
+
   // ✅ Fetch registrations from backend
   const fetchRegistrations = async () => {
     try {
@@ -367,16 +379,25 @@ function ClientDetails() {
                           <span className="text-green-400">Valid</span>
                         )}
                       </td>
-                      <td className="p-4">
-                        {item.pdf ? (
-                          <button
-                            onClick={() => viewPDF(item.pdf)}
-                            className="text-cyan-400 hover:underline"
-                          >
-                            📄 View PDF
-                          </button>
-                        ) : "-"}
-                      </td>
+                      // ✅ Table mein Download button
+<td className="p-4">
+  {item.pdf ? (
+    <div className="flex gap-2">
+      <button
+        onClick={() => viewPDF(item.pdf)}
+        className="text-cyan-400 hover:underline text-sm"
+      >
+        📄 View
+      </button>
+      <button
+        onClick={() => downloadPDF(item.pdf)}
+        className="text-green-400 hover:underline text-sm"
+      >
+        ⬇️ Download
+      </button>
+    </div>
+  ) : "-"}
+</td>
                       <td className="p-4 flex gap-3">
                         <button
                           onClick={() =>
