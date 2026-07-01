@@ -8,13 +8,22 @@ const storage = new CloudinaryStorage({
     folder: 'legalvault/pdfs',
     resource_type: 'raw',
     format: async (req, file) => 'pdf',
-    public_id: (req, file) => `${Date.now()}-${file.originalname}`
+    public_id: (req, file) => `${Date.now()}-${file.originalname.split('.')[0]}`
   }
 });
 
-const upload = multer({ 
+const fileFilter = (req, file, cb) => {
+  if (file.mimetype === 'application/pdf') {
+    cb(null, true);
+  } else {
+    cb(new Error('Only PDF files are allowed'), false);
+  }
+};
+
+const upload = multer({
   storage: storage,
-  limits: { fileSize: 10 * 1024 * 1024 } // 10MB
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  fileFilter: fileFilter
 });
 
 module.exports = upload;
