@@ -1,209 +1,196 @@
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
+import axios from 'axios';
 import MainLayout from "../layouts/MainLayout";
 
+const API_URL = 'https://legalvault-jm2n.onrender.com';
+
 function RegistrationDetails() {
-
   const { id, registrationId } = useParams();
+  const navigate = useNavigate();
+  const [registration, setRegistration] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState("");
 
-  const [registration, setRegistration] =
-    useState(null);
-
-  const [pdfPreviewUrl, setPdfPreviewUrl] =
-    useState("");
-
+  // ✅ Fetch registration from backend
   useEffect(() => {
-
-    const registrations =
-      JSON.parse(
-        localStorage.getItem(
-          `registrations_${id}`
-        )
-      ) || [];
-
-    const selected =
-      registrations.find(
-        (item) =>
-          String(item.id) ===
-          registrationId
-      );
-
-    setRegistration(selected);
-
+    const fetchRegistration = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        console.log('📋 Fetching registration:', registrationId);
+        const response = await axios.get(`${API_URL}/api/registrations/${registrationId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        console.log('✅ Registration fetched:', response.data);
+        setRegistration(response.data);
+      } catch (error) {
+        console.error('❌ Error fetching registration:', error);
+        // Fallback: Local storage se load karo
+        const registrations = JSON.parse(
+          localStorage.getItem(`registrations_${id}`)
+        ) || [];
+        const selected = registrations.find(
+          (item) => String(item.id) === registrationId
+        );
+        setRegistration(selected);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchRegistration();
   }, [id, registrationId]);
 
+  // ✅ PDF preview for base64 (fallback)
   useEffect(() => {
-
-    if (
-      registration?.pdfUrl &&
-      registration.pdfUrl.startsWith(
-        "data:application/pdf"
-      )
-    ) {
-
-      fetch(registration.pdfUrl)
+    if (registration?.pdf && registration.pdf.startsWith('data:application/pdf')) {
+      fetch(registration.pdf)
         .then((res) => res.blob())
         .then((blob) => {
-
-          const blobUrl =
-            URL.createObjectURL(blob);
-
+          const blobUrl = URL.createObjectURL(blob);
           setPdfPreviewUrl(blobUrl);
-
         })
-        .catch((err) => {
-          console.log(
-            "PDF Preview Error",
-            err
-          );
-        });
-
+        .catch((err) => console.log('PDF Preview Error', err));
     }
-
   }, [registration]);
 
-  if (!registration) {
-
+  if (loading) {
     return (
       <MainLayout>
-        <div className="glass-card p-6">
-          Registration Not Found
+        <div className="flex justify-center items-center h-64">
+          <div className="text-xl">Loading Registration Details...</div>
         </div>
       </MainLayout>
     );
-
   }
 
-  return (
-
-    <MainLayout>
-
-      <div className="glass p-6">
-
-        <h1 className="text-3xl font-bold mb-6">
-          Registration Details
-        </h1>
-
-        <div className="grid md:grid-cols-2 gap-4">
-
-          <div className="glass-card p-4">
-            <p className="text-gray-400">
-              Type
-            </p>
-
-            <h3>
-              {registration.category}
-            </h3>
-          </div>
-
-          <div className="glass-card p-4">
-            <p className="text-gray-400">
-              Registration Name
-            </p>
-
-            <h3>
-              {registration.registrationName}
-            </h3>
-          </div>
-
-          <div className="glass-card p-4">
-            <p className="text-gray-400">
-              Start Date
-            </p>
-
-            <h3>
-              {registration.startDate}
-            </h3>
-          </div>
-
-          <div className="glass-card p-4">
-            <p className="text-gray-400">
-              End Date
-            </p>
-
-            <h3>
-              {registration.endDate}
-            </h3>
-          </div>
-
-          <div className="glass-card p-4">
-            <p className="text-gray-400">
-              Status
-            </p>
-
-            <h3>
-              {registration.status}
-            </h3>
-          </div>
-
-          <div className="glass-card p-4">
-
-            <p className="text-gray-400">
-              PDF Document
-            </p>
-
-            <h3 className="mb-4 break-all">
-              {registration.pdf}
-            </h3>
-
-            {pdfPreviewUrl && (
-
-              <div className="flex gap-3">
-
-                <button
-                  onClick={() =>
-                    window.open(
-                      pdfPreviewUrl,
-                      "_blank"
-                    )
-                  }
-                  className="glass-card px-4 py-2"
-                >
-                  View PDF
-                </button>
-
-                <a
-                  href={pdfPreviewUrl}
-                  download={registration.pdf}
-                  className="glass-card px-4 py-2"
-                >
-                  Download PDF
-                </a>
-
-              </div>
-
-            )}
-
-          </div>
-
+  if (!registration) {
+    return (
+      <MainLayout>
+        <div className="glass-card p-6">
+          <p className="text-red-400">Registration Not Found</p>
+          <button
+            onClick={() => navigate(`/clients/${id}`)}
+            className="glass-card px-4 py-2 mt-4"
+          >
+            ← Back to Client
+          </button>
         </div>
+      </MainLayout>
+    );
+  }
 
-        {pdfPreviewUrl && (
+  const getDaysLeft = (endDate) => {
+    const today = new Date();
+    const expiry = new Date(endDate);
+    const diff = expiry.getTime() - today.getTime();
+    return Math.ceil(diff / (1000 * 60 * 60 * 24));
+  };
 
-          <div className="mt-8">
+  const statusColor = registration.endDate
+    ? getDaysLeft(registration.endDate) <= 0
+      ? 'text-red-400'
+      : getDaysLeft(registration.endDate) <= 30
+      ? 'text-yellow-400'
+      : 'text-green-400'
+    : 'text-gray-400';
 
-            <h2 className="text-xl font-semibold mb-4">
-              PDF Preview
-            </h2>
+  const statusText = registration.endDate
+    ? getDaysLeft(registration.endDate) <= 0
+      ? 'Expired'
+      : getDaysLeft(registration.endDate) <= 30
+      ? 'Expiring Soon'
+      : 'Valid'
+    : 'N/A';
 
-            <iframe
-              src={pdfPreviewUrl}
-              width="100%"
-              height="700"
-              title="PDF Preview"
-              className="rounded-xl border border-white/10"
-            />
+  return (
+    <MainLayout>
+      <div className="p-6">
+        <button
+          onClick={() => navigate(`/clients/${id}`)}
+          className="glass-card px-4 py-2 mb-6 text-sm hover:scale-105 transition"
+        >
+          ← Back to Client
+        </button>
 
+        <div className="glass p-6">
+          <h1 className="text-3xl font-bold mb-6">Registration Details</h1>
+
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="glass-card p-4">
+              <p className="text-gray-400 text-sm">Type</p>
+              <h3 className="font-semibold mt-1">{registration.category || 'N/A'}</h3>
+            </div>
+
+            <div className="glass-card p-4">
+              <p className="text-gray-400 text-sm">Registration Name</p>
+              <h3 className="font-semibold mt-1">{registration.registrationName}</h3>
+            </div>
+
+            <div className="glass-card p-4">
+              <p className="text-gray-400 text-sm">Start Date</p>
+              <h3 className="font-semibold mt-1">{registration.startDate || 'N/A'}</h3>
+            </div>
+
+            <div className="glass-card p-4">
+              <p className="text-gray-400 text-sm">End Date</p>
+              <h3 className="font-semibold mt-1">{registration.endDate || 'N/A'}</h3>
+            </div>
+
+            <div className="glass-card p-4">
+              <p className="text-gray-400 text-sm">Status</p>
+              <h3 className={`font-semibold mt-1 ${statusColor}`}>{statusText}</h3>
+            </div>
+
+            <div className="glass-card p-4">
+              <p className="text-gray-400 text-sm">PDF Document</p>
+              {registration.pdf ? (
+                <div className="mt-2">
+                  <a
+                    href={registration.pdf}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-cyan-400 hover:underline block mb-2 break-all text-sm"
+                  >
+                    📄 {registration.pdf.split('/').pop() || 'View PDF'}
+                  </a>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => window.open(registration.pdf, '_blank')}
+                      className="glass-card px-4 py-2 text-sm hover:scale-105 transition"
+                    >
+                      View PDF
+                    </button>
+                    <a
+                      href={registration.pdf}
+                      download
+                      className="glass-card px-4 py-2 text-sm hover:scale-105 transition"
+                    >
+                      Download PDF
+                    </a>
+                  </div>
+                </div>
+              ) : (
+                <h3 className="font-semibold mt-1 text-gray-400">No PDF uploaded</h3>
+              )}
+            </div>
           </div>
 
-        )}
-
+          {pdfPreviewUrl && (
+            <div className="mt-8">
+              <h2 className="text-xl font-semibold mb-4">PDF Preview</h2>
+              <iframe
+                src={pdfPreviewUrl}
+                width="100%"
+                height="700"
+                title="PDF Preview"
+                className="rounded-xl border border-white/10"
+              />
+            </div>
+          )}
+        </div>
       </div>
-
     </MainLayout>
-
   );
-
 }
 
 export default RegistrationDetails;
