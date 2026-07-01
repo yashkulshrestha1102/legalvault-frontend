@@ -12,6 +12,16 @@ function RegistrationDetails() {
   const [loading, setLoading] = useState(true);
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState("");
 
+
+
+
+  // ✅ PDF view function
+const viewPDF = (pdfUrl) => {
+  // Cloudinary raw URL ko viewable banane ke liye Google Docs Viewer
+  const viewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(pdfUrl)}&embedded=true`;
+  window.open(viewerUrl, '_blank');
+};
+
   // ✅ Fetch registration from backend
   useEffect(() => {
     const fetchRegistration = async () => {
@@ -154,19 +164,22 @@ function RegistrationDetails() {
                     📄 {registration.pdf.split('/').pop() || 'View PDF'}
                   </a>
                   <div className="flex gap-3">
-                    <button
-                      onClick={() => window.open(registration.pdf, '_blank')}
-                      className="glass-card px-4 py-2 text-sm hover:scale-105 transition"
-                    >
-                      View PDF
-                    </button>
-                    <a
-                      href={registration.pdf}
-                      download
-                      className="glass-card px-4 py-2 text-sm hover:scale-105 transition"
-                    >
-                      Download PDF
-                    </a>
+                    // ✅ PDF View button mein
+<button
+  onClick={() => viewPDF(registration.pdf)}
+  className="glass-card px-4 py-2 hover:scale-105 transition"
+>
+  View PDF
+</button>
+
+// ✅ Download button
+<a
+  href={registration.pdf}
+  download
+  className="glass-card px-4 py-2 hover:scale-105 transition"
+>
+  Download PDF
+</a>
                   </div>
                 </div>
               ) : (
