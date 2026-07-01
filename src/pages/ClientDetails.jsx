@@ -43,18 +43,6 @@ function ClientDetails() {
     fetchClient();
   }, [id]);
 
-  // ✅ Download PDF function
-const downloadPDF = (pdfUrl) => {
-  if (!pdfUrl) return;
-  // Cloudinary raw URL ko download link mein convert karo
-  let downloadUrl = pdfUrl;
-  if (pdfUrl.includes('cloudinary.com')) {
-    // fl_attachment flag add karo
-    downloadUrl = pdfUrl.replace('/upload/', '/upload/fl_attachment:/');
-  }
-  window.open(downloadUrl, '_blank');
-};
-
   // ✅ Fetch registrations from backend
   const fetchRegistrations = async () => {
     try {
@@ -89,7 +77,7 @@ const downloadPDF = (pdfUrl) => {
     }
   };
 
-  // ✅ Load registrations and contracts on mount (only once)
+  // ✅ Load registrations and contracts on mount
   useEffect(() => {
     if (id) {
       console.log('🔄 Loading data for client ID:', id);
@@ -99,7 +87,24 @@ const downloadPDF = (pdfUrl) => {
       console.error('❌ No client ID available');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]); // ✅ Only run when id changes
+  }, [id]);
+
+  // ✅ View PDF using Google Docs Viewer
+  const viewPDF = (pdfUrl) => {
+    if (!pdfUrl) return;
+    const viewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(pdfUrl)}&embedded=true`;
+    window.open(viewerUrl, '_blank');
+  };
+
+  // ✅ Download PDF with fl_attachment flag
+  const downloadPDF = (pdfUrl) => {
+    if (!pdfUrl) return;
+    let downloadUrl = pdfUrl;
+    if (pdfUrl.includes('cloudinary.com')) {
+      downloadUrl = pdfUrl.replace('/upload/', '/upload/fl_attachment:/');
+    }
+    window.open(downloadUrl, '_blank');
+  };
 
   // ✅ Upload PDF function
   const uploadPDF = async (file) => {
@@ -127,7 +132,6 @@ const downloadPDF = (pdfUrl) => {
       const token = localStorage.getItem('token');
       const data = { ...registrationData, clientId: id };
       
-      // Agar PDF file hai toh upload karo
       if (registrationData.pdfFile) {
         const pdfUrl = await uploadPDF(registrationData.pdfFile);
         if (pdfUrl) data.pdf = pdfUrl;
@@ -142,7 +146,7 @@ const downloadPDF = (pdfUrl) => {
           headers: { Authorization: `Bearer ${token}` }
         });
       }
-      fetchRegistrations(); // Refresh list
+      fetchRegistrations();
       setEditRegistration(null);
       setOpenModal(false);
     } catch (error) {
@@ -186,7 +190,7 @@ const downloadPDF = (pdfUrl) => {
           headers: { Authorization: `Bearer ${token}` }
         });
       }
-      fetchContracts(); // Refresh list
+      fetchContracts();
       setEditContract(null);
       setOpenContractModal(false);
     } catch (error) {
@@ -225,13 +229,6 @@ const downloadPDF = (pdfUrl) => {
   const handleEditContract = (contract) => {
     setEditContract(contract);
     setOpenContractModal(true);
-  };
-
-  // ✅ View PDF using Google Docs Viewer
-  const viewPDF = (pdfUrl) => {
-    if (!pdfUrl) return;
-    const viewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(pdfUrl)}&embedded=true`;
-    window.open(viewerUrl, '_blank');
   };
 
   // ✅ User permissions
@@ -364,64 +361,71 @@ const downloadPDF = (pdfUrl) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {registrations.map((item) => (
-                    <tr key={item._id || item.id}>
-                      <td className="p-4">{item.category}</td>
-                      <td className="p-4">{item.registrationName}</td>
-                      <td className="p-4">{item.startDate}</td>
-                      <td className="p-4">{item.endDate}</td>
-                      <td className="p-4">
-                        {getDaysLeft(item.endDate) <= 0 ? (
-                          <span className="text-red-400">Expired</span>
-                        ) : getDaysLeft(item.endDate) <= 30 ? (
-                          <span className="text-yellow-400">Expiring Soon</span>
-                        ) : (
-                          <span className="text-green-400">Valid</span>
-                        )}
-                      </td>
-                      // ✅ Table mein Download button
-<td className="p-4">
-  {item.pdf ? (
-    <div className="flex gap-2">
-      <button
-        onClick={() => viewPDF(item.pdf)}
-        className="text-cyan-400 hover:underline text-sm"
-      >
-        📄 View
-      </button>
-      <button
-        onClick={() => downloadPDF(item.pdf)}
-        className="text-green-400 hover:underline text-sm"
-      >
-        ⬇️ Download
-      </button>
-    </div>
-  ) : "-"}
-</td>
-                      <td className="p-4 flex gap-3">
-                        <button
-                          onClick={() =>
-                            navigate(`/clients/${id}/registration/${item._id || item.id}`)
-                          }
-                          className="text-cyan-400"
-                        >
-                          View
-                        </button>
-                        <button
-                          onClick={() => handleEdit(item)}
-                          className="text-yellow-400"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => deleteRegistration(item._id || item.id)}
-                          className="text-red-400"
-                        >
-                          Delete
-                        </button>
+                  {registrations.length === 0 ? (
+                    <tr>
+                      <td colSpan="7" className="text-center py-12 text-gray-400">
+                        No Registrations Found
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    registrations.map((item) => (
+                      <tr key={item._id || item.id}>
+                        <td className="p-4">{item.category}</td>
+                        <td className="p-4">{item.registrationName}</td>
+                        <td className="p-4">{item.startDate}</td>
+                        <td className="p-4">{item.endDate}</td>
+                        <td className="p-4">
+                          {getDaysLeft(item.endDate) <= 0 ? (
+                            <span className="text-red-400">Expired</span>
+                          ) : getDaysLeft(item.endDate) <= 30 ? (
+                            <span className="text-yellow-400">Expiring Soon</span>
+                          ) : (
+                            <span className="text-green-400">Valid</span>
+                          )}
+                        </td>
+                        <td className="p-4">
+                          {item.pdf ? (
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => viewPDF(item.pdf)}
+                                className="text-cyan-400 hover:underline text-sm"
+                              >
+                                📄 View
+                              </button>
+                              <button
+                                onClick={() => downloadPDF(item.pdf)}
+                                className="text-green-400 hover:underline text-sm"
+                              >
+                                ⬇️ Download
+                              </button>
+                            </div>
+                          ) : "-"}
+                        </td>
+                        <td className="p-4">
+                          <div className="flex gap-3">
+                            <button
+                              onClick={() => navigate(`/clients/${id}/registration/${item._id || item.id}`)}
+                              className="text-cyan-400"
+                            >
+                              View
+                            </button>
+                            <button
+                              onClick={() => handleEdit(item)}
+                              className="text-yellow-400"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => deleteRegistration(item._id || item.id)}
+                              className="text-red-400"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -457,48 +461,64 @@ const downloadPDF = (pdfUrl) => {
                   </tr>
                 </thead>
                 <tbody>
-                  {contracts.map((item) => (
-                    <tr key={item._id || item.id}>
-                      <td className="p-4">{item.contractType}</td>
-                      <td className="p-4">{item.contractName}</td>
-                      <td className="p-4">{item.firstParty}</td>
-                      <td className="p-4">{item.secondParty}</td>
-                      <td className="p-4">{item.startDate}</td>
-                      <td className="p-4">{item.endDate}</td>
-                      <td className="p-4">
-                        {item.pdf ? (
-                          <button
-                            onClick={() => viewPDF(item.pdf)}
-                            className="text-cyan-400 hover:underline"
-                          >
-                            📄 View PDF
-                          </button>
-                        ) : "-"}
-                      </td>
-                      <td className="p-4 flex gap-3">
-                        <button
-                          className="text-cyan-400"
-                          onClick={() =>
-                            navigate(`/clients/${id}/contract/${item._id || item.id}`)
-                          }
-                        >
-                          View
-                        </button>
-                        <button
-                          onClick={() => handleEditContract(item)}
-                          className="text-yellow-400"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => deleteContract(item._id || item.id)}
-                          className="text-red-400"
-                        >
-                          Delete
-                        </button>
+                  {contracts.length === 0 ? (
+                    <tr>
+                      <td colSpan="8" className="text-center py-12 text-gray-400">
+                        No Contracts Found
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    contracts.map((item) => (
+                      <tr key={item._id || item.id}>
+                        <td className="p-4">{item.contractType}</td>
+                        <td className="p-4">{item.contractName}</td>
+                        <td className="p-4">{item.firstParty}</td>
+                        <td className="p-4">{item.secondParty}</td>
+                        <td className="p-4">{item.startDate}</td>
+                        <td className="p-4">{item.endDate}</td>
+                        <td className="p-4">
+                          {item.pdf ? (
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => viewPDF(item.pdf)}
+                                className="text-cyan-400 hover:underline text-sm"
+                              >
+                                📄 View
+                              </button>
+                              <button
+                                onClick={() => downloadPDF(item.pdf)}
+                                className="text-green-400 hover:underline text-sm"
+                              >
+                                ⬇️ Download
+                              </button>
+                            </div>
+                          ) : "-"}
+                        </td>
+                        <td className="p-4">
+                          <div className="flex gap-3">
+                            <button
+                              className="text-cyan-400"
+                              onClick={() => navigate(`/clients/${id}/contract/${item._id || item.id}`)}
+                            >
+                              View
+                            </button>
+                            <button
+                              onClick={() => handleEditContract(item)}
+                              className="text-yellow-400"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => deleteContract(item._id || item.id)}
+                              className="text-red-400"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
