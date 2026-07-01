@@ -15,6 +15,7 @@ const ALL_FOLDERS = [
 export default function EditUserModal({ open, onClose, onSave, user }) {
   const [formData, setFormData] = useState({
     id: "",
+    _id: "",
     name: "",
     email: "",
     phone: "",
@@ -29,6 +30,8 @@ export default function EditUserModal({ open, onClose, onSave, user }) {
     if (user) {
       setFormData({
         ...user,
+        id: user._id || user.id || "",  // ✅ Ensure id is set from _id or id
+        _id: user._id || user.id || "", // ✅ Store _id separately
         folderPermissions: user.folderPermissions || []
       });
     }
@@ -36,7 +39,6 @@ export default function EditUserModal({ open, onClose, onSave, user }) {
 
   if (!open) return null;
 
-  // ✅ Toggle folder permission
   const toggleFolder = (folderId) => {
     setFormData((prev) => {
       const current = prev.folderPermissions || [];
@@ -54,7 +56,6 @@ export default function EditUserModal({ open, onClose, onSave, user }) {
     });
   };
 
-  // ✅ Select all folders
   const selectAllFolders = () => {
     setFormData((prev) => ({
       ...prev,
@@ -62,7 +63,6 @@ export default function EditUserModal({ open, onClose, onSave, user }) {
     }));
   };
 
-  // ✅ Deselect all folders
   const deselectAllFolders = () => {
     setFormData((prev) => ({
       ...prev,
@@ -71,7 +71,23 @@ export default function EditUserModal({ open, onClose, onSave, user }) {
   };
 
   const handleSave = () => {
-    onSave(formData);
+    // ✅ Ensure id is present
+    const userId = formData._id || formData.id;
+    if (!userId) {
+      console.error('❌ User ID is missing!', formData);
+      alert('Error: User ID not found. Please try again.');
+      return;
+    }
+    
+    // ✅ Create user object with proper id
+    const userToSave = {
+      ...formData,
+      id: userId,
+      _id: userId
+    };
+    
+    console.log('📤 Saving user with ID:', userId);
+    onSave(userToSave);
     onClose();
   };
 
@@ -133,7 +149,6 @@ export default function EditUserModal({ open, onClose, onSave, user }) {
             <option>Inactive</option>
           </select>
 
-          {/* ✅ 8 Folders - Edit Permissions */}
           <div className="glass-card p-4">
             <div className="flex justify-between items-center mb-3">
               <h3 className="text-lg font-semibold">Folder Access Permissions</h3>

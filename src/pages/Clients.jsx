@@ -1,18 +1,19 @@
 import MainLayout from "../layouts/MainLayout";
 import { FaEye, FaEdit, FaTrash } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import axios from 'axios';
+import AuthContext from '../context/AuthContext';
 import AddClientModal from "../components/modals/AddClientModal";
 import { addNotification } from "../utils/notifications";
 import { addActivity } from "../utils/activityLogger";
 import { exportClientsPDF, exportClientsExcel } from "../utils/reportExport";
 
-// ✅ Hardcoded Render URL (AuthContext ke same)
 const API_URL = 'https://legalvault-jm2n.onrender.com';
 
 function Clients() {
   const navigate = useNavigate();
+  const { user } = useContext(AuthContext);
 
   const [openModal, setOpenModal] = useState(false);
   const [clients, setClients] = useState([]);
@@ -21,93 +22,122 @@ function Clients() {
   const [editData, setEditData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchClients = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        console.log('📋 Fetching clients from:', `${API_URL}/api/clients`);
-        const response = await axios.get(`${API_URL}/api/clients`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        setClients(response.data);
-      } catch (error) {
-        console.error('❌ Error fetching clients:', error);
-        const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
-        if (savedClients.length > 0) {
-          setClients(savedClients);
-        } else {
-          setClients([
-            {
-              id: 1,
-              name: "Rajan Malhotra",
-              company: "Malhotra Group",
-              email: "rajan@malhotra.com",
-              phone: "9876543210",
-              status: "Active",
-            },
-            {
-              id: 2,
-              name: "Vikram Mehta",
-              company: "Mehta Enterprises",
-              email: "vikram@mehta.com",
-              phone: "9876543211",
-              status: "Active",
-            },
-            {
-              id: 3,
-              name: "Neha Kapoor",
-              company: "Kapoor Industries",
-              email: "neha@kapoor.com",
-              phone: "9876543212",
-              status: "Inactive",
-            },
-          ]);
-        }
-      } finally {
-        setLoading(false);
+  // ✅ Fetch clients from backend
+  const fetchClients = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_URL}/api/clients`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      console.log('✅ Clients fetched from backend:', response.data);
+      setClients(response.data);
+    } catch (error) {
+      console.error('❌ Error fetching clients:', error);
+      // Fallback: Local storage se load karo
+      const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
+      if (savedClients.length > 0) {
+        setClients(savedClients);
       }
-    };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchClients();
   }, []);
 
-  const addClient = (newClient) => {
-    const clientWithId = {
-      ...newClient,
-      id: Date.now(),
-      registrations: [],
-      contracts: [],
-      policies: [],
-      corporateSecretariat: [],
-      hr: [],
-      gst: [],
-      incomeTax: [],
-      financials: [],
-    };
-    const updatedClients = [...clients, clientWithId];
-    setClients(updatedClients);
-    localStorage.setItem("clients", JSON.stringify(updatedClients));
-    addNotification(`Client Added: ${newClient.name}`);
-    addActivity(`Client Added`);
+  // ✅ Add client to backend
+  const addClient = async (newClient) => {
+    try {
+      const token = localStorage.getItem('token');
+      console.log('📤 Adding client to backend:', newClient);
+      const response = await axios.post(`${API_URL}/api/clients`, newClient, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      console.log('✅ Client added to backend:', response.data);
+      addNotification(`Client Added: ${newClient.name}`);
+      addActivity(`Client Added`);
+      fetchClients(); // Refresh list
+    } catch (error) {
+      console.error('❌ Error adding client:', error.response?.data || error.message);
+      // Fallback: Local storage mein save karo
+      const clientWithId = {
+        ...newClient,
+        id: Date.now(),
+        registrations: [],
+        contracts: [],
+        policies: [],
+        corporateSecretariat: [],
+        hr: [],
+        gst: [],
+        incomeTax: [],
+        financials: [],
+      };
+      const updatedClients = [...clients, clientWithId];
+      setClients(updatedClients);
+      localStorage.setItem("clients", JSON.stringify(updatedClients));
+      addNotification(`Client Added (Local): ${newClient.name}`);
+      addActivity(`Client Added (Local)`);
+    }
   };
 
-  const deleteClient = (indexToDelete) => {
-    const clientName = clients[indexToDelete]?.name || 'Unknown';
-    const updatedClients = clients.filter((_, index) => index !== indexToDelete);
-    setClients(updatedClients);
-    localStorage.setItem("clients", JSON.stringify(updatedClients));
-    addNotification(`Client Deleted: ${clientName}`);
-    addActivity(`Client Deleted`);
+  // ✅ Delete client from backend
+  const deleteClient = async (indexToDelete) => {
+    const client = clients[indexToDelete];
+    const clientId = client?._id || client?.id;
+    const clientName = client?.name || 'Unknown';
+    
+    if (!clientId) {
+      console.error('No client ID found');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`${API_URL}/api/clients/${clientId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      console.log('✅ Client deleted from backend');
+      addNotification(`Client Deleted: ${clientName}`);
+      addActivity(`Client Deleted`);
+      fetchClients(); // Refresh list
+    } catch (error) {
+      console.error('❌ Error deleting client:', error);
+      // Fallback: Local storage se delete karo
+      const updatedClients = clients.filter((_, index) => index !== indexToDelete);
+      setClients(updatedClients);
+      localStorage.setItem("clients", JSON.stringify(updatedClients));
+      addNotification(`Client Deleted (Local): ${clientName}`);
+      addActivity(`Client Deleted (Local)`);
+    }
   };
 
-  const updateClient = (updatedClient) => {
-    const updatedClients = [...clients];
-    updatedClients[editIndex] = updatedClient;
-    setClients(updatedClients);
-    localStorage.setItem("clients", JSON.stringify(updatedClients));
+  // ✅ Update client in backend
+  const updateClient = async (updatedClient) => {
+    try {
+      const token = localStorage.getItem('token');
+      const clientId = updatedClient._id || updatedClient.id;
+      console.log('📤 Updating client:', updatedClient);
+      const response = await axios.put(`${API_URL}/api/clients/${clientId}`, updatedClient, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      console.log('✅ Client updated in backend:', response.data);
+      addNotification(`Client Updated: ${updatedClient.name}`);
+      addActivity(`Client Updated`);
+      fetchClients(); // Refresh list
+    } catch (error) {
+      console.error('❌ Error updating client:', error);
+      // Fallback: Local storage mein update karo
+      const updatedClients = [...clients];
+      updatedClients[editIndex] = updatedClient;
+      setClients(updatedClients);
+      localStorage.setItem("clients", JSON.stringify(updatedClients));
+      addNotification(`Client Updated (Local): ${updatedClient.name}`);
+      addActivity(`Client Updated (Local)`);
+    }
     setEditIndex(null);
     setEditData(null);
-    addNotification(`Client Updated: ${updatedClient.name}`);
-    addActivity(`Client Updated`);
   };
 
   const activeClients = clients.filter(client => client.status === "Active").length;
@@ -179,7 +209,7 @@ function Clients() {
                   )
                   .map((client, index) => (
                     <tr
-                      key={client.id || index}
+                      key={client._id || client.id || index}
                       className="border-b border-white/10 hover:bg-white/5 transition-all duration-300"
                     >
                       <td className="p-3">{client.name}</td>
@@ -201,7 +231,7 @@ function Clients() {
                         <div className="flex gap-4">
                           <FaEye
                             className="cursor-pointer text-cyan-400 hover:scale-125 transition-all"
-                            onClick={() => navigate(`/client/${client.id}`)}
+                            onClick={() => navigate(`/client/${client._id || client.id}`)}
                           />
                           <FaEdit
                             className="cursor-pointer text-yellow-400 hover:scale-125 transition-all"

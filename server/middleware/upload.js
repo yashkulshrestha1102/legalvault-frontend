@@ -6,9 +6,11 @@ const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
     folder: 'legalvault/pdfs',
-    resource_type: 'raw',
+    resource_type: 'raw',  // ✅ raw hi rakho
     format: async (req, file) => 'pdf',
-    public_id: (req, file) => `${Date.now()}-${file.originalname.split('.')[0]}`
+    public_id: (req, file) => `${Date.now()}-${file.originalname.split('.')[0]}`,
+    // ✅ PDF ko inline view karne ke liye
+    transformation: [{ flags: 'attachment' }]
   }
 });
 

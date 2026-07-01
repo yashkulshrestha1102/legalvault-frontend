@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import Select from "react-select";
+import axios from 'axios';
+
+const API_URL = 'https://legalvault-jm2n.onrender.com';
 
 function AddRegistrationModal({
   open,
@@ -15,12 +18,17 @@ function AddRegistrationModal({
     endDate: "",
     status: "Valid",
     pdf: "",
+    pdfFile: null, // ✅ File object for upload
     pdfUrl: "",
   });
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     if (editData) {
-      setFormData(editData);
+      setFormData({
+        ...editData,
+        pdfFile: null,
+      });
     } else {
       setFormData({
         category: "",
@@ -30,12 +38,33 @@ function AddRegistrationModal({
         endDate: "",
         status: "Valid",
         pdf: "",
+        pdfFile: null,
         pdfUrl: "",
       });
     }
   }, [editData]);
 
   if (!open) return null;
+
+  // ✅ Upload PDF to Cloudinary
+  const uploadPDF = async (file) => {
+    try {
+      const token = localStorage.getItem('token');
+      const formData = new FormData();
+      formData.append('pdf', file);
+      
+      const response = await axios.post(`${API_URL}/api/upload/pdf`, formData, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      return response.data.url;
+    } catch (error) {
+      console.error('PDF upload error:', error);
+      return null;
+    }
+  };
 
   const registrationOptions = [
     { value: "GST Registration", label: "GST Registration" },
@@ -52,7 +81,7 @@ function AddRegistrationModal({
     { value: "FIU", label: "FIU" },
     { value: "Partnership Firm", label: "Partnership Firm" },
     { value: "Trademark Registration", label: "Trademark Registration" },
-    { value: "Copy right", label: "Copy right" },
+    { value: "Copyright", label: "Copyright" },
     { value: "Labours License", label: "Labours License" },
     { value: "Pollution Control", label: "Pollution Control" },
     { value: "Five NOC", label: "Five NOC" },
@@ -82,7 +111,6 @@ function AddRegistrationModal({
       boxShadow: "none",
       color: "#fff",
     }),
-
     menu: (provided) => ({
       ...provided,
       background: "rgba(15,23,42,.95)",
@@ -92,7 +120,6 @@ function AddRegistrationModal({
       overflow: "hidden",
       zIndex: 9999,
     }),
-
     option: (provided, state) => ({
       ...provided,
       background: state.isFocused
@@ -101,39 +128,45 @@ function AddRegistrationModal({
       color: "#fff",
       cursor: "pointer",
     }),
-
     singleValue: (provided) => ({
       ...provided,
       color: "#fff",
     }),
-
     placeholder: (provided) => ({
       ...provided,
       color: "rgba(255,255,255,.6)",
     }),
-
     input: (provided) => ({
       ...provided,
       color: "#fff",
     }),
-
     dropdownIndicator: (provided) => ({
       ...provided,
       color: "#fff",
     }),
-
     indicatorSeparator: () => ({
       display: "none",
     }),
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    let pdfUrl = formData.pdf;
+
+    // ✅ If PDF file is selected, upload it
+    if (formData.pdfFile) {
+      setUploading(true);
+      const uploadedUrl = await uploadPDF(formData.pdfFile);
+      setUploading(false);
+      if (uploadedUrl) {
+        pdfUrl = uploadedUrl;
+      }
+    }
+
     const finalData = {
       ...formData,
-      category:
-        formData.category === "Others"
-          ? formData.customCategory
-          : formData.category,
+      category: formData.category === "Others" ? formData.customCategory : formData.category,
+      pdf: pdfUrl,
+      pdfFile: undefined,
     };
 
     onSave(finalData);
@@ -146,6 +179,7 @@ function AddRegistrationModal({
       endDate: "",
       status: "Valid",
       pdf: "",
+      pdfFile: null,
       pdfUrl: "",
     });
 
@@ -154,32 +188,19 @@ function AddRegistrationModal({
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-[9999] p-4">
-
       <div className="glass p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-
         <h2 className="text-2xl font-bold mb-6 text-white">
           {editData ? "Edit Registration" : "Add Registration"}
         </h2>
 
         <div className="space-y-4">
-
           <Select
             styles={customSelectStyles}
             options={registrationOptions}
             placeholder="Select Registration Type"
-            value={
-              formData.category
-                ? {
-                    value: formData.category,
-                    label: formData.category,
-                  }
-                : null
-            }
+            value={formData.category ? { value: formData.category, label: formData.category } : null}
             onChange={(selected) =>
-              setFormData({
-                ...formData,
-                category: selected.value,
-              })
+              setFormData({ ...formData, category: selected.value })
             }
           />
 
@@ -189,10 +210,7 @@ function AddRegistrationModal({
               placeholder="Enter Custom Registration"
               value={formData.customCategory}
               onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  customCategory: e.target.value,
-                })
+                setFormData({ ...formData, customCategory: e.target.value })
               }
               className="glass-card p-4 w-full text-white outline-none"
             />
@@ -203,109 +221,97 @@ function AddRegistrationModal({
             placeholder="Registration Name"
             value={formData.registrationName}
             onChange={(e) =>
-              setFormData({
-                ...formData,
-                registrationName: e.target.value,
-              })
+              setFormData({ ...formData, registrationName: e.target.value })
             }
             className="glass-card p-4 w-full text-white outline-none"
           />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
             <input
               type="date"
               value={formData.startDate}
               onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  startDate: e.target.value,
-                })
+                setFormData({ ...formData, startDate: e.target.value })
               }
               className="glass-card p-4 w-full text-white outline-none"
             />
-
             <input
               type="date"
               value={formData.endDate}
               onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  endDate: e.target.value,
-                })
+                setFormData({ ...formData, endDate: e.target.value })
               }
               className="glass-card p-4 w-full text-white outline-none"
             />
-
           </div>
 
           <Select
             styles={customSelectStyles}
             options={statusOptions}
             placeholder="Select Status"
-            value={{
-              value: formData.status,
-              label: formData.status,
-            }}
+            value={{ value: formData.status, label: formData.status }}
             onChange={(selected) =>
-              setFormData({
-                ...formData,
-                status: selected.value,
-              })
+              setFormData({ ...formData, status: selected.value })
             }
           />
 
-          <input
-            type="file"
-            accept=".pdf"
-            onChange={(e) => {
-              const file = e.target.files[0];
+          {/* ✅ PDF Upload */}
+          <div className="glass-card p-4">
+            <label className="block text-sm text-gray-400 mb-2">Upload PDF Document</label>
+            <input
+              type="file"
+              accept=".pdf"
+              onChange={(e) => {
+                const file = e.target.files[0];
+                if (file) {
+                  setFormData({
+                    ...formData,
+                    pdfFile: file,
+                    pdf: file.name,
+                  });
+                }
+              }}
+              className="w-full text-white file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-cyan-500/20 file:text-cyan-400 hover:file:bg-cyan-500/30"
+            />
+            {formData.pdf && (
+              <div className="mt-2 text-sm text-green-400">
+                📄 Selected: {formData.pdf}
+              </div>
+            )}
+            {uploading && (
+              <div className="mt-2 text-sm text-yellow-400">
+                ⏳ Uploading PDF...
+              </div>
+            )}
+          </div>
 
-              if (!file) return;
-
-              const reader = new FileReader();
-
-              reader.onload = () => {
-                setFormData((prev) => ({
-                  ...prev,
-                  pdf: file.name,
-                  pdfUrl: reader.result,
-                }));
-              };
-
-              reader.readAsDataURL(file);
-            }}
-            className="glass-card p-4 w-full text-white"
-          />
-
-          {formData.pdf && (
-            <div className="glass-card p-4 text-green-400">
-              Selected File: {formData.pdf}
+          {formData.pdfUrl && (
+            <div className="glass-card p-4">
+              <a
+                href={formData.pdfUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-cyan-400 hover:underline"
+              >
+                📄 View PDF
+              </a>
             </div>
           )}
-
         </div>
 
         <div className="flex flex-col sm:flex-row justify-end gap-3 mt-8">
-
-          <button
-            onClick={onClose}
-            className="glass-card px-6 py-3 text-white"
-          >
+          <button onClick={onClose} className="glass-card px-6 py-3 text-white">
             Cancel
           </button>
-
           <button
             onClick={handleSave}
-            className="glass-card px-6 py-3 text-white blue-glow"
+            disabled={uploading}
+            className={`glass-card px-6 py-3 text-white blue-glow ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
-            Save Registration
+            {uploading ? 'Uploading...' : 'Save Registration'}
           </button>
-
         </div>
-
       </div>
-
     </div>
   );
 }

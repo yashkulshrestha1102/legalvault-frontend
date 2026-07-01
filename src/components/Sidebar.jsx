@@ -12,12 +12,10 @@ import {
   useLocation,
 } from "react-router-dom";
 
-import { useContext, useEffect, useState } from "react"; // ✅ useState import karo
+import { useContext, useEffect, useState } from "react";
 import AuthContext from '../context/AuthContext';
-import { ThemeContext } from "../context/ThemeContext";
 import { SidebarContext } from "../context/SidebarContext";
 
-// ✅ 8 Folders Configuration
 const ALL_FOLDERS = [
   { id: 'registrations', label: 'Registrations / Certifications', path: '/registrations' },
   { id: 'contracts', label: 'Contracts', path: '/contracts' },
@@ -31,10 +29,8 @@ const ALL_FOLDERS = [
 
 function Sidebar() {
   const { user: contextUser, logout } = useContext(AuthContext);
-  const { theme } = useContext(ThemeContext);
   const { collapsed, toggleSidebar, mobileOpen, setMobileOpen } = useContext(SidebarContext);
 
-  // ✅ Fallback: localStorage se user load karo (page refresh ke liye)
   const [user, setUser] = useState(contextUser);
 
   useEffect(() => {
@@ -51,10 +47,6 @@ function Sidebar() {
       }
     }
   }, [contextUser]);
-
-  // ✅ Debug logs
-  console.log('👤 Sidebar - User:', user);
-  console.log('📁 Sidebar - Folder Permissions:', user?.folderPermissions);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -75,25 +67,19 @@ function Sidebar() {
   const role = user?.role || 'user';
   const permissions = user?.folderPermissions || [];
 
-  // ✅ Filter accessible folders
   const accessibleFolders = ALL_FOLDERS.filter(f => 
     role === 'admin' || permissions.includes(f.id)
   );
 
-  console.log('📂 Accessible Folders:', accessibleFolders);
-
-  // ✅ Base menu items
   const menuItems = [
     { path: "/", label: "Dashboard", icon: <FaTachometerAlt /> },
     { path: "/clients", label: "Clients", icon: <FaUsers /> },
   ];
 
-  // ✅ Add Users menu (Admin only)
   if (role === 'admin') {
     menuItems.push({ path: "/users", label: "Users", icon: <FaUsers /> });
   }
 
-  // ✅ Add Profile menu
   menuItems.push({ path: "/profile", label: "Profile", icon: <FaUserCircle /> });
 
   return (
@@ -139,7 +125,6 @@ function Sidebar() {
             </NavLink>
           ))}
 
-          {/* ✅ Dynamic Folders - Only show if user has access */}
           {accessibleFolders.length > 0 && !collapsed && (
             <div className="mt-4 pt-4 border-t border-white/10">
               <p className="text-xs text-gray-400 uppercase tracking-wider mb-2">Folders</p>

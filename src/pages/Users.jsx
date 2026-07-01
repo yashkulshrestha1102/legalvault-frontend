@@ -13,13 +13,14 @@ import {
   FaTrash,
   FaUserCheck,
 } from "react-icons/fa";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import axios from 'axios';
+import AuthContext from '../context/AuthContext';
 
-// ✅ Hardcoded Render URL (AuthContext ke same)
 const API_URL = 'https://legalvault-jm2n.onrender.com';
 
 function Users() {
+  const { user: currentUser, setUser, refreshUser } = useContext(AuthContext);
   const [openModal, setOpenModal] = useState(false);
   const [editModal, setEditModal] = useState(false);
   const [viewModal, setViewModal] = useState(false);
@@ -91,27 +92,75 @@ function Users() {
     }
   };
 
+  // ✅ Update User - with proper ID handling
   const updateUser = async (updatedUser) => {
+    // ✅ Ensure user ID is present
+    const userId = updatedUser._id || updatedUser.id;
+    if (!userId) {
+      console.error('❌ Cannot update user: No ID found', updatedUser);
+      alert('Error: User ID not found');
+      return;
+    }
+
     try {
       const token = localStorage.getItem('token');
-      await axios.put(`${API_URL}/api/users/${updatedUser.id}`, updatedUser, {
+      console.log('📤 Updating user with ID:', userId);
+      
+      const response = await axios.put(`${API_URL}/api/users/${userId}`, updatedUser, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      
+      console.log('✅ User updated:', response.data);
       fetchUsers();
+
+      // ✅ Check if the updated user is the currently logged-in user
+      const currentUserData = JSON.parse(localStorage.getItem('user'));
+      if (currentUserData && (currentUserData.id === userId || currentUserData._id === userId)) {
+        console.log('🔄 Current user updated, refreshing...');
+        
+        // Update localStorage
+        localStorage.setItem('user', JSON.stringify(response.data));
+        
+        // Update AuthContext
+        if (refreshUser) {
+          await refreshUser();
+        } else if (setUser) {
+          setUser(response.data);
+        }
+        
+        alert('Your permissions have been updated. Please refresh the page for changes to take effect.');
+      }
+      
     } catch (error) {
       console.error('❌ Error updating user:', error);
+      // Fallback: Local storage mein update karo
       const updatedUsers = users.map((user) =>
-        user.id === updatedUser.id ? updatedUser : user
+        user.id === updatedUser.id || user._id === updatedUser._id ? updatedUser : user
       );
       setUsers(updatedUsers);
       localStorage.setItem("users", JSON.stringify(updatedUsers));
+      
+      // Fallback for current user
+      const currentUserData = JSON.parse(localStorage.getItem('user'));
+      if (currentUserData && (currentUserData.id === userId || currentUserData._id === userId)) {
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+        if (setUser) setUser(updatedUser);
+      }
     }
   };
 
   const deleteUser = async () => {
     try {
       const token = localStorage.getItem('token');
-      const userId = users[selectedIndex]?._id || users[selectedIndex]?.id;
+      const user = users[selectedIndex];
+      const userId = user?._id || user?.id;
+      
+      if (!userId) {
+        console.error('❌ Cannot delete user: No ID found');
+        alert('Error: User ID not found');
+        return;
+      }
+      
       await axios.delete(`${API_URL}/api/users/${userId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -141,6 +190,11 @@ function Users() {
       </MainLayout>
     );
   }
+
+  // ✅ Get unique key for table rows
+  const getRowKey = (user, index) => {
+    return user._id || user.id || `user-${index}`;
+  };
 
   return (
     <MainLayout>
@@ -210,7 +264,7 @@ function Users() {
                     user.name?.toLowerCase().includes(searchTerm.toLowerCase())
                   )
                   .map((user, index) => (
-                    <tr key={user._id || user.id || index} className="border-b border-white/5 hover:bg-white/5 transition-all duration-300">
+                    <tr key={getRowKey(user, index)} className="border-b border-white/5 hover:bg-white/5 transition-all duration-300">
                       <td className="p-4">
                         <div className="flex items-center gap-3">
                           <div className="w-12 h-12 rounded-full glass-card flex items-center justify-center">
