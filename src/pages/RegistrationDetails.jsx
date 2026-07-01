@@ -23,27 +23,39 @@ function RegistrationDetails() {
         setRegistration(response.data);
       } catch (error) {
         console.error('❌ Error fetching registration:', error);
-        // Fallback: Local storage se load karo
-        const registrations = JSON.parse(
-          localStorage.getItem(`registrations_${id}`)
-        ) || [];
-        const selected = registrations.find(
-          (item) => String(item.id) === registrationId
-        );
-        setRegistration(selected);
       } finally {
         setLoading(false);
       }
     };
     fetchRegistration();
-  }, [id, registrationId]);
+  }, [registrationId]);
 
-  // ✅ View PDF - Google Docs Viewer se open karo
+  // ✅ Fix: Cloudinary URL ko viewable aur downloadable banayein
+  const getCloudinaryUrl = (pdfUrl, action) => {
+    if (!pdfUrl || !pdfUrl.includes('cloudinary.com')) return pdfUrl;
+    
+    // raw/upload ko upload mein convert karo
+    let url = pdfUrl.replace('/raw/upload/', '/upload/');
+    
+    if (action === 'download') {
+      // Download: fl_attachment flag
+      url = url.replace('/upload/', '/upload/fl_attachment:/');
+    }
+    return url;
+  };
+
+  // ✅ View PDF - Direct Cloudinary URL
   const viewPDF = (pdfUrl) => {
     if (!pdfUrl) return;
-    // Cloudinary raw URL ko Google Docs Viewer se open karo
-    const viewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(pdfUrl)}&embedded=true`;
-    window.open(viewerUrl, '_blank');
+    const viewableUrl = getCloudinaryUrl(pdfUrl, 'view');
+    window.open(viewableUrl, '_blank');
+  };
+
+  // ✅ Download PDF - Direct download
+  const downloadPDF = (pdfUrl) => {
+    if (!pdfUrl) return;
+    const downloadUrl = getCloudinaryUrl(pdfUrl, 'download');
+    window.open(downloadUrl, '_blank');
   };
 
   if (loading) {
@@ -71,18 +83,6 @@ function RegistrationDetails() {
       </MainLayout>
     );
   }
-
-// ✅ Download PDF function
-const downloadPDF = (pdfUrl) => {
-  if (!pdfUrl) return;
-  let downloadUrl = pdfUrl;
-  if (pdfUrl.includes('cloudinary.com')) {
-    downloadUrl = pdfUrl.replace('/upload/', '/upload/fl_attachment:/');
-  }
-  window.open(downloadUrl, '_blank');
-};
-
-
 
   const getDaysLeft = (endDate) => {
     const today = new Date();
@@ -154,21 +154,18 @@ const downloadPDF = (pdfUrl) => {
                     {registration.pdf.split('/').pop() || 'PDF Document'}
                   </p>
                   <div className="flex gap-3 flex-wrap">
-                    {/* ✅ View PDF - Google Docs Viewer */}
                     <button
                       onClick={() => viewPDF(registration.pdf)}
                       className="glass-card px-4 py-2 text-cyan-400 hover:scale-105 transition"
                     >
                       📄 View PDF
                     </button>
-                    {/* ✅ Download PDF - Direct download */}
-                    // ✅ Download button mein
-<button
-  onClick={() => downloadPDF(registration.pdf)}
-  className="glass-card px-4 py-2 text-green-400 hover:scale-105 transition"
->
-  ⬇️ Download PDF
-</button>
+                    <button
+                      onClick={() => downloadPDF(registration.pdf)}
+                      className="glass-card px-4 py-2 text-green-400 hover:scale-105 transition"
+                    >
+                      ⬇️ Download PDF
+                    </button>
                   </div>
                 </div>
               ) : (
