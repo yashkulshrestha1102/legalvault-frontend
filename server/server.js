@@ -9,6 +9,15 @@ const connectDB = require('./config/db');
 
 const app = express();
 
+// upload wala code
+app.use('/api/upload', require('./routes/uploadRoutes'));
+app.use('/api/registrations', require('./routes/registrationRoutes'));
+app.use('/api/contracts', require('./routes/contractRoutes'));
+
+
+
+
+
 // ✅ CORS
 app.use(cors({
   origin: '*',
