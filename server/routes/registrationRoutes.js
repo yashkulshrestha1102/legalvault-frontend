@@ -3,7 +3,7 @@ const router = express.Router();
 const auth = require('../middleware/auth');
 const Registration = require('../models/Registration');
 
-// GET - All registrations for a client
+// ✅ GET - All registrations for a client (SPECIFIC ROUTE - Pehle)
 router.get('/client/:clientId', auth, async (req, res) => {
   try {
     console.log('📋 GET /registrations/client/:clientId - Client ID:', req.params.clientId);
@@ -13,6 +13,23 @@ router.get('/client/:clientId', auth, async (req, res) => {
     res.json(registrations);
   } catch (error) {
     console.error('❌ Error fetching registrations:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ✅ GET - Single registration by ID (GENERIC ROUTE - Baad mein)
+router.get('/:id', auth, async (req, res) => {
+  try {
+    console.log('📋 GET /registrations/:id - ID:', req.params.id);
+    const registration = await Registration.findById(req.params.id)
+      .populate('createdBy', 'name email');
+    if (!registration) {
+      return res.status(404).json({ message: 'Registration not found' });
+    }
+    console.log('✅ Registration found:', registration._id);
+    res.json(registration);
+  } catch (error) {
+    console.error('❌ Error fetching registration:', error);
     res.status(500).json({ message: error.message });
   }
 });
