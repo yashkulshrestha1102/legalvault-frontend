@@ -89,25 +89,36 @@ function ClientDetails() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  // ✅ Upload PDF to GridFS
+
+
+
+  // mongodbpdf
   const uploadPDF = async (file) => {
-    try {
-      const token = localStorage.getItem('token');
-      const formData = new FormData();
-      formData.append('pdf', file);
-      
-      const response = await axios.post(`${API_URL}/api/pdfs/pdf`, formData, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data'
-        }
-      });
-      return response.data.url;
-    } catch (error) {
-      console.error('PDF upload error:', error);
+  try {
+    const token = localStorage.getItem('token');
+    console.log('🔑 ClientDetails - PDF Upload Token:', token ? '✅ Yes' : '❌ No');
+
+    if (!token) {
+      alert('Please login again');
       return null;
     }
-  };
+
+    const formData = new FormData();
+    formData.append('pdf', file);
+    
+    const response = await axios.post(`${API_URL}/api/pdfs/pdf`, formData, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    console.log('✅ PDF uploaded:', response.data);
+    return response.data.url;
+  } catch (error) {
+    console.error('❌ PDF upload error:', error.response?.data || error.message);
+    return null;
+  }
+};
 
   // ✅ View PDF
   const viewPDF = (pdfUrl) => {

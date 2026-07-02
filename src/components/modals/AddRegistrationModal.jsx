@@ -46,19 +46,30 @@ function AddRegistrationModal({
 
   if (!open) return null;
 
-  // ✅ Upload PDF to directly mongogrid
-  const uploadPDF = async (file) => {
+  // ✅ Upload PDF to GridFS
+const uploadPDF = async (file) => {
   try {
     const token = localStorage.getItem('token');
+    console.log('🔑 PDF Upload - Token:', token ? '✅ Yes' : '❌ No');
+
+    if (!token) {
+      alert('Please login again');
+      return null;
+    }
+
     const formData = new FormData();
     formData.append('pdf', file);
     
     const response = await axios.post(`${API_URL}/api/pdfs/pdf`, formData, {
-      headers: { 'Authorization': `Bearer ${token}` }
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'multipart/form-data'
+      }
     });
+    console.log('✅ PDF uploaded successfully:', response.data);
     return response.data.url;
   } catch (error) {
-    console.error('PDF upload error:', error);
+    console.error('❌ PDF upload error:', error.response?.data || error.message);
     return null;
   }
 };
