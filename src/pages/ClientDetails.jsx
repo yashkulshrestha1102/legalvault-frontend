@@ -110,21 +110,22 @@ function ClientDetails() {
       return null;
     }
   };
-// ✅ View PDF - Raw URL as it is
+
+
+// PDF Directly to mongo
+
 const viewPDF = (pdfUrl) => {
   if (!pdfUrl) return;
   window.open(pdfUrl, '_blank');
 };
 
-// ✅ Download PDF - Raw URL with fl_attachment
 const downloadPDF = (pdfUrl) => {
   if (!pdfUrl) return;
-  let url = pdfUrl;
-  if (url.includes('/upload/')) {
-    url = url.replace('/upload/', '/upload/fl_attachment:/');
-  }
-  window.open(url, '_blank');
+  window.open(pdfUrl, '_blank');
 };
+
+
+
   // ✅ Save registration to backend
   const saveRegistration = async (registrationData) => {
     try {

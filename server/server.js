@@ -6,6 +6,8 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const connectDB = require('./config/db');
+const { initGridFS } = require('./config/gridfs');
+
 
 const app = express();
 
@@ -42,6 +44,9 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // ==========================================
 connectDB();
 
+// ✅ Initialize GridFS
+initGridFS().catch(err => console.error('GridFS init failed:', err));
+
 // ==========================================
 // ✅ 5. Routes (CORS ke BAAD)
 // ==========================================
@@ -52,6 +57,7 @@ app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/registrations', require('./routes/registrationRoutes'));
 app.use('/api/contracts', require('./routes/contractRoutes'));
 app.use('/api/upload', require('./routes/uploadRoutes'));
+app.use('/api/pdfs', require('./routes/uploadGridFSRoutes'));
 
 // ==========================================
 // ✅ 6. Health Check & Root

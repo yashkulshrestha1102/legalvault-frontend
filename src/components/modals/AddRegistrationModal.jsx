@@ -46,25 +46,22 @@ function AddRegistrationModal({
 
   if (!open) return null;
 
-  // ✅ Upload PDF to Cloudinary
+  // ✅ Upload PDF to directly mongogrid
   const uploadPDF = async (file) => {
-    try {
-      const token = localStorage.getItem('token');
-      const formData = new FormData();
-      formData.append('pdf', file);
-      
-      const response = await axios.post(`${API_URL}/api/upload/pdf`, formData, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data'
-        }
-      });
-      return response.data.url;
-    } catch (error) {
-      console.error('PDF upload error:', error);
-      return null;
-    }
-  };
+  try {
+    const token = localStorage.getItem('token');
+    const formData = new FormData();
+    formData.append('pdf', file);
+    
+    const response = await axios.post(`${API_URL}/api/pdfs/pdf`, formData, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    return response.data.url;
+  } catch (error) {
+    console.error('PDF upload error:', error);
+    return null;
+  }
+};
 
   const registrationOptions = [
     { value: "GST Registration", label: "GST Registration" },

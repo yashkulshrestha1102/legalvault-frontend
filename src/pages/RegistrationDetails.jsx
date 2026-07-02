@@ -30,17 +30,20 @@ function RegistrationDetails() {
     fetchRegistration();
   }, [registrationId]);
 
-  // ✅ View PDF - Raw URL as it is
-  const viewPDF = (pdfUrl) => {
-    if (!pdfUrl) return;
-    console.log('📄 View PDF URL:', pdfUrl);
-    window.open(pdfUrl, '_blank');
-  };
+  // ✅ View PDF - Direct API call
+const viewPDF = (pdfUrl) => {
+  if (!pdfUrl) return;
+  window.open(pdfUrl, '_blank');
+};
 
-  // ✅ Download PDF - Raw URL mein fl_attachment flag add karo
-  const downloadPDF = (pdfUrl) => {
-    if (!pdfUrl) return;
-    let url = pdfUrl;
+const downloadPDF = (pdfUrl) => {
+  if (!pdfUrl) return;
+  window.open(pdfUrl, '_blank');
+};
+
+
+
+
     // ✅ Check if URL already has raw/upload, if yes use it directly
     if (url.includes('/upload/')) {
       url = url.replace('/upload/', '/upload/fl_attachment:/');
@@ -156,6 +159,6 @@ function RegistrationDetails() {
       </div>
     </MainLayout>
   );
-}
+
 
 export default RegistrationDetails;
