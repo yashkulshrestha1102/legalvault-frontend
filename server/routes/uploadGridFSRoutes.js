@@ -9,14 +9,21 @@ const { ObjectId } = require('mongodb');
 // ✅ Upload PDF
 router.post('/pdf', auth, upload.single('pdf'), async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ message: 'No file uploaded' });
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
 
     const bucket = getGridFS();
     const { clientId, registrationId } = req.body;
 
     const uploadStream = bucket.openUploadStream(req.file.originalname, {
       contentType: req.file.mimetype,
-      metadata: { uploadedBy: req.user.id, clientId, registrationId }
+      metadata: {
+        uploadedBy: req.user.id,
+        clientId: clientId || null,
+        registrationId: registrationId || null,
+        uploadDate: new Date()
+      }
     });
 
     uploadStream.end(req.file.buffer);
@@ -27,21 +34,28 @@ router.post('/pdf', auth, upload.single('pdf'), async (req, res) => {
         contentType: req.file.mimetype,
         size: req.file.size,
         uploadedBy: req.user.id,
-        clientId,
-        registrationId,
+        clientId: clientId || null,
+        registrationId: registrationId || null,
         fileId: uploadStream.id
       });
+
       await pdfDoc.save();
 
       res.json({
-        message: 'PDF uploaded',
+        message: 'PDF uploaded successfully',
+        fileId: uploadStream.id,
         url: `${req.protocol}://${req.get('host')}/api/pdfs/${uploadStream.id}`,
-        fileId: uploadStream.id
+        filename: req.file.originalname
       });
     });
 
-    uploadStream.on('error', () => res.status(500).json({ message: 'Upload failed' }));
+    uploadStream.on('error', (error) => {
+      console.error('Upload error:', error);
+      res.status(500).json({ message: 'Upload failed' });
+    });
+
   } catch (error) {
+    console.error('Upload error:', error);
     res.status(500).json({ message: error.message });
   }
 });
@@ -50,16 +64,27 @@ router.post('/pdf', auth, upload.single('pdf'), async (req, res) => {
 router.get('/:id', auth, async (req, res) => {
   try {
     const fileId = new ObjectId(req.params.id);
+    
     const pdfDoc = await PDF.findOne({ fileId });
-    if (!pdfDoc) return res.status(404).json({ message: 'PDF not found' });
+    if (!pdfDoc) {
+      return res.status(404).json({ message: 'PDF not found' });
+    }
 
     const bucket = getGridFS();
     const downloadStream = bucket.openDownloadStream(fileId);
 
     res.setHeader('Content-Type', pdfDoc.contentType);
     res.setHeader('Content-Disposition', `inline; filename="${pdfDoc.filename}"`);
+    
     downloadStream.pipe(res);
+
+    downloadStream.on('error', (error) => {
+      console.error('Download error:', error);
+      res.status(500).json({ message: 'Error downloading file' });
+    });
+
   } catch (error) {
+    console.error('PDF fetch error:', error);
     res.status(500).json({ message: error.message });
   }
 });
