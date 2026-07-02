@@ -12,7 +12,6 @@ import RegistrationDetails from "../pages/RegistrationDetails";
 import ContractDetails from "../pages/ContractDetails";
 import AuditLog from '../pages/AuditLog';
 
-
 // ✅ Import actual folder pages
 import RegistrationsPage from "../pages/folders/RegistrationsPage";
 import ContractsPage from "../pages/folders/ContractsPage";
@@ -42,17 +41,23 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
 
-      
-<Route path="/clients" element={
-  <ProtectedRoute>
-    <Clients />
-  </ProtectedRoute>
-} />
+      <Route path="/clients" element={
+        <ProtectedRoute>
+          <Clients />
+        </ProtectedRoute>
+      } />
 
       {/* ✅ Users - Admin only */}
       <Route path="/users" element={
         <ProtectedRoute requiredRole="admin">
           <Users />
+        </ProtectedRoute>
+      } />
+
+      {/* ✅ Audit Log - Admin only */}
+      <Route path="/audit" element={
+        <ProtectedRoute requiredRole="admin">
+          <AuditLog />
         </ProtectedRoute>
       } />
 
@@ -150,12 +155,6 @@ const AppRoutes = () => {
           </ProtectedFolder>
         </ProtectedRoute>
       } />
-
-      <Route path="/audit" element={
-  <ProtectedRoute requiredRole="admin">
-    <AuditLog />
-  </ProtectedRoute>
-} />
     </Routes>
   );
 };
