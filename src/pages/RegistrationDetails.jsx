@@ -31,31 +31,26 @@ function RegistrationDetails() {
   }, [registrationId]);
 
   // ✅ View PDF with token
-  const viewPDF = async (pdfUrl) => {
-    if (!pdfUrl) return;
-    
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        alert('Please login again');
-        return;
-      }
-      
-      const response = await axios.get(pdfUrl, {
-        headers: { 'Authorization': `Bearer ${token}` },
-        responseType: 'blob'
-      });
-      
-      const blob = new Blob([response.data], { type: 'application/pdf' });
-      const url = window.URL.createObjectURL(blob);
-      window.open(url, '_blank');
-      setTimeout(() => window.URL.revokeObjectURL(url), 1000);
-    } catch (error) {
-      console.error('❌ Error viewing PDF:', error);
-      alert('Failed to view PDF');
-    }
-  };
+ const viewPDF = async (pdfUrl) => {
+  if (!pdfUrl) return;
+  
+  // ✅ PDF URL already https:// se hai, seedha use karo
+  const token = localStorage.getItem('token');
+  if (!token) {
+    alert('Please login again');
+    return;
+  }
 
+  try {
+    const response = await axios.get(pdfUrl, {  // ✅ Seedha pdfUrl use karo
+      headers: { 'Authorization': `Bearer ${token}` },
+      responseType: 'blob'
+    });
+    // ... rest
+  } catch (error) {
+    console.error('Error viewing PDF:', error);
+  }
+};
   // ✅ Download PDF with token
   const downloadPDF = async (pdfUrl) => {
     if (!pdfUrl) return;
