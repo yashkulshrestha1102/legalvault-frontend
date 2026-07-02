@@ -30,26 +30,16 @@ function RegistrationDetails() {
     fetchRegistration();
   }, [registrationId]);
 
-  // ✅ View PDF - Direct API call
-const viewPDF = (pdfUrl) => {
-  if (!pdfUrl) return;
-  window.open(pdfUrl, '_blank');
-};
+  // ✅ View PDF
+  const viewPDF = (pdfUrl) => {
+    if (!pdfUrl) return;
+    window.open(pdfUrl, '_blank');
+  };
 
-const downloadPDF = (pdfUrl) => {
-  if (!pdfUrl) return;
-  window.open(pdfUrl, '_blank');
-};
-
-
-
-
-    // ✅ Check if URL already has raw/upload, if yes use it directly
-    if (url.includes('/upload/')) {
-      url = url.replace('/upload/', '/upload/fl_attachment:/');
-    }
-    console.log('⬇️ Download PDF URL:', url);
-    window.open(url, '_blank');
+  // ✅ Download PDF
+  const downloadPDF = (pdfUrl) => {
+    if (!pdfUrl) return;
+    window.open(pdfUrl, '_blank');
   };
 
   if (loading) {
@@ -134,14 +124,12 @@ const downloadPDF = (pdfUrl) => {
                     {registration.pdf.split('/').pop() || 'PDF Document'}
                   </p>
                   <div className="flex gap-3 flex-wrap">
-                    {/* ✅ View - Direct raw URL */}
                     <button
                       onClick={() => viewPDF(registration.pdf)}
                       className="glass-card px-4 py-2 text-cyan-400 hover:scale-105 transition"
                     >
                       📄 View PDF
                     </button>
-                    {/* ✅ Download - raw URL with fl_attachment */}
                     <button
                       onClick={() => downloadPDF(registration.pdf)}
                       className="glass-card px-4 py-2 text-green-400 hover:scale-105 transition"
@@ -159,6 +147,6 @@ const downloadPDF = (pdfUrl) => {
       </div>
     </MainLayout>
   );
-
+}
 
 export default RegistrationDetails;
