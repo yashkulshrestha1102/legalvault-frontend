@@ -6,6 +6,9 @@ import {
   FaUserCircle,
 } from "react-icons/fa";
 
+import { FaHistory } from "react-icons/fa";
+
+
 import {
   NavLink,
   useNavigate,
@@ -81,6 +84,14 @@ function Sidebar() {
   }
 
   menuItems.push({ path: "/profile", label: "Profile", icon: <FaUserCircle /> });
+
+// ✅ Add this in menuItems array (after Users)
+if (role === 'admin') {
+  menuItems.push({ path: "/users", label: "Users", icon: <FaUsers /> });
+  // ✅ Add Audit Log (Admin only)
+  menuItems.push({ path: "/audit", label: "Audit Log", icon: <FaHistory /> }); // ✅ Add this
+}
+
 
   return (
     <>

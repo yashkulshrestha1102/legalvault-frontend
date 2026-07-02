@@ -49,6 +49,7 @@ app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/registrations', require('./routes/registrationRoutes'));
 app.use('/api/contracts', require('./routes/contractRoutes'));
 app.use('/api/pdfs', require('./routes/uploadGridFSRoutes'));
+app.use('/api/audit', require('./routes/auditRoutes'));
 
 // ✅ Health Check
 app.get('/health', (req, res) => {

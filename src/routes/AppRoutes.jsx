@@ -10,6 +10,8 @@ import SearchResults from "../pages/SearchResults";
 import Profile from "../pages/Profile";
 import RegistrationDetails from "../pages/RegistrationDetails";
 import ContractDetails from "../pages/ContractDetails";
+import AuditLog from '../pages/AuditLog';
+
 
 // ✅ Import actual folder pages
 import RegistrationsPage from "../pages/folders/RegistrationsPage";
@@ -148,6 +150,12 @@ const AppRoutes = () => {
           </ProtectedFolder>
         </ProtectedRoute>
       } />
+
+      <Route path="/audit" element={
+  <ProtectedRoute requiredRole="admin">
+    <AuditLog />
+  </ProtectedRoute>
+} />
     </Routes>
   );
 };
