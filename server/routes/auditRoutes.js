@@ -7,12 +7,11 @@ const AuditLog = require('../models/AuditLog');
 // ✅ Get all audit logs (Admin only)
 router.get('/', [auth, admin], async (req, res) => {
   try {
-    const { limit = 50, skip = 0, action, entity, user } = req.query;
+    const { limit = 50, skip = 0, action, entity } = req.query;
     
     const filter = {};
     if (action) filter.action = action;
     if (entity) filter.entity = entity;
-    if (user) filter['user.id'] = user;
 
     const logs = await AuditLog.find(filter)
       .sort({ timestamp: -1 })
@@ -31,6 +30,7 @@ router.get('/', [auth, admin], async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('Error fetching audit logs:', error);
     res.status(500).json({ message: error.message });
   }
 });
@@ -58,6 +58,7 @@ router.get('/stats', [auth, admin], async (req, res) => {
       actionsByEntity
     });
   } catch (error) {
+    console.error('Error fetching audit stats:', error);
     res.status(500).json({ message: error.message });
   }
 });

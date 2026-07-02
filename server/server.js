@@ -7,6 +7,8 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const connectDB = require('./config/db');
 const { initGridFS } = require('./config/gridfs');
+const auditLog = require('./middleware/audit');
+
 
 const app = express();
 
@@ -17,6 +19,10 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+
+
+app.use(auditLog); // ✅ Add this line
 
 // ✅ Rate Limiting
 const limiter = rateLimit({
