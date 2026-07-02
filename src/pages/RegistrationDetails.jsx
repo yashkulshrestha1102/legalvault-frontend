@@ -30,7 +30,7 @@ function RegistrationDetails() {
     fetchRegistration();
   }, [registrationId]);
 
-  // ✅ View PDF with token
+  // ✅ View PDF - Open in new tab using iframe
   const viewPDF = async (pdfUrl) => {
     if (!pdfUrl) return;
     
@@ -41,7 +41,6 @@ function RegistrationDetails() {
     }
 
     try {
-      // ✅ Force HTTPS URL
       let secureUrl = pdfUrl;
       if (secureUrl.startsWith('http://')) {
         secureUrl = secureUrl.replace('http://', 'https://');
@@ -55,15 +54,43 @@ function RegistrationDetails() {
       
       const blob = new Blob([response.data], { type: 'application/pdf' });
       const url = window.URL.createObjectURL(blob);
-      window.open(url, '_blank');
-      setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+      
+      // ✅ Open in new tab with iframe
+      const newWindow = window.open('', '_blank');
+      if (newWindow) {
+        newWindow.document.write(`
+          <html>
+            <head>
+              <title>PDF Viewer</title>
+              <style>
+                body { margin: 0; padding: 0; height: 100vh; overflow: hidden; }
+                iframe { width: 100%; height: 100%; border: none; }
+              </style>
+            </head>
+            <body>
+              <iframe src="${url}"></iframe>
+            </body>
+          </html>
+        `);
+        newWindow.document.close();
+      } else {
+        // Fallback: Agar popup blocked ho toh download karo
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${registration?.registrationName || 'document'}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+      
+      setTimeout(() => window.URL.revokeObjectURL(url), 10000);
     } catch (error) {
       console.error('❌ Error viewing PDF:', error);
-      alert('Failed to view PDF');
+      alert('Failed to view PDF. Please try downloading instead.');
     }
   };
 
-  // ✅ Download PDF with token
+  // ✅ Download PDF
   const downloadPDF = async (pdfUrl) => {
     if (!pdfUrl) return;
     
@@ -74,7 +101,6 @@ function RegistrationDetails() {
         return;
       }
       
-      // ✅ Force HTTPS URL
       let secureUrl = pdfUrl;
       if (secureUrl.startsWith('http://')) {
         secureUrl = secureUrl.replace('http://', 'https://');
@@ -90,7 +116,7 @@ function RegistrationDetails() {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = 'document.pdf';
+      link.download = `${registration?.registrationName || 'document'}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
