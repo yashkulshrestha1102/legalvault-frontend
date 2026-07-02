@@ -89,22 +89,7 @@ function ClientDetails() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  // ✅ View PDF using Google Docs Viewer
-  const viewPDF = (pdfUrl) => {
-    if (!pdfUrl) return;
-    const viewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(pdfUrl)}&embedded=true`;
-    window.open(viewerUrl, '_blank');
-  };
-
-  // ✅ Download PDF with fl_attachment flag
-  const downloadPDF = (pdfUrl) => {
-    if (!pdfUrl) return;
-    let downloadUrl = pdfUrl;
-    if (pdfUrl.includes('cloudinary.com')) {
-      downloadUrl = pdfUrl.replace('/upload/', '/upload/fl_attachment:/');
-    }
-    window.open(downloadUrl, '_blank');
-  };
+  
 
   // ✅ Upload PDF function
   const uploadPDF = async (file) => {
@@ -125,7 +110,21 @@ function ClientDetails() {
       return null;
     }
   };
+// ✅ View PDF - Direct raw URL open karo
+const viewPDF = (pdfUrl) => {
+  if (!pdfUrl) return;
+  window.open(pdfUrl, '_blank');
+};
 
+// ✅ Download PDF - raw URL mein fl_attachment flag add karo
+const downloadPDF = (pdfUrl) => {
+  if (!pdfUrl) return;
+  let url = pdfUrl;
+  if (url.includes('/upload/')) {
+    url = url.replace('/upload/', '/upload/fl_attachment:/');
+  }
+  window.open(url, '_blank');
+};
   // ✅ Save registration to backend
   const saveRegistration = async (registrationData) => {
     try {

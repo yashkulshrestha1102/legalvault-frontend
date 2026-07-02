@@ -30,39 +30,23 @@ function RegistrationDetails() {
     fetchRegistration();
   }, [registrationId]);
 
-  // ✅ Fix: Cloudinary URL ko viewable aur downloadable banayein
-  const getCloudinaryUrl = (pdfUrl, action) => {
-    if (!pdfUrl) return '';
-    
-    let url = pdfUrl;
-    
-    // Agar raw/upload hai toh upload karo
-    if (url.includes('raw/upload')) {
-      url = url.replace('/raw/upload/', '/upload/');
-    }
-    
-    // Download ke liye fl_attachment flag
-    if (action === 'download' && url.includes('/upload/')) {
-      url = url.replace('/upload/', '/upload/fl_attachment:/');
-    }
-    
-    return url;
-  };
-
-  // ✅ View PDF
+  // ✅ View PDF - Direct raw URL open karo
   const viewPDF = (pdfUrl) => {
     if (!pdfUrl) return;
-    const viewableUrl = getCloudinaryUrl(pdfUrl, 'view');
-    console.log('📄 View PDF URL:', viewableUrl);
-    window.open(viewableUrl, '_blank');
+    console.log('📄 View PDF URL:', pdfUrl);
+    window.open(pdfUrl, '_blank');
   };
 
-  // ✅ Download PDF
+  // ✅ Download PDF - raw URL mein fl_attachment flag add karo
   const downloadPDF = (pdfUrl) => {
     if (!pdfUrl) return;
-    const downloadUrl = getCloudinaryUrl(pdfUrl, 'download');
-    console.log('⬇️ Download PDF URL:', downloadUrl);
-    window.open(downloadUrl, '_blank');
+    let url = pdfUrl;
+    // Agar URL mein upload hai toh fl_attachment flag add karo
+    if (url.includes('/upload/')) {
+      url = url.replace('/upload/', '/upload/fl_attachment:/');
+    }
+    console.log('⬇️ Download PDF URL:', url);
+    window.open(url, '_blank');
   };
 
   if (loading) {
@@ -80,10 +64,7 @@ function RegistrationDetails() {
       <MainLayout>
         <div className="glass-card p-6">
           <p className="text-red-400">Registration Not Found</p>
-          <button
-            onClick={() => navigate(`/clients/${id}`)}
-            className="glass-card px-4 py-2 mt-4"
-          >
+          <button onClick={() => navigate(`/clients/${id}`)} className="glass-card px-4 py-2 mt-4">
             ← Back to Client
           </button>
         </div>
@@ -99,28 +80,21 @@ function RegistrationDetails() {
   };
 
   const statusColor = registration.endDate
-    ? getDaysLeft(registration.endDate) <= 0
-      ? 'text-red-400'
-      : getDaysLeft(registration.endDate) <= 30
-      ? 'text-yellow-400'
+    ? getDaysLeft(registration.endDate) <= 0 ? 'text-red-400'
+      : getDaysLeft(registration.endDate) <= 30 ? 'text-yellow-400'
       : 'text-green-400'
     : 'text-gray-400';
 
   const statusText = registration.endDate
-    ? getDaysLeft(registration.endDate) <= 0
-      ? 'Expired'
-      : getDaysLeft(registration.endDate) <= 30
-      ? 'Expiring Soon'
+    ? getDaysLeft(registration.endDate) <= 0 ? 'Expired'
+      : getDaysLeft(registration.endDate) <= 30 ? 'Expiring Soon'
       : 'Valid'
     : 'N/A';
 
   return (
     <MainLayout>
       <div className="p-6">
-        <button
-          onClick={() => navigate(`/clients/${id}`)}
-          className="glass-card px-4 py-2 mb-6 text-sm hover:scale-105 transition"
-        >
+        <button onClick={() => navigate(`/clients/${id}`)} className="glass-card px-4 py-2 mb-6 text-sm hover:scale-105 transition">
           ← Back to Client
         </button>
 
@@ -132,22 +106,18 @@ function RegistrationDetails() {
               <p className="text-gray-400 text-sm">Type</p>
               <h3 className="font-semibold mt-1">{registration.category || 'N/A'}</h3>
             </div>
-
             <div className="glass-card p-4">
               <p className="text-gray-400 text-sm">Registration Name</p>
               <h3 className="font-semibold mt-1">{registration.registrationName}</h3>
             </div>
-
             <div className="glass-card p-4">
               <p className="text-gray-400 text-sm">Start Date</p>
               <h3 className="font-semibold mt-1">{registration.startDate || 'N/A'}</h3>
             </div>
-
             <div className="glass-card p-4">
               <p className="text-gray-400 text-sm">End Date</p>
               <h3 className="font-semibold mt-1">{registration.endDate || 'N/A'}</h3>
             </div>
-
             <div className="glass-card p-4">
               <p className="text-gray-400 text-sm">Status</p>
               <h3 className={`font-semibold mt-1 ${statusColor}`}>{statusText}</h3>
