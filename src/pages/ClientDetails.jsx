@@ -89,16 +89,14 @@ function ClientDetails() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-  
-
-  // ✅ Upload PDF function
+  // ✅ Upload PDF to GridFS
   const uploadPDF = async (file) => {
     try {
       const token = localStorage.getItem('token');
       const formData = new FormData();
       formData.append('pdf', file);
       
-      const response = await axios.post(`${API_URL}/api/upload/pdf`, formData, {
+      const response = await axios.post(`${API_URL}/api/pdfs/pdf`, formData, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'multipart/form-data'
@@ -111,20 +109,17 @@ function ClientDetails() {
     }
   };
 
+  // ✅ View PDF
+  const viewPDF = (pdfUrl) => {
+    if (!pdfUrl) return;
+    window.open(pdfUrl, '_blank');
+  };
 
-// PDF Directly to mongo
-
-const viewPDF = (pdfUrl) => {
-  if (!pdfUrl) return;
-  window.open(pdfUrl, '_blank');
-};
-
-const downloadPDF = (pdfUrl) => {
-  if (!pdfUrl) return;
-  window.open(pdfUrl, '_blank');
-};
-
-
+  // ✅ Download PDF
+  const downloadPDF = (pdfUrl) => {
+    if (!pdfUrl) return;
+    window.open(pdfUrl, '_blank');
+  };
 
   // ✅ Save registration to backend
   const saveRegistration = async (registrationData) => {
@@ -276,10 +271,7 @@ const downloadPDF = (pdfUrl) => {
       <MainLayout>
         <div className="glass-card p-6">
           <p className="text-red-400">Client Not Found</p>
-          <button
-            onClick={() => navigate('/clients')}
-            className="glass-card px-4 py-2 mt-4"
-          >
+          <button onClick={() => navigate('/clients')} className="glass-card px-4 py-2 mt-4">
             ← Back to Clients
           </button>
         </div>
@@ -321,11 +313,7 @@ const downloadPDF = (pdfUrl) => {
         {accessibleFolders.length > 0 && (
           <div className="grid md:grid-cols-4 gap-5">
             {accessibleFolders.map((folder) => (
-              <div
-                key={folder.value}
-                onClick={() => setSelectedFolder(folder.value)}
-                className="glass-card p-6 cursor-pointer hover:scale-105 transition-all duration-300"
-              >
+              <div key={folder.value} onClick={() => setSelectedFolder(folder.value)} className="glass-card p-6 cursor-pointer hover:scale-105 transition-all duration-300">
                 <div className="text-5xl mb-4">📁</div>
                 <h3 className="font-semibold">{folder.label}</h3>
               </div>
@@ -337,13 +325,7 @@ const downloadPDF = (pdfUrl) => {
         {selectedFolder === "registrations" && (
           <div className="glass p-6">
             <div className="flex justify-between items-center mb-6">
-              <button
-                onClick={() => {
-                  setEditRegistration(null);
-                  setOpenModal(true);
-                }}
-                className="glass-card px-5 py-3 blue-glow"
-              >
+              <button onClick={() => { setEditRegistration(null); setOpenModal(true); }} className="glass-card px-5 py-3 blue-glow">
                 + Add Registration
               </button>
             </div>
@@ -386,41 +368,16 @@ const downloadPDF = (pdfUrl) => {
                         <td className="p-4">
                           {item.pdf ? (
                             <div className="flex gap-2">
-                              <button
-                                onClick={() => viewPDF(item.pdf)}
-                                className="text-cyan-400 hover:underline text-sm"
-                              >
-                                📄 View
-                              </button>
-                              <button
-                                onClick={() => downloadPDF(item.pdf)}
-                                className="text-green-400 hover:underline text-sm"
-                              >
-                                ⬇️ Download
-                              </button>
+                              <button onClick={() => viewPDF(item.pdf)} className="text-cyan-400 hover:underline text-sm">📄 View</button>
+                              <button onClick={() => downloadPDF(item.pdf)} className="text-green-400 hover:underline text-sm">⬇️ Download</button>
                             </div>
                           ) : "-"}
                         </td>
                         <td className="p-4">
                           <div className="flex gap-3">
-                            <button
-                              onClick={() => navigate(`/clients/${id}/registration/${item._id || item.id}`)}
-                              className="text-cyan-400"
-                            >
-                              View
-                            </button>
-                            <button
-                              onClick={() => handleEdit(item)}
-                              className="text-yellow-400"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              onClick={() => deleteRegistration(item._id || item.id)}
-                              className="text-red-400"
-                            >
-                              Delete
-                            </button>
+                            <button onClick={() => navigate(`/clients/${id}/registration/${item._id || item.id}`)} className="text-cyan-400">View</button>
+                            <button onClick={() => handleEdit(item)} className="text-yellow-400">Edit</button>
+                            <button onClick={() => deleteRegistration(item._id || item.id)} className="text-red-400">Delete</button>
                           </div>
                         </td>
                       </tr>
@@ -436,13 +393,7 @@ const downloadPDF = (pdfUrl) => {
         {selectedFolder === "contracts" && (
           <div className="glass p-6">
             <div className="flex justify-between items-center mb-6">
-              <button
-                onClick={() => {
-                  setEditContract(null);
-                  setOpenContractModal(true);
-                }}
-                className="glass-card px-5 py-3 blue-glow"
-              >
+              <button onClick={() => { setEditContract(null); setOpenContractModal(true); }} className="glass-card px-5 py-3 blue-glow">
                 + Add Contract
               </button>
             </div>
@@ -479,41 +430,16 @@ const downloadPDF = (pdfUrl) => {
                         <td className="p-4">
                           {item.pdf ? (
                             <div className="flex gap-2">
-                              <button
-                                onClick={() => viewPDF(item.pdf)}
-                                className="text-cyan-400 hover:underline text-sm"
-                              >
-                                📄 View
-                              </button>
-                              <button
-                                onClick={() => downloadPDF(item.pdf)}
-                                className="text-green-400 hover:underline text-sm"
-                              >
-                                ⬇️ Download
-                              </button>
+                              <button onClick={() => viewPDF(item.pdf)} className="text-cyan-400 hover:underline text-sm">📄 View</button>
+                              <button onClick={() => downloadPDF(item.pdf)} className="text-green-400 hover:underline text-sm">⬇️ Download</button>
                             </div>
                           ) : "-"}
                         </td>
                         <td className="p-4">
                           <div className="flex gap-3">
-                            <button
-                              className="text-cyan-400"
-                              onClick={() => navigate(`/clients/${id}/contract/${item._id || item.id}`)}
-                            >
-                              View
-                            </button>
-                            <button
-                              onClick={() => handleEditContract(item)}
-                              className="text-yellow-400"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              onClick={() => deleteContract(item._id || item.id)}
-                              className="text-red-400"
-                            >
-                              Delete
-                            </button>
+                            <button className="text-cyan-400" onClick={() => navigate(`/clients/${id}/contract/${item._id || item.id}`)}>View</button>
+                            <button onClick={() => handleEditContract(item)} className="text-yellow-400">Edit</button>
+                            <button onClick={() => deleteContract(item._id || item.id)} className="text-red-400">Delete</button>
                           </div>
                         </td>
                       </tr>
@@ -528,20 +454,14 @@ const downloadPDF = (pdfUrl) => {
 
       <AddRegistrationModal
         open={openModal}
-        onClose={() => {
-          setOpenModal(false);
-          setEditRegistration(null);
-        }}
+        onClose={() => { setOpenModal(false); setEditRegistration(null); }}
         onSave={saveRegistration}
         editData={editRegistration}
       />
 
       <AddContractModal
         open={openContractModal}
-        onClose={() => {
-          setOpenContractModal(false);
-          setEditContract(null);
-        }}
+        onClose={() => { setOpenContractModal(false); setEditContract(null); }}
         onSave={saveContract}
         editData={editContract}
       />
