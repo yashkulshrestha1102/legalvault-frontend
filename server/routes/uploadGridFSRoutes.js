@@ -43,9 +43,14 @@ router.post('/pdf', auth, upload.single('pdf'), async (req, res) => {
 
       await pdfDoc.save();
 
+      // ✅ FORCE HTTPS URL
+      const host = req.get('host');
+      const protocol = 'https'; // ✅ Always use HTTPS
+      const url = `${protocol}://${host}/api/pdfs/${uploadStream.id}`;
+
       res.json({
         message: 'PDF uploaded successfully',
-        url: `${req.protocol}://${req.get('host')}/api/pdfs/${uploadStream.id}`,
+        url: url,
         fileId: uploadStream.id
       });
     });

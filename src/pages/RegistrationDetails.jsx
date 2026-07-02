@@ -31,26 +31,38 @@ function RegistrationDetails() {
   }, [registrationId]);
 
   // ✅ View PDF with token
- const viewPDF = async (pdfUrl) => {
-  if (!pdfUrl) return;
-  
-  // ✅ PDF URL already https:// se hai, seedha use karo
-  const token = localStorage.getItem('token');
-  if (!token) {
-    alert('Please login again');
-    return;
-  }
+  const viewPDF = async (pdfUrl) => {
+    if (!pdfUrl) return;
+    
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('Please login again');
+      return;
+    }
 
-  try {
-    const response = await axios.get(pdfUrl, {  // ✅ Seedha pdfUrl use karo
-      headers: { 'Authorization': `Bearer ${token}` },
-      responseType: 'blob'
-    });
-    // ... rest
-  } catch (error) {
-    console.error('Error viewing PDF:', error);
-  }
-};
+    try {
+      // ✅ Force HTTPS URL
+      let secureUrl = pdfUrl;
+      if (secureUrl.startsWith('http://')) {
+        secureUrl = secureUrl.replace('http://', 'https://');
+      }
+      console.log('📄 Viewing PDF:', secureUrl);
+
+      const response = await axios.get(secureUrl, {
+        headers: { 'Authorization': `Bearer ${token}` },
+        responseType: 'blob'
+      });
+      
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+      console.error('❌ Error viewing PDF:', error);
+      alert('Failed to view PDF');
+    }
+  };
+
   // ✅ Download PDF with token
   const downloadPDF = async (pdfUrl) => {
     if (!pdfUrl) return;
@@ -62,7 +74,14 @@ function RegistrationDetails() {
         return;
       }
       
-      const response = await axios.get(pdfUrl, {
+      // ✅ Force HTTPS URL
+      let secureUrl = pdfUrl;
+      if (secureUrl.startsWith('http://')) {
+        secureUrl = secureUrl.replace('http://', 'https://');
+      }
+      console.log('⬇️ Downloading PDF:', secureUrl);
+
+      const response = await axios.get(secureUrl, {
         headers: { 'Authorization': `Bearer ${token}` },
         responseType: 'blob'
       });
