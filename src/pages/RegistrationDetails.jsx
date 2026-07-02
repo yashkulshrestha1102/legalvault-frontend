@@ -30,18 +30,18 @@ function RegistrationDetails() {
     fetchRegistration();
   }, [registrationId]);
 
-  // ✅ View PDF - Direct raw URL open karo
+  // ✅ View PDF - Raw URL as it is
   const viewPDF = (pdfUrl) => {
     if (!pdfUrl) return;
     console.log('📄 View PDF URL:', pdfUrl);
     window.open(pdfUrl, '_blank');
   };
 
-  // ✅ Download PDF - raw URL mein fl_attachment flag add karo
+  // ✅ Download PDF - Raw URL mein fl_attachment flag add karo
   const downloadPDF = (pdfUrl) => {
     if (!pdfUrl) return;
     let url = pdfUrl;
-    // Agar URL mein upload hai toh fl_attachment flag add karo
+    // ✅ Check if URL already has raw/upload, if yes use it directly
     if (url.includes('/upload/')) {
       url = url.replace('/upload/', '/upload/fl_attachment:/');
     }
@@ -131,12 +131,14 @@ function RegistrationDetails() {
                     {registration.pdf.split('/').pop() || 'PDF Document'}
                   </p>
                   <div className="flex gap-3 flex-wrap">
+                    {/* ✅ View - Direct raw URL */}
                     <button
                       onClick={() => viewPDF(registration.pdf)}
                       className="glass-card px-4 py-2 text-cyan-400 hover:scale-105 transition"
                     >
                       📄 View PDF
                     </button>
+                    {/* ✅ Download - raw URL with fl_attachment */}
                     <button
                       onClick={() => downloadPDF(registration.pdf)}
                       className="glass-card px-4 py-2 text-green-400 hover:scale-105 transition"

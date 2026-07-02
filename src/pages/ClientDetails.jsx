@@ -110,13 +110,13 @@ function ClientDetails() {
       return null;
     }
   };
-// ✅ View PDF - Direct raw URL open karo
+// ✅ View PDF - Raw URL as it is
 const viewPDF = (pdfUrl) => {
   if (!pdfUrl) return;
   window.open(pdfUrl, '_blank');
 };
 
-// ✅ Download PDF - raw URL mein fl_attachment flag add karo
+// ✅ Download PDF - Raw URL with fl_attachment
 const downloadPDF = (pdfUrl) => {
   if (!pdfUrl) return;
   let url = pdfUrl;
