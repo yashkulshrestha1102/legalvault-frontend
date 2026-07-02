@@ -30,16 +30,61 @@ function RegistrationDetails() {
     fetchRegistration();
   }, [registrationId]);
 
-  // ✅ View PDF
-  const viewPDF = (pdfUrl) => {
+  // ✅ View PDF with token
+  const viewPDF = async (pdfUrl) => {
     if (!pdfUrl) return;
-    window.open(pdfUrl, '_blank');
+    
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Please login again');
+        return;
+      }
+      
+      const response = await axios.get(pdfUrl, {
+        headers: { 'Authorization': `Bearer ${token}` },
+        responseType: 'blob'
+      });
+      
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+      console.error('❌ Error viewing PDF:', error);
+      alert('Failed to view PDF');
+    }
   };
 
-  // ✅ Download PDF
-  const downloadPDF = (pdfUrl) => {
+  // ✅ Download PDF with token
+  const downloadPDF = async (pdfUrl) => {
     if (!pdfUrl) return;
-    window.open(pdfUrl, '_blank');
+    
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Please login again');
+        return;
+      }
+      
+      const response = await axios.get(pdfUrl, {
+        headers: { 'Authorization': `Bearer ${token}` },
+        responseType: 'blob'
+      });
+      
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'document.pdf';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('❌ Error downloading PDF:', error);
+      alert('Failed to download PDF');
+    }
   };
 
   if (loading) {
