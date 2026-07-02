@@ -31,101 +31,59 @@ function RegistrationDetails() {
   }, [registrationId]);
 
   // ✅ View PDF - Open in new tab using iframe
-  const viewPDF = async (pdfUrl) => {
-    if (!pdfUrl) return;
-    
+  // ✅ View PDF - Direct URL with token as query param
+// ✅ View PDF
+const viewPDF = (pdfUrl) => {
+  if (!pdfUrl) return;
+  const token = localStorage.getItem('token');
+  if (!token) {
+    alert('Please login again');
+    return;
+  }
+  let secureUrl = pdfUrl;
+  if (secureUrl.startsWith('http://')) {
+    secureUrl = secureUrl.replace('http://', 'https://');
+  }
+  // ✅ Token as query param
+  window.open(`${secureUrl}?token=${token}`, '_blank');
+};
+
+// ✅ Download PDF
+const downloadPDF = async (pdfUrl) => {
+  if (!pdfUrl) return;
+  try {
     const token = localStorage.getItem('token');
     if (!token) {
       alert('Please login again');
       return;
     }
-
-    try {
-      let secureUrl = pdfUrl;
-      if (secureUrl.startsWith('http://')) {
-        secureUrl = secureUrl.replace('http://', 'https://');
-      }
-      console.log('📄 Viewing PDF:', secureUrl);
-
-      const response = await axios.get(secureUrl, {
-        headers: { 'Authorization': `Bearer ${token}` },
-        responseType: 'blob'
-      });
-      
-      const blob = new Blob([response.data], { type: 'application/pdf' });
-      const url = window.URL.createObjectURL(blob);
-      
-      // ✅ Open in new tab with iframe
-      const newWindow = window.open('', '_blank');
-      if (newWindow) {
-        newWindow.document.write(`
-          <html>
-            <head>
-              <title>PDF Viewer</title>
-              <style>
-                body { margin: 0; padding: 0; height: 100vh; overflow: hidden; }
-                iframe { width: 100%; height: 100%; border: none; }
-              </style>
-            </head>
-            <body>
-              <iframe src="${url}"></iframe>
-            </body>
-          </html>
-        `);
-        newWindow.document.close();
-      } else {
-        // Fallback: Agar popup blocked ho toh download karo
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `${registration?.registrationName || 'document'}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      }
-      
-      setTimeout(() => window.URL.revokeObjectURL(url), 10000);
-    } catch (error) {
-      console.error('❌ Error viewing PDF:', error);
-      alert('Failed to view PDF. Please try downloading instead.');
+    let secureUrl = pdfUrl;
+    if (secureUrl.startsWith('http://')) {
+      secureUrl = secureUrl.replace('http://', 'https://');
     }
-  };
+    // ✅ Token as query param
+    const response = await axios.get(`${secureUrl}?token=${token}`, {
+      responseType: 'blob'
+    });
+    const blob = new Blob([response.data], { type: 'application/pdf' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'document.pdf';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error('Download error:', error);
+    alert('Failed to download PDF');
+  }
+};
+// *************************
 
-  // ✅ Download PDF
-  const downloadPDF = async (pdfUrl) => {
-    if (!pdfUrl) return;
-    
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        alert('Please login again');
-        return;
-      }
-      
-      let secureUrl = pdfUrl;
-      if (secureUrl.startsWith('http://')) {
-        secureUrl = secureUrl.replace('http://', 'https://');
-      }
-      console.log('⬇️ Downloading PDF:', secureUrl);
 
-      const response = await axios.get(secureUrl, {
-        headers: { 'Authorization': `Bearer ${token}` },
-        responseType: 'blob'
-      });
-      
-      const blob = new Blob([response.data], { type: 'application/pdf' });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${registration?.registrationName || 'document'}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('❌ Error downloading PDF:', error);
-      alert('Failed to download PDF');
-    }
-  };
+
+
 
   if (loading) {
     return (
