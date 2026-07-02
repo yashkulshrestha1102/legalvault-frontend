@@ -5,6 +5,7 @@ const upload = require('../middleware/uploadGridFS');
 const { getGridFS } = require('../config/gridfs');
 const PDF = require('../models/PDF');
 const { ObjectId } = require('mongodb');
+const jwt = require('jsonwebtoken');
 
 // ✅ Upload PDF
 router.post('/pdf', auth, upload.single('pdf'), async (req, res) => {
@@ -43,9 +44,8 @@ router.post('/pdf', auth, upload.single('pdf'), async (req, res) => {
 
       await pdfDoc.save();
 
-      // ✅ FORCE HTTPS URL
       const host = req.get('host');
-      const protocol = 'https'; // ✅ Always use HTTPS
+      const protocol = 'https';
       const url = `${protocol}://${host}/api/pdfs/${uploadStream.id}`;
 
       res.json({
@@ -66,11 +66,31 @@ router.post('/pdf', auth, upload.single('pdf'), async (req, res) => {
   }
 });
 
-// ✅ Get PDF by ID
-router.get('/:id', auth, async (req, res) => {
+// ✅ Get PDF by ID (with query param token support)
+router.get('/:id', async (req, res) => {
   try {
-    const fileId = new ObjectId(req.params.id);
+    // ✅ Check token from header or query param
+    let token = req.header('Authorization')?.replace('Bearer ', '');
+    if (!token) {
+      token = req.query.token; // ✅ Query param se token le sakte hain
+    }
     
+    console.log('🔑 PDF Access - Token received:', token ? '✅ Yes' : '❌ No');
+
+    if (!token) {
+      return res.status(401).json({ message: 'Access Denied. No token provided.' });
+    }
+
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      req.user = decoded;
+      console.log('✅ PDF Access - User verified:', decoded.email);
+    } catch (error) {
+      console.error('❌ PDF Access - Token verification failed:', error.message);
+      return res.status(401).json({ message: 'Invalid token.' });
+    }
+
+    const fileId = new ObjectId(req.params.id);
     const pdfDoc = await PDF.findOne({ fileId });
     if (!pdfDoc) {
       return res.status(404).json({ message: 'PDF not found' });
