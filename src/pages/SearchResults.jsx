@@ -1,5 +1,6 @@
 import MainLayout from "../layouts/MainLayout";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import { useState } from "react";
 
 function SearchResults() {
   const location = useLocation();

@@ -17,12 +17,16 @@ function AddContractModal({
     endDate: "",
     status: "Active",
     pdf: "",
+    pdfFile: null,
     pdfUrl: "",
   });
 
   useEffect(() => {
     if (editData) {
-      setFormData(editData);
+      setFormData({
+        ...editData,
+        pdfFile: null,
+      });
     } else {
       setFormData({
         contractType: "",
@@ -34,6 +38,7 @@ function AddContractModal({
         endDate: "",
         status: "Active",
         pdf: "",
+        pdfFile: null,
         pdfUrl: "",
       });
     }
@@ -135,6 +140,7 @@ function AddContractModal({
       endDate: "",
       status: "Active",
       pdf: "",
+      pdfFile: null,
       pdfUrl: "",
     });
 
@@ -284,6 +290,7 @@ function AddContractModal({
                 setFormData((prev) => ({
                   ...prev,
                   pdf: file.name,
+                  pdfFile: file,
                   pdfUrl: reader.result,
                 }));
               };

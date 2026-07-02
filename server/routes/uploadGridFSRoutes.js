@@ -9,6 +9,8 @@ const { ObjectId } = require('mongodb');
 // ✅ Upload PDF
 router.post('/pdf', auth, upload.single('pdf'), async (req, res) => {
   try {
+    console.log('📥 Upload request received');
+    
     if (!req.file) {
       return res.status(400).json({ message: 'No file uploaded' });
     }
@@ -43,9 +45,8 @@ router.post('/pdf', auth, upload.single('pdf'), async (req, res) => {
 
       res.json({
         message: 'PDF uploaded successfully',
-        fileId: uploadStream.id,
         url: `${req.protocol}://${req.get('host')}/api/pdfs/${uploadStream.id}`,
-        filename: req.file.originalname
+        fileId: uploadStream.id
       });
     });
 
