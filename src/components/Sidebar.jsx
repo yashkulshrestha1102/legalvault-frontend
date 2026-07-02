@@ -17,17 +17,6 @@ import { useContext, useEffect, useState } from "react";
 import AuthContext from '../context/AuthContext';
 import { SidebarContext } from "../context/SidebarContext";
 
-const ALL_FOLDERS = [
-  { id: 'registrations', label: 'Registrations / Certifications', path: '/registrations' },
-  { id: 'contracts', label: 'Contracts', path: '/contracts' },
-  { id: 'policies', label: 'Policies', path: '/policies' },
-  { id: 'corporate-secretariat', label: 'Corporate Secretariat', path: '/corporate-secretariat' },
-  { id: 'hr', label: 'HR', path: '/hr' },
-  { id: 'gst', label: 'GST', path: '/gst' },
-  { id: 'income-tax', label: 'Income Tax', path: '/income-tax' },
-  { id: 'financials', label: 'Financials', path: '/financials' }
-];
-
 function Sidebar() {
   const { user: contextUser, logout } = useContext(AuthContext);
   const { collapsed, toggleSidebar, mobileOpen, setMobileOpen } = useContext(SidebarContext);
@@ -74,13 +63,8 @@ function Sidebar() {
   }, [location.pathname]);
 
   const role = user?.role || 'user';
-  const permissions = user?.folderPermissions || [];
 
-  const accessibleFolders = ALL_FOLDERS.filter(f => 
-    role === 'admin' || permissions.includes(f.id)
-  );
-
-  // ✅ Unique menu items with unique IDs
+  // ✅ Unique menu items with unique IDs (Folders section hata diya)
   const menuItems = [
     { id: 'dashboard', path: "/", label: "Dashboard", icon: <FaTachometerAlt /> },
     { id: 'clients', path: "/clients", label: "Clients", icon: <FaUsers /> },
@@ -158,25 +142,6 @@ function Sidebar() {
               {!collapsed && <span className="font-medium">{item.label}</span>}
             </NavLink>
           ))}
-
-          {accessibleFolders.length > 0 && !collapsed && (
-            <div className="mt-4 pt-4 border-t border-white/10">
-              <p className="text-xs text-gray-400 uppercase tracking-wider mb-2">Folders</p>
-              {accessibleFolders.map((folder) => (
-                <NavLink
-                  key={folder.id}
-                  to={folder.path}
-                  onClick={closeMobileSidebar}
-                  className={({ isActive }) => `
-                    flex items-center gap-3 px-4 py-2 rounded-xl transition-all duration-300 text-sm
-                    ${isActive ? "glass-card border border-cyan-400/20 text-white" : "hover:bg-slate-800 text-gray-400"}
-                  `}
-                >
-                  <span>{folder.label}</span>
-                </NavLink>
-              ))}
-            </div>
-          )}
         </div>
 
         <div className="mt-auto">
