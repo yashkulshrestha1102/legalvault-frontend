@@ -31,17 +31,31 @@ function RegistrationDetails() {
   }, [registrationId]);
 
   // ✅ View PDF - Direct URL with token as query param
-  const viewPDF = (pdfUrl) => {
-    if (!pdfUrl) return;
-    const token = localStorage.getItem('token');
-    if (!token) {
-      alert('Please login again');
-      return;
-    }
-    const finalUrl = `${pdfUrl}?token=${token}`;
-    console.log('📄 View PDF - Final URL:', finalUrl);
-    window.open(finalUrl, '_blank');
-  };
+ // ✅ View PDF - Direct URL with token
+const viewPDF = (pdfUrl) => {
+  if (!pdfUrl) return;
+  const token = localStorage.getItem('token');
+  if (!token) {
+    alert('Please login again');
+    return;
+  }
+  const finalUrl = `${pdfUrl}?token=${token}`;
+  console.log('📄 View PDF - Final URL:', finalUrl);
+  
+  // ✅ New tab me open karo
+  const newWindow = window.open(finalUrl, '_blank');
+  
+  // ✅ Agar popup blocked hai toh link create karo
+  if (!newWindow) {
+    const link = document.createElement('a');
+    link.href = finalUrl;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+};
 
   // ✅ Download PDF - Direct URL with token as query param
   const downloadPDF = async (pdfUrl) => {
