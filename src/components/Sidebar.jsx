@@ -22,14 +22,6 @@ function Sidebar() {
   const { collapsed, toggleSidebar, mobileOpen, setMobileOpen } = useContext(SidebarContext);
 
   const [user, setUser] = useState(contextUser);
-  const [currentTime, setCurrentTime] = useState(new Date());
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
 
   useEffect(() => {
     if (contextUser) {
@@ -77,18 +69,6 @@ function Sidebar() {
 
   menuItems.push({ id: 'profile', path: "/profile", label: "Profile", icon: <FaUserCircle /> });
 
-  const formattedDate = currentTime.toLocaleDateString('en-US', {
-    month: '2-digit',
-    day: '2-digit',
-    year: 'numeric'
-  });
-  const formattedTime = currentTime.toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: true
-  });
-
   return (
     <>
       <div className={`
@@ -97,7 +77,7 @@ function Sidebar() {
         z-50 glass m-4 p-5 min-h-[calc(100vh-32px)] flex flex-col transition-all duration-500 ease-in-out
         ${collapsed ? "w-24" : "w-80"}
       `}>
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-10">
           {!collapsed && (
             <div>
               <h1 className="text-4xl font-black tracking-tight bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 bg-clip-text text-transparent">
@@ -110,17 +90,6 @@ function Sidebar() {
             <FaBars />
           </button>
         </div>
-
-        {!collapsed && (
-          <div className="text-center mb-6">
-            <div className="text-sm text-white/70 font-mono">
-              {formattedDate}
-            </div>
-            <div className="text-xl font-bold text-cyan-400">
-              {formattedTime}
-            </div>
-          </div>
-        )}
 
         <div className="absolute top-0 right-0 w-40 h-40 bg-cyan-500/10 blur-[90px] rounded-full pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-40 h-40 bg-purple-500/10 blur-[90px] rounded-full pointer-events-none" />
