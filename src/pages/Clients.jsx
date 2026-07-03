@@ -22,7 +22,6 @@ function Clients() {
   const [editData, setEditData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // ✅ Fetch clients from backend
   const fetchClients = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -33,7 +32,6 @@ function Clients() {
       setClients(response.data);
     } catch (error) {
       console.error('❌ Error fetching clients:', error);
-      // Fallback: Local storage se load karo
       const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
       if (savedClients.length > 0) {
         setClients(savedClients);
@@ -47,7 +45,6 @@ function Clients() {
     fetchClients();
   }, []);
 
-  // ✅ Add client to backend
   const addClient = async (newClient) => {
     try {
       const token = localStorage.getItem('token');
@@ -58,10 +55,9 @@ function Clients() {
       console.log('✅ Client added to backend:', response.data);
       addNotification(`Client Added: ${newClient.name}`);
       addActivity(`Client Added`);
-      fetchClients(); // Refresh list
+      fetchClients();
     } catch (error) {
       console.error('❌ Error adding client:', error.response?.data || error.message);
-      // Fallback: Local storage mein save karo
       const clientWithId = {
         ...newClient,
         id: Date.now(),
@@ -82,7 +78,6 @@ function Clients() {
     }
   };
 
-  // ✅ Delete client from backend
   const deleteClient = async (indexToDelete) => {
     const client = clients[indexToDelete];
     const clientId = client?._id || client?.id;
@@ -101,10 +96,9 @@ function Clients() {
       console.log('✅ Client deleted from backend');
       addNotification(`Client Deleted: ${clientName}`);
       addActivity(`Client Deleted`);
-      fetchClients(); // Refresh list
+      fetchClients();
     } catch (error) {
       console.error('❌ Error deleting client:', error);
-      // Fallback: Local storage se delete karo
       const updatedClients = clients.filter((_, index) => index !== indexToDelete);
       setClients(updatedClients);
       localStorage.setItem("clients", JSON.stringify(updatedClients));
@@ -113,7 +107,6 @@ function Clients() {
     }
   };
 
-  // ✅ Update client in backend
   const updateClient = async (updatedClient) => {
     try {
       const token = localStorage.getItem('token');
@@ -125,10 +118,9 @@ function Clients() {
       console.log('✅ Client updated in backend:', response.data);
       addNotification(`Client Updated: ${updatedClient.name}`);
       addActivity(`Client Updated`);
-      fetchClients(); // Refresh list
+      fetchClients();
     } catch (error) {
       console.error('❌ Error updating client:', error);
-      // Fallback: Local storage mein update karo
       const updatedClients = [...clients];
       updatedClients[editIndex] = updatedClient;
       setClients(updatedClients);
@@ -212,7 +204,15 @@ function Clients() {
                       key={client._id || client.id || index}
                       className="border-b border-white/10 hover:bg-white/5 transition-all duration-300"
                     >
-                      <td className="p-3">{client.name}</td>
+                      {/* ✅ Name - Clickable */}
+                      <td className="p-3">
+                        <button
+                          onClick={() => navigate(`/client/${client._id || client.id}`)}
+                          className="text-cyan-400 hover:underline hover:text-cyan-300 transition font-medium"
+                        >
+                          {client.name}
+                        </button>
+                      </td>
                       <td className="p-3">{client.company}</td>
                       <td className="p-3">{client.email}</td>
                       <td className="p-3">{client.phone}</td>
