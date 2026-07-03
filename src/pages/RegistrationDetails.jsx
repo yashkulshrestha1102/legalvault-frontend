@@ -10,7 +10,6 @@ function RegistrationDetails() {
   const navigate = useNavigate();
   const [registration, setRegistration] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [documents, setDocuments] = useState([]);
 
   useEffect(() => {
     const fetchRegistration = async () => {
@@ -22,11 +21,6 @@ function RegistrationDetails() {
         });
         console.log('✅ Registration fetched:', response.data);
         setRegistration(response.data);
-        
-        // ✅ Fetch associated documents
-        if (response.data._id) {
-          fetchDocuments(response.data._id);
-        }
       } catch (error) {
         console.error('❌ Error fetching registration:', error);
       } finally {
@@ -36,30 +30,16 @@ function RegistrationDetails() {
     fetchRegistration();
   }, [registrationId]);
 
-  // ✅ Fetch documents for this registration
-  const fetchDocuments = async (regId) => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/api/pdfs/registration/${regId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      console.log('✅ Documents fetched:', response.data);
-      setDocuments(response.data);
-    } catch (error) {
-      console.error('❌ Error fetching documents:', error);
-    }
-  };
-
-  // ✅ View Document (PDF/Image)
-  const viewDocument = (docUrl) => {
-    if (!docUrl) return;
+  // ✅ View PDF - Direct URL with token
+  const viewPDF = (pdfUrl) => {
+    if (!pdfUrl) return;
     const token = localStorage.getItem('token');
     if (!token) {
       alert('Please login again');
       return;
     }
-    const finalUrl = `${docUrl}?token=${token}`;
-    console.log('📄 View Document - Final URL:', finalUrl);
+    const finalUrl = `${pdfUrl}?token=${token}`;
+    console.log('📄 View PDF - Final URL:', finalUrl);
     
     const newWindow = window.open(finalUrl, '_blank');
     if (!newWindow) {
@@ -73,34 +53,34 @@ function RegistrationDetails() {
     }
   };
 
-  // ✅ Download Document
-  const downloadDocument = async (docUrl, filename) => {
-    if (!docUrl) return;
+  // ✅ Download PDF - Direct URL with token
+  const downloadPDF = async (pdfUrl) => {
+    if (!pdfUrl) return;
     try {
       const token = localStorage.getItem('token');
       if (!token) {
         alert('Please login again');
         return;
       }
-      const finalUrl = `${docUrl}?token=${token}`;
-      console.log('⬇️ Download Document - Final URL:', finalUrl);
+      const finalUrl = `${pdfUrl}?token=${token}`;
+      console.log('⬇️ Download PDF - Final URL:', finalUrl);
       
       const response = await axios.get(finalUrl, {
         responseType: 'blob'
       });
       
-      const blob = new Blob([response.data]);
+      const blob = new Blob([response.data], { type: 'application/pdf' });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = filename || 'document';
+      link.download = 'document.pdf';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('❌ Download error:', error);
-      alert('Failed to download document');
+      alert('Failed to download PDF');
     }
   };
 
@@ -178,44 +158,30 @@ function RegistrationDetails() {
               <h3 className={`font-semibold mt-1 ${statusColor}`}>{statusText}</h3>
             </div>
 
-            {/* ✅ Multiple Documents Section */}
-            <div className="glass-card p-4 md:col-span-2">
-              <p className="text-gray-400 text-sm mb-2">📄 Documents</p>
-              {documents.length > 0 ? (
-                <div className="space-y-2">
-                  {documents.map((doc) => (
-                    <div key={doc._id} className="flex items-center justify-between glass-card p-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm">
-                          {doc.filename}
-                          <span className={`ml-2 text-xs px-2 py-0.5 rounded-full ${
-                            doc.fileType === 'pdf' 
-                              ? 'bg-red-500/20 text-red-400' 
-                              : 'bg-green-500/20 text-green-400'
-                          }`}>
-                            {doc.fileType}
-                          </span>
-                        </span>
-                      </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => viewDocument(doc.fileUrl)}
-                          className="text-cyan-400 hover:underline text-sm"
-                        >
-                          👁️ View
-                        </button>
-                        <button
-                          onClick={() => downloadDocument(doc.fileUrl, doc.filename)}
-                          className="text-green-400 hover:underline text-sm"
-                        >
-                          ⬇️ Download
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+            <div className="glass-card p-4">
+              <p className="text-gray-400 text-sm">PDF Document</p>
+              {registration.pdf ? (
+                <div className="mt-2">
+                  <p className="text-sm text-gray-400 break-all mb-2">
+                    {registration.pdf.split('/').pop() || 'PDF Document'}
+                  </p>
+                  <div className="flex gap-3 flex-wrap">
+                    <button
+                      onClick={() => viewPDF(registration.pdf)}
+                      className="glass-card px-4 py-2 text-cyan-400 hover:scale-105 transition"
+                    >
+                      📄 View PDF
+                    </button>
+                    <button
+                      onClick={() => downloadPDF(registration.pdf)}
+                      className="glass-card px-4 py-2 text-green-400 hover:scale-105 transition"
+                    >
+                      ⬇️ Download PDF
+                    </button>
+                  </div>
                 </div>
               ) : (
-                <p className="text-gray-400 text-sm mt-1">No documents uploaded</p>
+                <h3 className="font-semibold mt-1 text-gray-400">No PDF uploaded</h3>
               )}
             </div>
           </div>

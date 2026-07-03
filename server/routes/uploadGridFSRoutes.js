@@ -7,10 +7,15 @@ const Document = require('../models/Document');
 const { ObjectId } = require('mongodb');
 const jwt = require('jsonwebtoken');
 
-// ✅ Upload Multiple Documents (PDF + Images)
+// ✅ Test route - Check if router is working
+router.get('/test', (req, res) => {
+  res.json({ message: 'PDF routes are working!' });
+});
+
+// ✅ Upload Multiple Documents
 router.post('/documents', auth, upload.array('documents', 10), async (req, res) => {
   try {
-    console.log('📥 Upload request received');
+    console.log('📥 Documents upload request received');
     
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ message: 'No files uploaded' });
@@ -74,7 +79,7 @@ router.post('/documents', auth, upload.array('documents', 10), async (req, res) 
   }
 });
 
-// ✅ Get Document by ID (View/Download)
+// ✅ Get Document by ID
 router.get('/documents/:id', async (req, res) => {
   try {
     let token = req.header('Authorization')?.replace('Bearer ', '');
@@ -86,7 +91,6 @@ router.get('/documents/:id', async (req, res) => {
 
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      console.log('✅ Document Access - User verified:', decoded.email);
     } catch (error) {
       return res.status(401).json({ message: 'Invalid token.' });
     }
@@ -100,31 +104,33 @@ router.get('/documents/:id', async (req, res) => {
     const bucket = getGridFS();
     const downloadStream = bucket.openDownloadStream(fileId);
 
-    res.setHeader('Content-Type', doc.fileType === 'pdf' ? 'application/pdf' : 'image/jpeg');
+    const contentType = doc.fileType === 'pdf' ? 'application/pdf' : 'image/jpeg';
+    res.setHeader('Content-Type', contentType);
     res.setHeader('Content-Disposition', `inline; filename="${doc.filename}"`);
     
     downloadStream.pipe(res);
-
-    downloadStream.on('error', (error) => {
-      console.error('Download error:', error);
-      res.status(500).json({ message: 'Error downloading file' });
-    });
-
   } catch (error) {
     console.error('Document fetch error:', error);
     res.status(500).json({ message: error.message });
   }
 });
 
-// ✅ Get documents for a registration/contract
-router.get('/:type/:id', auth, async (req, res) => {
+// ✅ Get documents for registration
+router.get('/registration/:registrationId', auth, async (req, res) => {
   try {
-    const { type, id } = req.params;
-    let filter = {};
-    if (type === 'registration') filter.registrationId = id;
-    else if (type === 'contract') filter.contractId = id;
+    const documents = await Document.find({ registrationId: req.params.registrationId })
+      .populate('uploadedBy', 'name email');
+    res.json(documents);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
 
-    const documents = await Document.find(filter).populate('uploadedBy', 'name email');
+// ✅ Get documents for contract
+router.get('/contract/:contractId', auth, async (req, res) => {
+  try {
+    const documents = await Document.find({ contractId: req.params.contractId })
+      .populate('uploadedBy', 'name email');
     res.json(documents);
   } catch (error) {
     res.status(500).json({ message: error.message });
