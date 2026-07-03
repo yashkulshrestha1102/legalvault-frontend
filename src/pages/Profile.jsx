@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import MainLayout from '../layouts/MainLayout';
 import AuthContext from '../context/AuthContext';
-import { FaUser, FaEnvelope, FaPhone, FaBriefcase, FaCalendar, FaSave, FaEdit, FaUsers, FaFileAlt, FaFileContract } from 'react-icons/fa';
+import { FaUser, FaEnvelope, FaPhone, FaBriefcase, FaSave, FaEdit, FaUsers, FaFileAlt, FaFileContract } from 'react-icons/fa';
 
 const API_URL = 'https://legalvault-jm2n.onrender.com';
 
@@ -19,15 +19,13 @@ function Profile() {
     phone: '',
     role: '',
     department: '',
-    status: ''
+    status: 'Active'
   });
   const [passwordData, setPasswordData] = useState({
-    currentPassword: '',
     newPassword: '',
     confirmPassword: ''
   });
   const [message, setMessage] = useState({ text: '', type: '' });
-  const [profileImage, setProfileImage] = useState(null);
 
   useEffect(() => {
     if (user) {
@@ -37,7 +35,7 @@ function Profile() {
         phone: user.phone || '',
         role: user.role || '',
         department: user.department || '',
-        status: user.status || ''
+        status: user.status || 'Active'
       });
       fetchUserStats();
     }
@@ -46,7 +44,6 @@ function Profile() {
   const fetchUserStats = async () => {
     try {
       const token = localStorage.getItem('token');
-      // Fetch user's clients count
       const clientsRes = await axios.get(`${API_URL}/api/clients`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -68,7 +65,6 @@ function Profile() {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      // Update localStorage and context
       const updatedUser = { ...user, ...formData };
       localStorage.setItem('user', JSON.stringify(updatedUser));
       setUser(updatedUser);
@@ -104,7 +100,7 @@ function Profile() {
       });
       
       setMessage({ text: 'Password changed successfully!', type: 'success' });
-      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setPasswordData({ newPassword: '', confirmPassword: '' });
     } catch (error) {
       setMessage({ text: error.response?.data?.message || 'Failed to change password', type: 'error' });
     } finally {
@@ -125,7 +121,6 @@ function Profile() {
   return (
     <MainLayout>
       <div className="p-6 max-w-6xl mx-auto">
-        {/* Page Header */}
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">
             My Profile
@@ -139,30 +134,21 @@ function Profile() {
           </button>
         </div>
 
-        {/* Message */}
         {message.text && (
           <div className={`glass-card p-4 mb-6 ${message.type === 'success' ? 'text-green-400 border-green-400/20' : 'text-red-400 border-red-400/20'}`}>
             {message.text}
           </div>
         )}
 
-        {/* Main Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Profile Info */}
+          {/* Left Column */}
           <div className="lg:col-span-1">
             <div className="glass-card p-6 text-center">
-              {/* Profile Image */}
-              <div className="relative inline-block">
-                <img
-                  src={profileImage || `https://ui-avatars.com/api/?name=${user.name}&background=0D9488&color=fff&size=128`}
-                  alt="Profile"
-                  className="w-32 h-32 rounded-full mx-auto border-4 border-cyan-400/50 object-cover"
-                />
-                <button className="absolute bottom-0 right-0 glass-card p-2 rounded-full hover:scale-105 transition">
-                  <FaEdit className="text-cyan-400" />
-                </button>
-              </div>
-
+              <img
+                src={`https://ui-avatars.com/api/?name=${user.name}&background=0D9488&color=fff&size=128`}
+                alt="Profile"
+                className="w-32 h-32 rounded-full mx-auto border-4 border-cyan-400/50 object-cover"
+              />
               <h2 className="text-2xl font-bold mt-4">{user.name}</h2>
               <p className="text-sm text-gray-400">{user.role || 'User'}</p>
               <p className="text-sm text-gray-500 mt-1">{user.department || 'General'}</p>
@@ -181,7 +167,6 @@ function Profile() {
               </div>
             </div>
 
-            {/* Stats Cards */}
             <div className="glass-card p-6 mt-6">
               <h3 className="text-lg font-semibold mb-4">Activity Stats</h3>
               <div className="space-y-3">
@@ -210,9 +195,8 @@ function Profile() {
             </div>
           </div>
 
-          {/* Right Column - Edit Form */}
+          {/* Right Column */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Profile Info Form */}
             <div className="glass-card p-6">
               <h3 className="text-xl font-semibold mb-4">Personal Information</h3>
               <form onSubmit={handleUpdateProfile}>
@@ -285,11 +269,10 @@ function Profile() {
               </form>
             </div>
 
-            {/* Change Password */}
             <div className="glass-card p-6">
               <h3 className="text-xl font-semibold mb-4">Change Password</h3>
               <form onSubmit={handleChangePassword}>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm text-gray-400 mb-1">New Password</label>
                     <input
@@ -310,15 +293,15 @@ function Profile() {
                       className="glass-card w-full px-4 py-3 bg-transparent outline-none"
                     />
                   </div>
-                  <div className="flex items-end">
-                    <button
-                      type="submit"
-                      disabled={loading || !passwordData.newPassword}
-                      className="glass-card w-full py-3 text-yellow-400 hover:scale-105 transition disabled:opacity-50"
-                    >
-                      {loading ? 'Updating...' : 'Update Password'}
-                    </button>
-                  </div>
+                </div>
+                <div className="mt-4 flex justify-end">
+                  <button
+                    type="submit"
+                    disabled={loading || !passwordData.newPassword}
+                    className="glass-card px-6 py-3 text-yellow-400 hover:scale-105 transition disabled:opacity-50"
+                  >
+                    {loading ? 'Updating...' : 'Update Password'}
+                  </button>
                 </div>
               </form>
             </div>

@@ -12,7 +12,7 @@ const ALLOWED_FOLDERS = [
   'hr', 'gst', 'income-tax', 'financials'
 ];
 
-// GET - All users
+// GET - All users (Admin only)
 router.get('/', [auth, admin], async (req, res) => {
   try {
     const users = await User.find().select('-password');
@@ -22,15 +22,13 @@ router.get('/', [auth, admin], async (req, res) => {
   }
 });
 
-// POST - Create user
+// POST - Create user (Admin only)
 router.post('/', [auth, admin], async (req, res) => {
   try {
     console.log('📥 POST /api/users - Request body:', req.body);
 
     const { name, email, password, department, role, status, phone, folderPermissions } = req.body;
     
-    console.log('📥 folderPermissions received:', folderPermissions);
-
     if (!password) {
       return res.status(400).json({ message: 'Password is required' });
     }
@@ -46,12 +44,10 @@ router.post('/', [auth, admin], async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // ✅ Filter valid folder permissions
     let validPermissions = [];
     if (folderPermissions && Array.isArray(folderPermissions)) {
       validPermissions = folderPermissions.filter(f => ALLOWED_FOLDERS.includes(f));
     }
-    console.log('✅ Valid permissions:', validPermissions);
 
     const user = new User({
       name,
@@ -65,7 +61,7 @@ router.post('/', [auth, admin], async (req, res) => {
     });
 
     await user.save();
-    console.log('✅ User saved with permissions:', user.folderPermissions);
+    console.log('✅ User saved:', user.email);
     
     const userResponse = user.toObject();
     delete userResponse.password;
@@ -80,32 +76,50 @@ router.post('/', [auth, admin], async (req, res) => {
   }
 });
 
-// PUT - Update user
+// ✅ PUT - Update user (Allow users to update their own profile)
 router.put('/:id', auth, async (req, res) => {
   try {
-    const { name, email, department, role, status, phone, folderPermissions } = req.body;
+    const { name, email, department, role, status, phone, folderPermissions, password } = req.body;
     
     const existingUser = await User.findById(req.params.id);
     if (!existingUser) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    let validPermissions = [];
-    if (folderPermissions && Array.isArray(folderPermissions)) {
-      validPermissions = folderPermissions.filter(f => ALLOWED_FOLDERS.includes(f));
+    // ✅ Check if user is updating their own profile or is admin
+    if (req.user.id !== req.params.id && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'You can only update your own profile' });
+    }
+
+    // ✅ Build update data
+    const updateData = {
+      name: name || existingUser.name,
+      department: department || existingUser.department || 'General',
+      phone: phone || existingUser.phone || '',
+      status: status || existingUser.status || 'Active'
+    };
+
+    // ✅ Only admin can update role, email, and folderPermissions
+    if (req.user.role === 'admin') {
+      if (role) updateData.role = role;
+      if (email) updateData.email = email;
+      if (folderPermissions) {
+        updateData.folderPermissions = folderPermissions.filter(f => ALLOWED_FOLDERS.includes(f));
+      }
+    }
+
+    // ✅ If password is provided, hash it
+    if (password) {
+      if (password.length < 6) {
+        return res.status(400).json({ message: 'Password must be at least 6 characters' });
+      }
+      const salt = await bcrypt.genSalt(10);
+      updateData.password = await bcrypt.hash(password, salt);
     }
 
     const updatedUser = await User.findByIdAndUpdate(
       req.params.id,
-      { 
-        name, 
-        email, 
-        department, 
-        role, 
-        status,
-        phone: phone || existingUser.phone,
-        folderPermissions: validPermissions
-      },
+      updateData,
       { new: true, runValidators: true }
     ).select('-password');
     
@@ -116,7 +130,7 @@ router.put('/:id', auth, async (req, res) => {
   }
 });
 
-// DELETE - Delete user
+// DELETE - Delete user (Admin only)
 router.delete('/:id', [auth, admin], async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
