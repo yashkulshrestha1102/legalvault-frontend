@@ -81,7 +81,7 @@ router.post('/', [auth, admin], async (req, res) => {
 });
 
 // PUT - Update user
-router.put('/:id', [auth, admin], async (req, res) => {
+router.put('/:id', auth, async (req, res) => {
   try {
     const { name, email, department, role, status, phone, folderPermissions } = req.body;
     
