@@ -1,13 +1,14 @@
 const express = require('express');
 const router = express.Router();
+const auth = require('../middleware/auth');
 const upload = require('../middleware/uploadGridFS');
 const { getGridFS } = require('../config/gridfs');
 const PDF = require('../models/PDF');
 const { ObjectId } = require('mongodb');
 const jwt = require('jsonwebtoken');
 
-// ✅ Upload PDF (auth middleware se protected)
-router.post('/pdf', require('../middleware/auth'), upload.single('pdf'), async (req, res) => {
+// ✅ Upload PDF
+router.post('/pdf', auth, upload.single('pdf'), async (req, res) => {
   try {
     console.log('📥 Upload request received');
     
@@ -44,7 +45,8 @@ router.post('/pdf', require('../middleware/auth'), upload.single('pdf'), async (
       await pdfDoc.save();
 
       const host = req.get('host');
-      const url = `https://${host}/api/pdfs/${uploadStream.id}`;
+      const protocol = 'https';
+      const url = `${protocol}://${host}/api/pdfs/${uploadStream.id}`;
 
       res.json({
         message: 'PDF uploaded successfully',
@@ -64,16 +66,15 @@ router.post('/pdf', require('../middleware/auth'), upload.single('pdf'), async (
   }
 });
 
-// ✅ Get PDF by ID (NO auth middleware, manual token check)
+// ✅ Get PDF by ID (with query param token support)
 router.get('/:id', async (req, res) => {
   try {
-    // ✅ Check token from header OR query param
     let token = req.header('Authorization')?.replace('Bearer ', '');
     if (!token) {
       token = req.query.token;
     }
     
-    console.log('🔑 PDF Access - Token received:', token ? '✅ Yes' : '❌ No');
+    console.log('🔑 PDF Access - Token received:', token ? token.substring(0, 20) + '...' : '❌ No');
 
     if (!token) {
       return res.status(401).json({ message: 'Access Denied. No token provided.' });
@@ -88,6 +89,7 @@ router.get('/:id', async (req, res) => {
       return res.status(401).json({ message: 'Invalid token.' });
     }
 
+    // ✅ Get PDF from GridFS
     const fileId = new ObjectId(req.params.id);
     const pdfDoc = await PDF.findOne({ fileId });
     if (!pdfDoc) {

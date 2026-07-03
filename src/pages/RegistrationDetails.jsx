@@ -30,60 +30,49 @@ function RegistrationDetails() {
     fetchRegistration();
   }, [registrationId]);
 
-  // ✅ View PDF - Open in new tab using iframe
   // ✅ View PDF - Direct URL with token as query param
-// ✅ View PDF
-const viewPDF = (pdfUrl) => {
-  if (!pdfUrl) return;
-  const token = localStorage.getItem('token');
-  if (!token) {
-    alert('Please login again');
-    return;
-  }
-  let secureUrl = pdfUrl;
-  if (secureUrl.startsWith('http://')) {
-    secureUrl = secureUrl.replace('http://', 'https://');
-  }
-  // ✅ Token as query param
-  window.open(`${secureUrl}?token=${token}`, '_blank');
-};
-
-// ✅ Download PDF
-const downloadPDF = async (pdfUrl) => {
-  if (!pdfUrl) return;
-  try {
+  const viewPDF = (pdfUrl) => {
+    if (!pdfUrl) return;
     const token = localStorage.getItem('token');
     if (!token) {
       alert('Please login again');
       return;
     }
-    let secureUrl = pdfUrl;
-    if (secureUrl.startsWith('http://')) {
-      secureUrl = secureUrl.replace('http://', 'https://');
+    const finalUrl = `${pdfUrl}?token=${token}`;
+    console.log('📄 View PDF - Final URL:', finalUrl);
+    window.open(finalUrl, '_blank');
+  };
+
+  // ✅ Download PDF - Direct URL with token as query param
+  const downloadPDF = async (pdfUrl) => {
+    if (!pdfUrl) return;
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Please login again');
+        return;
+      }
+      const finalUrl = `${pdfUrl}?token=${token}`;
+      console.log('⬇️ Download PDF - Final URL:', finalUrl);
+      
+      const response = await axios.get(finalUrl, {
+        responseType: 'blob'
+      });
+      
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'document.pdf';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('❌ Download error:', error);
+      alert('Failed to download PDF');
     }
-    // ✅ Token as query param
-    const response = await axios.get(`${secureUrl}?token=${token}`, {
-      responseType: 'blob'
-    });
-    const blob = new Blob([response.data], { type: 'application/pdf' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'document.pdf';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
-  } catch (error) {
-    console.error('Download error:', error);
-    alert('Failed to download PDF');
-  }
-};
-// *************************
-
-
-
-
+  };
 
   if (loading) {
     return (
