@@ -120,17 +120,27 @@ function ClientDetails() {
   }
 };
 
-  // ✅ View PDF
-  const viewPDF = (pdfUrl) => {
-    if (!pdfUrl) return;
-    window.open(pdfUrl, '_blank');
-  };
+  // ✅ View PDF - Direct URL with token as query param
+const viewPDF = (pdfUrl) => {
+  if (!pdfUrl) return;
+  const token = localStorage.getItem('token');
+  if (!token) {
+    alert('Please login again');
+    return;
+  }
+  window.open(`${pdfUrl}?token=${token}`, '_blank');
+};
 
-  // ✅ Download PDF
-  const downloadPDF = (pdfUrl) => {
-    if (!pdfUrl) return;
-    window.open(pdfUrl, '_blank');
-  };
+// ✅ Download PDF - Direct URL with token as query param
+const downloadPDF = (pdfUrl) => {
+  if (!pdfUrl) return;
+  const token = localStorage.getItem('token');
+  if (!token) {
+    alert('Please login again');
+    return;
+  }
+  window.open(`${pdfUrl}?token=${token}`, '_blank');
+};
 
   // ✅ Save registration to backend
   const saveRegistration = async (registrationData) => {
