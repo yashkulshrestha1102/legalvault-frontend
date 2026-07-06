@@ -77,23 +77,33 @@ function AddRegistrationModal({ open, onClose, onSave, editData }) {
     return Object.keys(newErrors).length === 0;
   };
 
+  // ✅ FIXED: Correct endpoint and field name
   const uploadDocuments = async (files) => {
     try {
       const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Please login again');
+        return null;
+      }
+
       const formData = new FormData();
       for (const file of files) {
-        formData.append('documents', file);
+        formData.append('pdf', file); // ✅ 'pdf' not 'documents'
       }
       
-      const response = await axios.post(`${API_URL}/api/pdfs/documents`, formData, {
+      // ✅ CORRECT ENDPOINT
+      const response = await axios.post(`${API_URL}/api/pdfs/pdf`, formData, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'multipart/form-data'
         }
       });
-      return response.data.files;
+      
+      console.log('✅ PDF uploaded:', response.data);
+      return response.data.url || response.data.files || [];
     } catch (error) {
-      console.error('Upload error:', error);
+      console.error('❌ Upload error:', error.response?.data || error.message);
+      alert('PDF upload failed. Please try again.');
       return null;
     }
   };
@@ -148,7 +158,15 @@ function AddRegistrationModal({ open, onClose, onSave, editData }) {
 
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
-    setSelectedFiles(prev => [...prev, ...files]);
+    // ✅ File size validation
+    const validFiles = files.filter(file => {
+      if (file.size > 20 * 1024 * 1024) {
+        alert(`❌ ${file.name} is too large (max 20MB)`);
+        return false;
+      }
+      return true;
+    });
+    setSelectedFiles(prev => [...prev, ...validFiles]);
   };
 
   const removeFile = (index) => {
