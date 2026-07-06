@@ -29,13 +29,42 @@ function ClientDetails() {
       try {
         const token = localStorage.getItem('token');
         console.log('📥 Fetching client with ID:', id);
-        const response = await axios.get(`${API_URL}/api/clients/${id}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        console.log('✅ Client fetched:', response.data);
-        setClient(response.data);
+        
+        // ✅ Check if id is a valid MongoDB ObjectId format (24 hex chars)
+        const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(id);
+        
+        let clientData;
+        if (!isValidObjectId) {
+          console.warn('⚠️ Invalid ObjectId format, trying fallback...');
+          // Try to find client from local storage
+          const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
+          const foundClient = savedClients.find(c => String(c.id) === String(id) || String(c._id) === String(id));
+          if (foundClient) {
+            clientData = foundClient;
+            console.log('✅ Client found in localStorage:', clientData);
+          } else {
+            throw new Error('Client not found');
+          }
+        } else {
+          const response = await axios.get(`${API_URL}/api/clients/${id}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          clientData = response.data;
+          console.log('✅ Client fetched from backend:', clientData);
+        }
+        
+        setClient(clientData);
       } catch (error) {
         console.error('❌ Error fetching client:', error);
+        // Try local storage fallback
+        const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
+        const foundClient = savedClients.find(c => String(c.id) === String(id) || String(c._id) === String(id));
+        if (foundClient) {
+          setClient(foundClient);
+          console.log('✅ Client loaded from localStorage fallback:', foundClient);
+        } else {
+          setClient(null);
+        }
       } finally {
         setLoading(false);
       }
@@ -52,13 +81,23 @@ function ClientDetails() {
         return;
       }
       console.log('📋 Fetching registrations for client ID:', id);
+      
+      // ✅ Check if id is valid ObjectId
+      const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(id);
+      if (!isValidObjectId) {
+        console.warn('⚠️ Invalid ObjectId, skipping registrations fetch');
+        setRegistrations([]);
+        return;
+      }
+      
       const response = await axios.get(`${API_URL}/api/registrations/client/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       console.log('✅ Registrations fetched:', response.data);
-      setRegistrations(response.data);
+      setRegistrations(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error('❌ Error fetching registrations:', error.response?.data || error.message);
+      setRegistrations([]);
     }
   };
 
@@ -67,13 +106,23 @@ function ClientDetails() {
     try {
       const token = localStorage.getItem('token');
       console.log('📋 Fetching contracts for client ID:', id);
+      
+      // ✅ Check if id is valid ObjectId
+      const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(id);
+      if (!isValidObjectId) {
+        console.warn('⚠️ Invalid ObjectId, skipping contracts fetch');
+        setContracts([]);
+        return;
+      }
+      
       const response = await axios.get(`${API_URL}/api/contracts/client/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       console.log('✅ Contracts fetched:', response.data);
-      setContracts(response.data);
+      setContracts(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error('❌ Error fetching contracts:', error.response?.data || error.message);
+      setContracts([]);
     }
   };
 
@@ -81,72 +130,80 @@ function ClientDetails() {
   useEffect(() => {
     if (id) {
       console.log('🔄 Loading data for client ID:', id);
-      fetchRegistrations();
-      fetchContracts();
+      // ✅ Only fetch if valid ObjectId
+      const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(id);
+      if (isValidObjectId) {
+        fetchRegistrations();
+        fetchContracts();
+      }
     } else {
       console.error('❌ No client ID available');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
-
-
-
   // mongodbpdf
   const uploadPDF = async (file) => {
-  try {
-    const token = localStorage.getItem('token');
-    console.log('🔑 ClientDetails - PDF Upload Token:', token ? '✅ Yes' : '❌ No');
+    try {
+      const token = localStorage.getItem('token');
+      console.log('🔑 ClientDetails - PDF Upload Token:', token ? '✅ Yes' : '❌ No');
 
-    if (!token) {
-      alert('Please login again');
+      if (!token) {
+        alert('Please login again');
+        return null;
+      }
+
+      const formData = new FormData();
+      formData.append('pdf', file);
+      
+      const response = await axios.post(`${API_URL}/api/pdfs/pdf`, formData, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      console.log('✅ PDF uploaded:', response.data);
+      return response.data.url;
+    } catch (error) {
+      console.error('❌ PDF upload error:', error.response?.data || error.message);
       return null;
     }
-
-    const formData = new FormData();
-    formData.append('pdf', file);
-    
-    const response = await axios.post(`${API_URL}/api/pdfs/pdf`, formData, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'multipart/form-data'
-      }
-    });
-    console.log('✅ PDF uploaded:', response.data);
-    return response.data.url;
-  } catch (error) {
-    console.error('❌ PDF upload error:', error.response?.data || error.message);
-    return null;
-  }
-};
+  };
 
   // ✅ View PDF - Direct URL with token as query param
-const viewPDF = (pdfUrl) => {
-  if (!pdfUrl) return;
-  const token = localStorage.getItem('token');
-  if (!token) {
-    alert('Please login again');
-    return;
-  }
-  window.open(`${pdfUrl}?token=${token}`, '_blank');
-};
+  const viewPDF = (pdfUrl) => {
+    if (!pdfUrl) return;
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('Please login again');
+      return;
+    }
+    window.open(`${pdfUrl}?token=${token}`, '_blank');
+  };
 
-// ✅ Download PDF - Direct URL with token as query param
-const downloadPDF = (pdfUrl) => {
-  if (!pdfUrl) return;
-  const token = localStorage.getItem('token');
-  if (!token) {
-    alert('Please login again');
-    return;
-  }
-  window.open(`${pdfUrl}?token=${token}`, '_blank');
-};
+  // ✅ Download PDF - Direct URL with token as query param
+  const downloadPDF = (pdfUrl) => {
+    if (!pdfUrl) return;
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('Please login again');
+      return;
+    }
+    window.open(`${pdfUrl}?token=${token}`, '_blank');
+  };
 
   // ✅ Save registration to backend
   const saveRegistration = async (registrationData) => {
     try {
       const token = localStorage.getItem('token');
       const data = { ...registrationData, clientId: id };
+      
+      // ✅ Check if id is valid ObjectId
+      const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(id);
+      if (!isValidObjectId) {
+        alert('Cannot save registration: Invalid client ID. Please refresh and try again.');
+        return;
+      }
       
       if (registrationData.pdfFile) {
         const pdfUrl = await uploadPDF(registrationData.pdfFile);
@@ -191,6 +248,13 @@ const downloadPDF = (pdfUrl) => {
     try {
       const token = localStorage.getItem('token');
       const data = { ...contractData, clientId: id };
+      
+      // ✅ Check if id is valid ObjectId
+      const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(id);
+      if (!isValidObjectId) {
+        alert('Cannot save contract: Invalid client ID. Please refresh and try again.');
+        return;
+      }
       
       if (contractData.pdfFile) {
         const pdfUrl = await uploadPDF(contractData.pdfFile);
