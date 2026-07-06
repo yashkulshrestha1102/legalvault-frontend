@@ -23,13 +23,26 @@ requiredEnv.forEach(key => {
 });
 console.log('✅ All environment variables are set');
 
-// ✅ CORS
+// ✅ CORS - Dynamic Origin
+const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173,https://legalvault-frontend-two.vercel.app').split(',');
+
 app.use(cors({
-  origin: ['http://localhost:5173', 'https://legalvault-frontend-two.vercel.app'],
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps, curl)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log('❌ CORS blocked for origin:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+// ✅ Pre-flight requests handle karo
 app.options('*', cors());
 
 // ✅ Morgan (Request Logging)

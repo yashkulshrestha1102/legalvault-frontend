@@ -8,9 +8,16 @@ const ContractSchema = new mongoose.Schema({
   secondParty: { type: String, required: true },
   startDate: { type: String, required: true },
   endDate: { type: String, required: true },
+  status: { type: String, enum: ['Active', 'Expired', 'Renewed', 'Terminated'], default: 'Active' },
   pdf: { type: String, default: '' },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  isDeleted: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now }
 });
+
+// ✅ Indexes
+ContractSchema.index({ clientId: 1 });
+ContractSchema.index({ contractType: 1 });
+ContractSchema.index({ isDeleted: 1 });
 
 module.exports = mongoose.model('Contract', ContractSchema);

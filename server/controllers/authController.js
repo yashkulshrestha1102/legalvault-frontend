@@ -1,7 +1,10 @@
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
+const { sendPasswordResetEmail } = require('../utils/email');
 
+// ✅ Register
 exports.register = async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
@@ -33,6 +36,7 @@ exports.register = async (req, res) => {
   }
 };
 
+// ✅ Login
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -72,6 +76,59 @@ exports.login = async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Login error:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ✅ Forgot Password
+exports.forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    console.log('🔑 Forgot password attempt:', { email });
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    user.resetPasswordToken = resetToken;
+    user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
+    await user.save();
+
+    console.log('📧 Sending password reset email to:', email);
+    await sendPasswordResetEmail(email, resetToken);
+    res.json({ message: 'Password reset email sent successfully' });
+  } catch (error) {
+    console.error('❌ Forgot password error:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ✅ Reset Password
+exports.resetPassword = async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+    console.log('🔑 Reset password attempt');
+
+    const user = await User.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpires: { $gt: Date.now() }
+    });
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid or expired token' });
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(newPassword, salt);
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+    await user.save();
+
+    console.log('✅ Password reset successfully for:', user.email);
+    res.json({ message: 'Password reset successfully' });
+  } catch (error) {
+    console.error('❌ Reset password error:', error);
     res.status(500).json({ message: error.message });
   }
 };

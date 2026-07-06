@@ -1,19 +1,53 @@
 const Client = require('../models/Client');
 
-// Get all clients
+// ✅ Get all clients with pagination, search, and soft delete filter
 exports.getClients = async (req, res) => {
   try {
-    const clients = await Client.find();
-    res.json(clients);
+    const { page = 1, limit = 10, search = '', status = '' } = req.query;
+    
+    const query = { isDeleted: false }; // ✅ Soft delete filter
+    
+    // ✅ Search
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { company: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } }
+      ];
+    }
+    
+    // ✅ Status filter
+    if (status) {
+      query.status = status;
+    }
+    
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    
+    const clients = await Client.find(query)
+      .limit(parseInt(limit))
+      .skip(skip)
+      .sort({ createdAt: -1 });
+    
+    const total = await Client.countDocuments(query);
+    
+    res.json({
+      clients,
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        pages: Math.ceil(total / parseInt(limit))
+      }
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// Get single client
+// ✅ Get single client
 exports.getClientById = async (req, res) => {
   try {
-    const client = await Client.findById(req.params.id);
+    const client = await Client.findOne({ _id: req.params.id, isDeleted: false });
     if (!client) {
       return res.status(404).json({ message: 'Client not found' });
     }
@@ -23,7 +57,7 @@ exports.getClientById = async (req, res) => {
   }
 };
 
-// Create client
+// ✅ Create client
 exports.createClient = async (req, res) => {
   try {
     const client = new Client({
@@ -37,11 +71,11 @@ exports.createClient = async (req, res) => {
   }
 };
 
-// Update client
+// ✅ Update client
 exports.updateClient = async (req, res) => {
   try {
-    const client = await Client.findByIdAndUpdate(
-      req.params.id,
+    const client = await Client.findOneAndUpdate(
+      { _id: req.params.id, isDeleted: false },
       req.body,
       { new: true, runValidators: true }
     );
@@ -54,10 +88,14 @@ exports.updateClient = async (req, res) => {
   }
 };
 
-// Delete client
+// ✅ Soft Delete client
 exports.deleteClient = async (req, res) => {
   try {
-    const client = await Client.findByIdAndDelete(req.params.id);
+    const client = await Client.findOneAndUpdate(
+      { _id: req.params.id, isDeleted: false },
+      { isDeleted: true },
+      { new: true }
+    );
     if (!client) {
       return res.status(404).json({ message: 'Client not found' });
     }
@@ -67,17 +105,16 @@ exports.deleteClient = async (req, res) => {
   }
 };
 
-// Dashboard stats
+// ✅ Dashboard stats
 exports.getDashboardStats = async (req, res) => {
   try {
-    const totalClients = await Client.countDocuments();
-    const activeClients = await Client.countDocuments({ status: 'Active' });
-    // Ye temporary hai, baad mein documents aur users add kar denge
+    const totalClients = await Client.countDocuments({ isDeleted: false });
+    const activeClients = await Client.countDocuments({ status: 'Active', isDeleted: false });
     res.json({
       totalClients,
-      activeCases: 89, // Temporary
-      documents: 1842, // Temporary
-      consultants: 18   // Temporary
+      activeCases: 89,
+      documents: 1842,
+      consultants: 18
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
