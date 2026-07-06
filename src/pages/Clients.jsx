@@ -22,6 +22,7 @@ function Clients() {
   const [editData, setEditData] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // ✅ Safe fetchClients function
   const fetchClients = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -29,13 +30,21 @@ function Clients() {
         headers: { Authorization: `Bearer ${token}` }
       });
       console.log('✅ Clients fetched from backend:', response.data);
-      setClients(response.data);
+      
+      // ✅ FIX: Safely extract clients array
+      let clientsData = response.data;
+      
+      // Agar response object hai aur usme 'clients' key hai (paginated response)
+      if (clientsData && typeof clientsData === 'object' && !Array.isArray(clientsData)) {
+        clientsData = clientsData.clients || [];
+      }
+      
+      // Ensure it's always an array
+      setClients(Array.isArray(clientsData) ? clientsData : []);
     } catch (error) {
       console.error('❌ Error fetching clients:', error);
       const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
-      if (savedClients.length > 0) {
-        setClients(savedClients);
-      }
+      setClients(Array.isArray(savedClients) ? savedClients : []);
     } finally {
       setLoading(false);
     }
@@ -132,7 +141,9 @@ function Clients() {
     setEditData(null);
   };
 
-  const activeClients = clients.filter(client => client.status === "Active").length;
+  // ✅ Safe filter
+  const clientsList = Array.isArray(clients) ? clients : [];
+  const activeClients = clientsList.filter(client => client?.status === "Active").length;
 
   if (loading) {
     return (
@@ -188,23 +199,22 @@ function Clients() {
               </tr>
             </thead>
             <tbody>
-              {clients.length === 0 ? (
+              {clientsList.length === 0 ? (
                 <tr>
                   <td colSpan="6" className="text-center py-12 text-gray-400">
                     No Clients Found
                   </td>
                 </tr>
               ) : (
-                clients
+                clientsList
                   .filter((client) =>
-                    client.name?.toLowerCase().includes(searchTerm.toLowerCase())
+                    client?.name?.toLowerCase().includes(searchTerm.toLowerCase())
                   )
                   .map((client, index) => (
                     <tr
                       key={client._id || client.id || index}
                       className="border-b border-white/10 hover:bg-white/5 transition-all duration-300"
                     >
-                      {/* ✅ Name - Clickable */}
                       <td className="p-3">
                         <button
                           onClick={() => navigate(`/client/${client._id || client.id}`)}
@@ -268,7 +278,7 @@ function Clients() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
         <div className="glass-card p-4 md:p-5">
           <p className="text-gray-400">Total Clients</p>
-          <h2 className="text-4xl font-bold mt-2">{clients.length}</h2>
+          <h2 className="text-4xl font-bold mt-2">{clientsList.length}</h2>
         </div>
         <div className="glass-card p-4 md:p-5">
           <p className="text-gray-400">Active Clients</p>
@@ -276,7 +286,7 @@ function Clients() {
         </div>
         <div className="glass-card p-4 md:p-5">
           <p className="text-gray-400">Inactive Clients</p>
-          <h2 className="text-4xl font-bold text-red-400 mt-2">{clients.length - activeClients}</h2>
+          <h2 className="text-4xl font-bold text-red-400 mt-2">{clientsList.length - activeClients}</h2>
         </div>
         <div className="glass-card p-4 md:p-5">
           <p className="text-gray-400">Growth</p>
