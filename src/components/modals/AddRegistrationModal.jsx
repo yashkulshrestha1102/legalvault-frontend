@@ -15,6 +15,9 @@ function AddRegistrationModal({ open, onClose, onSave, editData }) {
   });
   const [uploading, setUploading] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState([]);
+  
+  // ✅ Validation Errors State
+  const [errors, setErrors] = useState({});
 
   useEffect(() => {
     if (editData) {
@@ -38,9 +41,51 @@ function AddRegistrationModal({ open, onClose, onSave, editData }) {
       });
       setSelectedFiles([]);
     }
-  }, [editData]);
+    // ✅ Modal open/close par errors clear
+    setErrors({});
+  }, [editData, open]);
 
-  if (!open) return null;
+  // ✅ Validation Function
+  const validateForm = () => {
+    const newErrors = {};
+
+    // 1. Category Validation
+    if (!formData.category) {
+      newErrors.category = "Registration type is required";
+    }
+
+    // 2. Custom Category Validation (if "Others" selected)
+    if (formData.category === "Others" && !formData.customCategory.trim()) {
+      newErrors.customCategory = "Please enter custom registration type";
+    }
+
+    // 3. Registration Name Validation
+    if (!formData.registrationName.trim()) {
+      newErrors.registrationName = "Registration name is required";
+    } else if (formData.registrationName.trim().length < 2) {
+      newErrors.registrationName = "Registration name must be at least 2 characters";
+    }
+
+    // 4. Start Date Validation
+    if (!formData.startDate) {
+      newErrors.startDate = "Start date is required";
+    }
+
+    // 5. End Date Validation
+    if (!formData.endDate) {
+      newErrors.endDate = "End date is required";
+    } else if (formData.startDate && formData.endDate < formData.startDate) {
+      newErrors.endDate = "End date must be after start date";
+    }
+
+    // 6. Status Validation
+    if (!formData.status) {
+      newErrors.status = "Please select a status";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0; // ✅ True if no errors
+  };
 
   const uploadDocuments = async (files) => {
     try {
@@ -63,7 +108,13 @@ function AddRegistrationModal({ open, onClose, onSave, editData }) {
     }
   };
 
+  // ✅ Handle Save - Validation Check Ke Saath
   const handleSave = async () => {
+    // ✅ Pehle validate karo
+    if (!validateForm()) {
+      return; // Agar errors hain toh save mat karo
+    }
+
     let uploadedDocs = [];
 
     if (selectedFiles.length > 0) {
@@ -79,7 +130,36 @@ function AddRegistrationModal({ open, onClose, onSave, editData }) {
     };
 
     onSave(finalData);
+    // ✅ Form Reset After Successful Save
+    setFormData({
+      category: "",
+      customCategory: "",
+      registrationName: "",
+      startDate: "",
+      endDate: "",
+      status: "Valid",
+    });
+    setSelectedFiles([]);
+    setErrors({});
     onClose();
+  };
+
+  // ✅ Handle Input Change - Live Error Clear
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    // ✅ Error clear on typing
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: "" }));
+    }
+  };
+
+  // ✅ Handle Select Change - Live Error Clear
+  const handleSelectChange = (field, value) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    if (errors[field]) {
+      setErrors((prev) => ({ ...prev, [field]: "" }));
+    }
   };
 
   const handleFileChange = (e) => {
@@ -168,6 +248,17 @@ function AddRegistrationModal({ open, onClose, onSave, editData }) {
     indicatorSeparator: () => ({ display: "none" }),
   };
 
+  // ✅ Error style for Select
+  const errorSelectStyles = {
+    ...customSelectStyles,
+    control: (provided, state) => ({
+      ...customSelectStyles.control(provided, state),
+      border: errors.category || errors.status ? "1px solid rgba(255,0,0,0.5)" : customSelectStyles.control(provided, state).border,
+    }),
+  };
+
+  if (!open) return null;
+
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-[9999] p-4">
       <div className="glass p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -176,54 +267,101 @@ function AddRegistrationModal({ open, onClose, onSave, editData }) {
         </h2>
 
         <div className="space-y-4">
-          <Select
-            styles={customSelectStyles}
-            options={registrationOptions}
-            placeholder="Select Registration Type"
-            value={formData.category ? { value: formData.category, label: formData.category } : null}
-            onChange={(selected) => setFormData({ ...formData, category: selected.value })}
-          />
-
-          {formData.category === "Others" && (
-            <input
-              type="text"
-              placeholder="Enter Custom Registration"
-              value={formData.customCategory}
-              onChange={(e) => setFormData({ ...formData, customCategory: e.target.value })}
-              className="glass-card p-4 w-full text-white outline-none"
+          {/* ✅ Registration Type Select with Error */}
+          <div>
+            <Select
+              styles={errorSelectStyles}
+              options={registrationOptions}
+              placeholder="Select Registration Type *"
+              value={formData.category ? { value: formData.category, label: formData.category } : null}
+              onChange={(selected) => handleSelectChange("category", selected?.value || "")}
             />
-          )}
-
-          <input
-            type="text"
-            placeholder="Registration Name"
-            value={formData.registrationName}
-            onChange={(e) => setFormData({ ...formData, registrationName: e.target.value })}
-            className="glass-card p-4 w-full text-white outline-none"
-          />
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <input
-              type="date"
-              value={formData.startDate}
-              onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-              className="glass-card p-4 w-full text-white outline-none"
-            />
-            <input
-              type="date"
-              value={formData.endDate}
-              onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-              className="glass-card p-4 w-full text-white outline-none"
-            />
+            {errors.category && (
+              <p className="text-red-400 text-sm mt-1">{errors.category}</p>
+            )}
           </div>
 
-          <Select
-            styles={customSelectStyles}
-            options={statusOptions}
-            placeholder="Select Status"
-            value={{ value: formData.status, label: formData.status }}
-            onChange={(selected) => setFormData({ ...formData, status: selected.value })}
-          />
+          {/* ✅ Custom Category Input with Error */}
+          {formData.category === "Others" && (
+            <div>
+              <input
+                type="text"
+                name="customCategory"
+                placeholder="Enter Custom Registration *"
+                value={formData.customCategory}
+                onChange={handleChange}
+                className={`glass-card p-4 w-full text-white outline-none ${
+                  errors.customCategory ? "border-2 border-red-500" : ""
+                }`}
+              />
+              {errors.customCategory && (
+                <p className="text-red-400 text-sm mt-1">{errors.customCategory}</p>
+              )}
+            </div>
+          )}
+
+          {/* ✅ Registration Name with Error */}
+          <div>
+            <input
+              type="text"
+              name="registrationName"
+              placeholder="Registration Name *"
+              value={formData.registrationName}
+              onChange={handleChange}
+              className={`glass-card p-4 w-full text-white outline-none ${
+                errors.registrationName ? "border-2 border-red-500" : ""
+              }`}
+            />
+            {errors.registrationName && (
+              <p className="text-red-400 text-sm mt-1">{errors.registrationName}</p>
+            )}
+          </div>
+
+          {/* ✅ Start Date & End Date with Errors */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <input
+                type="date"
+                name="startDate"
+                value={formData.startDate}
+                onChange={handleChange}
+                className={`glass-card p-4 w-full text-white outline-none ${
+                  errors.startDate ? "border-2 border-red-500" : ""
+                }`}
+              />
+              {errors.startDate && (
+                <p className="text-red-400 text-sm mt-1">{errors.startDate}</p>
+              )}
+            </div>
+            <div>
+              <input
+                type="date"
+                name="endDate"
+                value={formData.endDate}
+                onChange={handleChange}
+                className={`glass-card p-4 w-full text-white outline-none ${
+                  errors.endDate ? "border-2 border-red-500" : ""
+                }`}
+              />
+              {errors.endDate && (
+                <p className="text-red-400 text-sm mt-1">{errors.endDate}</p>
+              )}
+            </div>
+          </div>
+
+          {/* ✅ Status Select with Error */}
+          <div>
+            <Select
+              styles={errorSelectStyles}
+              options={statusOptions}
+              placeholder="Select Status *"
+              value={{ value: formData.status, label: formData.status }}
+              onChange={(selected) => handleSelectChange("status", selected?.value || "")}
+            />
+            {errors.status && (
+              <p className="text-red-400 text-sm mt-1">{errors.status}</p>
+            )}
+          </div>
 
           {/* ✅ Multiple File Upload */}
           <div className="glass-card p-4">
@@ -271,9 +409,11 @@ function AddRegistrationModal({ open, onClose, onSave, editData }) {
           <button
             onClick={handleSave}
             disabled={uploading}
-            className={`glass-card px-6 py-3 text-white blue-glow ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+            className={`glass-card px-6 py-3 text-white blue-glow ${
+              uploading ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
           >
-            {uploading ? 'Uploading...' : 'Save Registration'}
+            {uploading ? 'Uploading...' : editData ? 'Update Registration' : 'Save Registration'}
           </button>
         </div>
       </div>
