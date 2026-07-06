@@ -15,8 +15,6 @@ function AddRegistrationModal({ open, onClose, onSave, editData }) {
   });
   const [uploading, setUploading] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState([]);
-  
-  // ✅ Validation Errors State
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
@@ -41,50 +39,42 @@ function AddRegistrationModal({ open, onClose, onSave, editData }) {
       });
       setSelectedFiles([]);
     }
-    // ✅ Modal open/close par errors clear
     setErrors({});
   }, [editData, open]);
 
-  // ✅ Validation Function
   const validateForm = () => {
     const newErrors = {};
 
-    // 1. Category Validation
     if (!formData.category) {
       newErrors.category = "Registration type is required";
     }
 
-    // 2. Custom Category Validation (if "Others" selected)
     if (formData.category === "Others" && !formData.customCategory.trim()) {
       newErrors.customCategory = "Please enter custom registration type";
     }
 
-    // 3. Registration Name Validation
     if (!formData.registrationName.trim()) {
       newErrors.registrationName = "Registration name is required";
     } else if (formData.registrationName.trim().length < 2) {
       newErrors.registrationName = "Registration name must be at least 2 characters";
     }
 
-    // 4. Start Date Validation
     if (!formData.startDate) {
       newErrors.startDate = "Start date is required";
     }
 
-    // 5. End Date Validation
     if (!formData.endDate) {
       newErrors.endDate = "End date is required";
     } else if (formData.startDate && formData.endDate < formData.startDate) {
       newErrors.endDate = "End date must be after start date";
     }
 
-    // 6. Status Validation
     if (!formData.status) {
       newErrors.status = "Please select a status";
     }
 
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0; // ✅ True if no errors
+    return Object.keys(newErrors).length === 0;
   };
 
   const uploadDocuments = async (files) => {
@@ -108,11 +98,9 @@ function AddRegistrationModal({ open, onClose, onSave, editData }) {
     }
   };
 
-  // ✅ Handle Save - Validation Check Ke Saath
   const handleSave = async () => {
-    // ✅ Pehle validate karo
     if (!validateForm()) {
-      return; // Agar errors hain toh save mat karo
+      return;
     }
 
     let uploadedDocs = [];
@@ -130,7 +118,6 @@ function AddRegistrationModal({ open, onClose, onSave, editData }) {
     };
 
     onSave(finalData);
-    // ✅ Form Reset After Successful Save
     setFormData({
       category: "",
       customCategory: "",
@@ -144,17 +131,14 @@ function AddRegistrationModal({ open, onClose, onSave, editData }) {
     onClose();
   };
 
-  // ✅ Handle Input Change - Live Error Clear
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    // ✅ Error clear on typing
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
     }
   };
 
-  // ✅ Handle Select Change - Live Error Clear
   const handleSelectChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) {
@@ -203,31 +187,33 @@ function AddRegistrationModal({ open, onClose, onSave, editData }) {
     { value: "Expired", label: "Expired" },
   ];
 
+  // ✅ React Select Styles - Only Once
   const customSelectStyles = {
-    control: (provided, state) => ({
+    control: (provided) => ({
       ...provided,
-      background: "rgba(255,255,255,0.04)",
-      backdropFilter: "blur(25px)",
-      border: state.isFocused ? "1px solid rgba(59,130,246,.5)" : "1px solid rgba(255,255,255,.08)",
-      borderRadius: "24px",
-      minHeight: "56px",
+      backgroundColor: "rgba(255,255,255,0.04)",
+      border: "1px solid rgba(255,255,255,0.08)",
+      borderRadius: "12px",
+      minHeight: "48px",
       boxShadow: "none",
       color: "#fff",
+      "&:hover": {
+        borderColor: "rgba(59,130,246,0.5)"
+      }
     }),
     menu: (provided) => ({
       ...provided,
-      background: "rgba(15,23,42,.95)",
-      backdropFilter: "blur(30px)",
-      borderRadius: "20px",
-      border: "1px solid rgba(255,255,255,.08)",
-      overflow: "hidden",
+      backgroundColor: "rgba(15,23,42,0.95)",
+      borderRadius: "12px",
+      border: "1px solid rgba(255,255,255,0.08)",
       zIndex: 9999,
     }),
     option: (provided, state) => ({
       ...provided,
-      background: state.isFocused ? "rgba(59,130,246,.20)" : "transparent",
+      backgroundColor: state.isFocused ? "rgba(59,130,246,0.20)" : "transparent",
       color: "#fff",
       cursor: "pointer",
+      padding: "10px 16px",
     }),
     singleValue: (provided) => ({
       ...provided,
@@ -235,7 +221,7 @@ function AddRegistrationModal({ open, onClose, onSave, editData }) {
     }),
     placeholder: (provided) => ({
       ...provided,
-      color: "rgba(255,255,255,.6)",
+      color: "rgba(255,255,255,0.6)",
     }),
     input: (provided) => ({
       ...provided,
@@ -248,12 +234,12 @@ function AddRegistrationModal({ open, onClose, onSave, editData }) {
     indicatorSeparator: () => ({ display: "none" }),
   };
 
-  // ✅ Error style for Select
+  // ✅ Error Select Styles - Only Once
   const errorSelectStyles = {
     ...customSelectStyles,
-    control: (provided, state) => ({
-      ...customSelectStyles.control(provided, state),
-      border: errors.category || errors.status ? "1px solid rgba(255,0,0,0.5)" : customSelectStyles.control(provided, state).border,
+    control: (provided) => ({
+      ...customSelectStyles.control(provided),
+      border: "1px solid rgba(255,0,0,0.5)",
     }),
   };
 
@@ -267,7 +253,7 @@ function AddRegistrationModal({ open, onClose, onSave, editData }) {
         </h2>
 
         <div className="space-y-4">
-          {/* ✅ Registration Type Select with Error */}
+          {/* Registration Type */}
           <div>
             <Select
               styles={errorSelectStyles}
@@ -281,7 +267,7 @@ function AddRegistrationModal({ open, onClose, onSave, editData }) {
             )}
           </div>
 
-          {/* ✅ Custom Category Input with Error */}
+          {/* Custom Category */}
           {formData.category === "Others" && (
             <div>
               <input
@@ -300,7 +286,7 @@ function AddRegistrationModal({ open, onClose, onSave, editData }) {
             </div>
           )}
 
-          {/* ✅ Registration Name with Error */}
+          {/* Registration Name */}
           <div>
             <input
               type="text"
@@ -317,7 +303,7 @@ function AddRegistrationModal({ open, onClose, onSave, editData }) {
             )}
           </div>
 
-          {/* ✅ Start Date & End Date with Errors */}
+          {/* Dates */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <input
@@ -349,7 +335,7 @@ function AddRegistrationModal({ open, onClose, onSave, editData }) {
             </div>
           </div>
 
-          {/* ✅ Status Select with Error */}
+          {/* Status */}
           <div>
             <Select
               styles={errorSelectStyles}
@@ -363,7 +349,7 @@ function AddRegistrationModal({ open, onClose, onSave, editData }) {
             )}
           </div>
 
-          {/* ✅ Multiple File Upload */}
+          {/* File Upload */}
           <div className="glass-card p-4">
             <label className="block text-sm text-gray-400 mb-2">
               Upload Documents (PDF, JPG, PNG)

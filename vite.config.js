@@ -7,4 +7,18 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  // ✅ Force CSS to be included in build
+  css: {
+    modules: {
+      scopeBehaviour: 'global',
+    },
+  },
+  build: {
+    // ✅ Ensure CSS is not purged too aggressively
+    rollupOptions: {
+      output: {
+        manualChunks: undefined,
+      },
+    },
+  },
 })
