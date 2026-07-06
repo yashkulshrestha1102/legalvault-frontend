@@ -30,13 +30,11 @@ function ClientDetails() {
         const token = localStorage.getItem('token');
         console.log('📥 Fetching client with ID:', id);
         
-        // ✅ Check if id is a valid MongoDB ObjectId format (24 hex chars)
         const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(id);
         
         let clientData;
         if (!isValidObjectId) {
           console.warn('⚠️ Invalid ObjectId format, trying fallback...');
-          // Try to find client from local storage
           const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
           const foundClient = savedClients.find(c => String(c.id) === String(id) || String(c._id) === String(id));
           if (foundClient) {
@@ -56,7 +54,6 @@ function ClientDetails() {
         setClient(clientData);
       } catch (error) {
         console.error('❌ Error fetching client:', error);
-        // Try local storage fallback
         const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
         const foundClient = savedClients.find(c => String(c.id) === String(id) || String(c._id) === String(id));
         if (foundClient) {
@@ -82,7 +79,6 @@ function ClientDetails() {
       }
       console.log('📋 Fetching registrations for client ID:', id);
       
-      // ✅ Check if id is valid ObjectId
       const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(id);
       if (!isValidObjectId) {
         console.warn('⚠️ Invalid ObjectId, skipping registrations fetch');
@@ -107,7 +103,6 @@ function ClientDetails() {
       const token = localStorage.getItem('token');
       console.log('📋 Fetching contracts for client ID:', id);
       
-      // ✅ Check if id is valid ObjectId
       const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(id);
       if (!isValidObjectId) {
         console.warn('⚠️ Invalid ObjectId, skipping contracts fetch');
@@ -130,7 +125,6 @@ function ClientDetails() {
   useEffect(() => {
     if (id) {
       console.log('🔄 Loading data for client ID:', id);
-      // ✅ Only fetch if valid ObjectId
       const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(id);
       if (isValidObjectId) {
         fetchRegistrations();
@@ -192,18 +186,62 @@ function ClientDetails() {
     window.open(`${pdfUrl}?token=${token}`, '_blank');
   };
 
-  // ✅ Save registration to backend
+  // ✅ Save registration to backend - FIXED
   const saveRegistration = async (registrationData) => {
     try {
       const token = localStorage.getItem('token');
-      const data = { ...registrationData, clientId: id };
       
       // ✅ Check if id is valid ObjectId
+      let validClientId = id;
       const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(id);
+      
       if (!isValidObjectId) {
-        alert('Cannot save registration: Invalid client ID. Please refresh and try again.');
-        return;
+        console.log('⚠️ Invalid ObjectId, trying to sync client to backend...');
+        
+        // ✅ Try to create client in backend from localStorage
+        const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
+        const localClient = savedClients.find(c => String(c.id) === String(id) || String(c._id) === String(id));
+        
+        if (localClient) {
+          try {
+            // ✅ Create client in backend
+            const createResponse = await axios.post(`${API_URL}/api/clients`, {
+              name: localClient.name,
+              company: localClient.company,
+              email: localClient.email,
+              phone: localClient.phone,
+              status: localClient.status || 'Active'
+            }, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            
+            console.log('✅ Client synced to backend:', createResponse.data);
+            validClientId = createResponse.data._id;
+            
+            // ✅ Update localStorage with new _id
+            const updatedClients = savedClients.map(c => 
+              String(c.id) === String(id) || String(c._id) === String(id) 
+                ? { ...c, _id: validClientId } 
+                : c
+            );
+            localStorage.setItem("clients", JSON.stringify(updatedClients));
+            
+            // ✅ Update URL without reload
+            window.history.replaceState(null, '', `/client/${validClientId}`);
+            
+          } catch (createError) {
+            console.error('❌ Failed to sync client:', createError);
+            alert('Please add this client again from the Clients page.');
+            return;
+          }
+        } else {
+          alert('Client not found. Please add the client again.');
+          return;
+        }
       }
+      
+      // ✅ Now save registration with valid client ID
+      const data = { ...registrationData, clientId: validClientId };
       
       if (registrationData.pdfFile) {
         const pdfUrl = await uploadPDF(registrationData.pdfFile);
@@ -219,12 +257,15 @@ function ClientDetails() {
           headers: { Authorization: `Bearer ${token}` }
         });
       }
+      
       fetchRegistrations();
       setEditRegistration(null);
       setOpenModal(false);
+      alert('✅ Registration saved successfully!');
+      
     } catch (error) {
       console.error('Error saving registration:', error);
-      alert('Failed to save registration');
+      alert('Failed to save registration: ' + (error.response?.data?.message || error.message));
     }
   };
 
@@ -243,18 +284,56 @@ function ClientDetails() {
     }
   };
 
-  // ✅ Save contract to backend
+  // ✅ Save contract to backend - FIXED
   const saveContract = async (contractData) => {
     try {
       const token = localStorage.getItem('token');
-      const data = { ...contractData, clientId: id };
       
       // ✅ Check if id is valid ObjectId
+      let validClientId = id;
       const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(id);
+      
       if (!isValidObjectId) {
-        alert('Cannot save contract: Invalid client ID. Please refresh and try again.');
-        return;
+        console.log('⚠️ Invalid ObjectId, trying to sync client to backend...');
+        
+        const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
+        const localClient = savedClients.find(c => String(c.id) === String(id) || String(c._id) === String(id));
+        
+        if (localClient) {
+          try {
+            const createResponse = await axios.post(`${API_URL}/api/clients`, {
+              name: localClient.name,
+              company: localClient.company,
+              email: localClient.email,
+              phone: localClient.phone,
+              status: localClient.status || 'Active'
+            }, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            
+            console.log('✅ Client synced to backend:', createResponse.data);
+            validClientId = createResponse.data._id;
+            
+            const updatedClients = savedClients.map(c => 
+              String(c.id) === String(id) || String(c._id) === String(id) 
+                ? { ...c, _id: validClientId } 
+                : c
+            );
+            localStorage.setItem("clients", JSON.stringify(updatedClients));
+            window.history.replaceState(null, '', `/client/${validClientId}`);
+            
+          } catch (createError) {
+            console.error('❌ Failed to sync client:', createError);
+            alert('Please add this client again from the Clients page.');
+            return;
+          }
+        } else {
+          alert('Client not found. Please add the client again.');
+          return;
+        }
       }
+      
+      const data = { ...contractData, clientId: validClientId };
       
       if (contractData.pdfFile) {
         const pdfUrl = await uploadPDF(contractData.pdfFile);
@@ -270,12 +349,15 @@ function ClientDetails() {
           headers: { Authorization: `Bearer ${token}` }
         });
       }
+      
       fetchContracts();
       setEditContract(null);
       setOpenContractModal(false);
+      alert('✅ Contract saved successfully!');
+      
     } catch (error) {
       console.error('Error saving contract:', error);
-      alert('Failed to save contract');
+      alert('Failed to save contract: ' + (error.response?.data?.message || error.message));
     }
   };
 
