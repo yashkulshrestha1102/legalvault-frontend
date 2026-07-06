@@ -5,24 +5,38 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const compression = require('compression');
+const morgan = require('morgan');
 const connectDB = require('./config/db');
 const { initGridFS } = require('./config/gridfs');
 const auditLog = require('./middleware/audit');
 
-
 const app = express();
+
+// ✅ Environment Variable Validation
+const requiredEnv = ['MONGO_URI', 'JWT_SECRET'];
+requiredEnv.forEach(key => {
+  if (!process.env[key]) {
+    console.error(`❌ Missing environment variable: ${key}`);
+    process.exit(1);
+  }
+});
+console.log('✅ All environment variables are set');
 
 // ✅ CORS
 app.use(cors({
-  origin: ['http://localhost:5173', 'https://legalvault-frontend-two.vercel.app', 'https://legalvault-jm2n.onrender.com'],
+  origin: ['http://localhost:5173', 'https://legalvault-frontend-two.vercel.app'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
+app.options('*', cors());
 
+// ✅ Morgan (Request Logging)
+app.use(morgan('dev'));
 
-
-app.use(auditLog); // ✅ Add this line
+// ✅ Compression
+app.use(compression());
 
 // ✅ Rate Limiting
 const limiter = rateLimit({
@@ -38,6 +52,9 @@ app.use(helmet());
 // ✅ Body Parser
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// ✅ Audit Log Middleware
+app.use(auditLog);
 
 // ✅ Connect to MongoDB
 connectDB();
@@ -82,6 +99,23 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
+});
+
+// ✅ Graceful Shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, closing server...');
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT received, closing server...');
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
 });
