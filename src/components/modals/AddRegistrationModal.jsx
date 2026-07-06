@@ -187,14 +187,14 @@ function AddRegistrationModal({ open, onClose, onSave, editData }) {
     { value: "Expired", label: "Expired" },
   ];
 
-  // ✅ React Select Styles - Only Once
+  // ✅ React Select Styles - ONLY ONCE
   const customSelectStyles = {
     control: (provided) => ({
       ...provided,
       backgroundColor: "rgba(255,255,255,0.04)",
       border: "1px solid rgba(255,255,255,0.08)",
-      borderRadius: "12px",
-      minHeight: "48px",
+      borderRadius: "24px",
+      minHeight: "56px",
       boxShadow: "none",
       color: "#fff",
       "&:hover": {
@@ -204,7 +204,7 @@ function AddRegistrationModal({ open, onClose, onSave, editData }) {
     menu: (provided) => ({
       ...provided,
       backgroundColor: "rgba(15,23,42,0.95)",
-      borderRadius: "12px",
+      borderRadius: "20px",
       border: "1px solid rgba(255,255,255,0.08)",
       zIndex: 9999,
     }),
@@ -234,7 +234,7 @@ function AddRegistrationModal({ open, onClose, onSave, editData }) {
     indicatorSeparator: () => ({ display: "none" }),
   };
 
-  // ✅ Error Select Styles - Only Once
+  // ✅ Error Select Styles - ONLY ONCE
   const errorSelectStyles = {
     ...customSelectStyles,
     control: (provided) => ({
