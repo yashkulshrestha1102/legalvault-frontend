@@ -23,7 +23,7 @@ function ClientDetails() {
   const [openContractModal, setOpenContractModal] = useState(false);
   const [editContract, setEditContract] = useState(null);
 
-  // ✅ Fetch client from backend
+  // ✅ Fetch client from backend - FIXED
   useEffect(() => {
     const fetchClient = async () => {
       try {
@@ -31,10 +31,39 @@ function ClientDetails() {
         console.log('📥 Fetching client with ID:', id);
         
         const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(id);
+        let clientData = null;
         
-        let clientData;
-        if (!isValidObjectId) {
-          console.warn('⚠️ Invalid ObjectId format, trying fallback...');
+        if (isValidObjectId) {
+          // ✅ PEHLE BACKEND SE FETCH KARO
+          try {
+            const response = await axios.get(`${API_URL}/api/clients/${id}`, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            clientData = response.data;
+            console.log('✅ Client fetched from backend:', clientData);
+            
+            // ✅ Update localStorage with latest data
+            const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
+            const updatedClients = savedClients.map(c => 
+              String(c._id) === String(id) || String(c.id) === String(id) ? clientData : c
+            );
+            localStorage.setItem("clients", JSON.stringify(updatedClients));
+            
+          } catch (backendError) {
+            console.warn('⚠️ Backend fetch failed, trying localStorage...', backendError);
+            // ✅ Fallback: localStorage se try karo
+            const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
+            const foundClient = savedClients.find(c => String(c._id) === String(id) || String(c.id) === String(id));
+            if (foundClient) {
+              clientData = foundClient;
+              console.log('✅ Client loaded from localStorage fallback:', clientData);
+            } else {
+              throw new Error('Client not found anywhere');
+            }
+          }
+        } else {
+          // ✅ Invalid ObjectId - localStorage se hi load karo
+          console.warn('⚠️ Invalid ObjectId format, loading from localStorage...');
           const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
           const foundClient = savedClients.find(c => String(c.id) === String(id) || String(c._id) === String(id));
           if (foundClient) {
@@ -43,17 +72,13 @@ function ClientDetails() {
           } else {
             throw new Error('Client not found');
           }
-        } else {
-          const response = await axios.get(`${API_URL}/api/clients/${id}`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
-          clientData = response.data;
-          console.log('✅ Client fetched from backend:', clientData);
         }
         
         setClient(clientData);
+        
       } catch (error) {
         console.error('❌ Error fetching client:', error);
+        // ✅ Last resort: localStorage fallback
         const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
         const foundClient = savedClients.find(c => String(c.id) === String(id) || String(c._id) === String(id));
         if (foundClient) {
@@ -186,57 +211,102 @@ function ClientDetails() {
     window.open(`${pdfUrl}?token=${token}`, '_blank');
   };
 
-  // ✅ Save registration to backend - FIXED with duplicate check
- const saveRegistration = async (registrationData) => {
-  try {
-    const token = localStorage.getItem('token');
-    
-    // ✅ Check if id is valid ObjectId
-    let validClientId = id;
-    const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(id);
-    
-    if (!isValidObjectId) {
-      // ... client sync code (same as before)
-    }
-    
-    // ✅ Now save registration with valid client ID
-    const data = { 
-      ...registrationData, 
-      clientId: validClientId 
-    };
-    
-    // ✅ PDF upload - registrationData.pdf se check karo
-    if (registrationData.pdf && !data.pdf) {
-      data.pdf = registrationData.pdf;
-      console.log('📄 PDF URL from modal:', data.pdf);
-    }
-    
-    // ✅ Agar registrationData.pdfFile hai toh upload karo
-    if (registrationData.pdfFile) {
-      const pdfUrl = await uploadPDF(registrationData.pdfFile);
-      if (pdfUrl) {
-        data.pdf = pdfUrl;
-        console.log('📄 PDF uploaded and set:', pdfUrl);
+  // ✅ Save registration to backend
+  const saveRegistration = async (registrationData) => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      let validClientId = id;
+      const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(id);
+      
+      if (!isValidObjectId) {
+        console.log('⚠️ Invalid ObjectId, trying to sync client to backend...');
+        const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
+        const localClient = savedClients.find(c => String(c.id) === String(id) || String(c._id) === String(id));
+        
+        if (localClient) {
+          try {
+            const allClientsRes = await axios.get(`${API_URL}/api/clients`, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            const allClients = allClientsRes.data?.clients || allClientsRes.data || [];
+            const existingClient = allClients.find(c => c.email === localClient.email);
+            
+            if (existingClient) {
+              validClientId = existingClient._id;
+              console.log('✅ Client already exists in backend, using ID:', validClientId);
+              const updatedClients = savedClients.map(c => 
+                String(c.id) === String(id) || String(c._id) === String(id) 
+                  ? { ...c, _id: validClientId } 
+                  : c
+              );
+              localStorage.setItem("clients", JSON.stringify(updatedClients));
+              window.history.replaceState(null, '', `/client/${validClientId}`);
+            } else {
+              const createResponse = await axios.post(`${API_URL}/api/clients`, {
+                name: localClient.name || 'Unknown',
+                company: localClient.company || 'Unknown',
+                email: localClient.email,
+                phone: localClient.phone || '0000000000',
+                status: localClient.status || 'Active'
+              }, {
+                headers: { Authorization: `Bearer ${token}` }
+              });
+              console.log('✅ Client synced to backend:', createResponse.data);
+              validClientId = createResponse.data._id;
+              const updatedClients = savedClients.map(c => 
+                String(c.id) === String(id) || String(c._id) === String(id) 
+                  ? { ...c, _id: validClientId } 
+                  : c
+              );
+              localStorage.setItem("clients", JSON.stringify(updatedClients));
+              window.history.replaceState(null, '', `/client/${validClientId}`);
+            }
+          } catch (syncError) {
+            console.error('❌ Sync error:', syncError.response?.data || syncError.message);
+            const errorMsg = syncError.response?.data?.message || 'Unknown error';
+            alert(`❌ Cannot sync client: ${errorMsg}\nPlease add this client again from the Clients page.`);
+            return;
+          }
+        } else {
+          alert('❌ Client not found in local storage. Please add the client again from the Clients page.');
+          return;
+        }
       }
+      
+      const data = { 
+        ...registrationData, 
+        clientId: validClientId 
+      };
+      
+      if (registrationData.pdf && !data.pdf) {
+        data.pdf = registrationData.pdf;
+        console.log('📄 PDF URL from modal:', data.pdf);
+      }
+      
+      if (registrationData.pdfFile) {
+        const pdfUrl = await uploadPDF(registrationData.pdfFile);
+        if (pdfUrl) {
+          data.pdf = pdfUrl;
+          console.log('📄 PDF uploaded and set:', pdfUrl);
+        }
+      }
+      
+      const response = await axios.post(`${API_URL}/api/registrations`, data, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      console.log('✅ Registration saved:', response.data);
+      fetchRegistrations();
+      setEditRegistration(null);
+      setOpenModal(false);
+      alert('✅ Registration saved successfully!');
+      
+    } catch (error) {
+      console.error('❌ Error saving registration:', error);
+      alert('Failed to save registration: ' + (error.response?.data?.message || error.message));
     }
-    
-    // ✅ Save registration
-    const response = await axios.post(`${API_URL}/api/registrations`, data, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    
-    console.log('✅ Registration saved:', response.data);
-    
-    fetchRegistrations();
-    setEditRegistration(null);
-    setOpenModal(false);
-    alert('✅ Registration saved successfully!');
-    
-  } catch (error) {
-    console.error('❌ Error saving registration:', error);
-    alert('Failed to save registration: ' + (error.response?.data?.message || error.message));
-  }
-};
+  };
 
   // ✅ Delete registration from backend
   const deleteRegistration = async (registrationId) => {
@@ -253,7 +323,7 @@ function ClientDetails() {
     }
   };
 
-  // ✅ Save contract to backend - FIXED with duplicate check
+  // ✅ Save contract to backend
   const saveContract = async (contractData) => {
     try {
       const token = localStorage.getItem('token');
@@ -263,24 +333,20 @@ function ClientDetails() {
       
       if (!isValidObjectId) {
         console.log('⚠️ Invalid ObjectId, trying to sync client to backend...');
-        
         const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
         const localClient = savedClients.find(c => String(c.id) === String(id) || String(c._id) === String(id));
         
         if (localClient) {
           try {
-            // ✅ STEP 1: Pehle check karo ki client already exists ya nahi
             const allClientsRes = await axios.get(`${API_URL}/api/clients`, {
               headers: { Authorization: `Bearer ${token}` }
             });
-            
             const allClients = allClientsRes.data?.clients || allClientsRes.data || [];
             const existingClient = allClients.find(c => c.email === localClient.email);
             
             if (existingClient) {
               validClientId = existingClient._id;
               console.log('✅ Client already exists in backend, using ID:', validClientId);
-              
               const updatedClients = savedClients.map(c => 
                 String(c.id) === String(id) || String(c._id) === String(id) 
                   ? { ...c, _id: validClientId } 
@@ -288,7 +354,6 @@ function ClientDetails() {
               );
               localStorage.setItem("clients", JSON.stringify(updatedClients));
               window.history.replaceState(null, '', `/client/${validClientId}`);
-              
             } else {
               const createResponse = await axios.post(`${API_URL}/api/clients`, {
                 name: localClient.name || 'Unknown',
@@ -299,10 +364,8 @@ function ClientDetails() {
               }, {
                 headers: { Authorization: `Bearer ${token}` }
               });
-              
               console.log('✅ Client synced to backend:', createResponse.data);
               validClientId = createResponse.data._id;
-              
               const updatedClients = savedClients.map(c => 
                 String(c.id) === String(id) || String(c._id) === String(id) 
                   ? { ...c, _id: validClientId } 
@@ -311,7 +374,6 @@ function ClientDetails() {
               localStorage.setItem("clients", JSON.stringify(updatedClients));
               window.history.replaceState(null, '', `/client/${validClientId}`);
             }
-            
           } catch (syncError) {
             console.error('❌ Sync error:', syncError.response?.data || syncError.message);
             const errorMsg = syncError.response?.data?.message || 'Unknown error';
