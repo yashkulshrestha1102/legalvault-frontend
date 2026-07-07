@@ -22,8 +22,9 @@ function ClientDetails() {
   const [contracts, setContracts] = useState([]);
   const [openContractModal, setOpenContractModal] = useState(false);
   const [editContract, setEditContract] = useState(null);
+  const [refreshKey, setRefreshKey] = useState(0); // ✅ Force re-render
 
-  // ✅ Fetch client function - FIXED with force re-render
+  // ✅ Fetch client function
   const fetchClient = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
@@ -40,7 +41,7 @@ function ClientDetails() {
           clientData = response.data;
           console.log('✅ Client fetched from backend:', clientData);
           
-          // ✅ Update localStorage with latest data
+          // ✅ Update localStorage
           const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
           const updatedClients = savedClients.map(c => 
             String(c._id) === String(id) || String(c.id) === String(id) ? clientData : c
@@ -72,6 +73,7 @@ function ClientDetails() {
       
       // ✅ FORCE RE-RENDER - New object reference
       setClient({ ...clientData });
+      setRefreshKey(prev => prev + 1); // ✅ Force re-render
       
     } catch (error) {
       console.error('❌ Error fetching client:', error);
@@ -79,6 +81,7 @@ function ClientDetails() {
       const foundClient = savedClients.find(c => String(c.id) === String(id) || String(c._id) === String(id));
       if (foundClient) {
         setClient({ ...foundClient });
+        setRefreshKey(prev => prev + 1);
         console.log('✅ Client loaded from localStorage fallback:', foundClient);
       } else {
         setClient(null);
@@ -103,6 +106,24 @@ function ClientDetails() {
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [id, fetchClient]);
+
+  // ✅ Force refresh when component mounts
+  useEffect(() => {
+    // Force a re-render when the component mounts
+    setRefreshKey(prev => prev + 1);
+  }, []);
+
+  // ✅ Refresh data when URL changes (navigation from clients page)
+  useEffect(() => {
+    const handleRouteChange = () => {
+      if (id) {
+        console.log('🔄 Route changed, refreshing client data...');
+        fetchClient();
+      }
+    };
+    window.addEventListener('popstate', handleRouteChange);
+    return () => window.removeEventListener('popstate', handleRouteChange);
   }, [id, fetchClient]);
 
   // ✅ Fetch registrations from backend
@@ -511,7 +532,7 @@ function ClientDetails() {
   }
 
   return (
-    <MainLayout>
+    <MainLayout key={refreshKey}> {/* ✅ Force re-render on refreshKey change */}
       <div className="space-y-6">
         {/* Client Header */}
         <div className="glass p-6">
