@@ -93,13 +93,20 @@ export default function AddClientModal({
     }
 
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0; // ✅ True if no errors
+    return Object.keys(newErrors).length === 0;
   };
 
-  // ✅ Handle Save - Validation Check Ke Saath
+  // ✅ Handle Save - FIXED: Preserve ID when editing
   const handleSave = () => {
     if (validateForm()) {
-      onSave(formData);
+      // ✅ If editing, preserve the ID
+      const saveData = editData ? {
+        ...formData,
+        _id: editData._id || editData.id,
+        id: editData.id || editData._id,
+      } : formData;
+      
+      onSave(saveData);
       // ✅ Form Reset After Successful Save
       setFormData({
         name: "",
