@@ -22,7 +22,6 @@ function Clients() {
   const [editData, setEditData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // ✅ fetchClients - Backup localStorage se
   const fetchClients = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -30,31 +29,13 @@ function Clients() {
         headers: { Authorization: `Bearer ${token}` }
       });
       console.log('✅ Clients fetched from backend:', response.data);
-      
-      let clientsData = response.data;
-      if (clientsData && typeof clientsData === 'object' && !Array.isArray(clientsData)) {
-        clientsData = clientsData.clients || [];
-      }
-      
-      if (Array.isArray(clientsData) && clientsData.length > 0) {
-        // ✅ Backend se data aaya, localStorage update karo
-        localStorage.setItem("clients", JSON.stringify(clientsData));
-        setClients(clientsData);
-      } else {
-        // ✅ Backend se empty aaya, localStorage check karo
-        const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
-        if (savedClients.length > 0) {
-          console.log('📦 Loading from localStorage:', savedClients.length);
-          setClients(savedClients);
-        } else {
-          setClients([]);
-        }
-      }
+      setClients(response.data);
     } catch (error) {
       console.error('❌ Error fetching clients:', error);
-      // ✅ Error par localStorage se load
       const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
-      setClients(Array.isArray(savedClients) ? savedClients : []);
+      if (savedClients.length > 0) {
+        setClients(savedClients);
+      }
     } finally {
       setLoading(false);
     }
@@ -64,7 +45,6 @@ function Clients() {
     fetchClients();
   }, []);
 
-  // ✅ addClient - Always save to localStorage
   const addClient = async (newClient) => {
     try {
       const token = localStorage.getItem('token');
@@ -73,23 +53,13 @@ function Clients() {
         headers: { Authorization: `Bearer ${token}` }
       });
       console.log('✅ Client added to backend:', response.data);
-      
-      // ✅ Success: localStorage update karo
-      const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
-      const updatedClients = [...savedClients, response.data];
-      localStorage.setItem("clients", JSON.stringify(updatedClients));
-      setClients(updatedClients);
-      
       addNotification(`Client Added: ${newClient.name}`);
       addActivity(`Client Added`);
-      setOpenModal(false);
+      fetchClients();
     } catch (error) {
       console.error('❌ Error adding client:', error.response?.data || error.message);
-      
-      // ✅ Fail: localStorage mein save karo
       const clientWithId = {
         ...newClient,
-        _id: `local_${Date.now()}`,
         id: Date.now(),
         registrations: [],
         contracts: [],
@@ -100,25 +70,14 @@ function Clients() {
         incomeTax: [],
         financials: [],
       };
-      const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
-      const updatedClients = [...savedClients, clientWithId];
-      localStorage.setItem("clients", JSON.stringify(updatedClients));
+      const updatedClients = [...clients, clientWithId];
       setClients(updatedClients);
-      
-      // ✅ User-friendly error message
-      const errorMessage = error.response?.data?.message || 'Failed to add client';
-      if (errorMessage.includes('email already exists')) {
-        alert(`❌ Client with email "${newClient.email}" already exists.`);
-      } else {
-        alert(`❌ ${errorMessage}. Client saved locally.`);
-      }
-      
+      localStorage.setItem("clients", JSON.stringify(updatedClients));
       addNotification(`Client Added (Local): ${newClient.name}`);
       addActivity(`Client Added (Local)`);
     }
   };
 
-  // ✅ deleteClient - Sync localStorage
   const deleteClient = async (indexToDelete) => {
     const client = clients[indexToDelete];
     const clientId = client?._id || client?.id;
@@ -135,28 +94,19 @@ function Clients() {
         headers: { Authorization: `Bearer ${token}` }
       });
       console.log('✅ Client deleted from backend');
-      
-      // ✅ LocalStorage se bhi delete karo
-      const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
-      const updatedClients = savedClients.filter((_, index) => index !== indexToDelete);
-      localStorage.setItem("clients", JSON.stringify(updatedClients));
-      setClients(updatedClients);
-      
       addNotification(`Client Deleted: ${clientName}`);
       addActivity(`Client Deleted`);
+      fetchClients();
     } catch (error) {
       console.error('❌ Error deleting client:', error);
-      // ✅ LocalStorage se delete karo (offline mode)
-      const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
-      const updatedClients = savedClients.filter((_, index) => index !== indexToDelete);
-      localStorage.setItem("clients", JSON.stringify(updatedClients));
+      const updatedClients = clients.filter((_, index) => index !== indexToDelete);
       setClients(updatedClients);
+      localStorage.setItem("clients", JSON.stringify(updatedClients));
       addNotification(`Client Deleted (Local): ${clientName}`);
       addActivity(`Client Deleted (Local)`);
     }
   };
 
-  // ✅ updateClient - Sync localStorage
   const updateClient = async (updatedClient) => {
     try {
       const token = localStorage.getItem('token');
@@ -166,26 +116,15 @@ function Clients() {
         headers: { Authorization: `Bearer ${token}` }
       });
       console.log('✅ Client updated in backend:', response.data);
-      
-      // ✅ LocalStorage update karo
-      const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
-      const updatedClients = savedClients.map(c => 
-        (c._id === clientId || c.id === clientId) ? response.data : c
-      );
-      localStorage.setItem("clients", JSON.stringify(updatedClients));
-      setClients(updatedClients);
-      
       addNotification(`Client Updated: ${updatedClient.name}`);
       addActivity(`Client Updated`);
+      fetchClients();
     } catch (error) {
       console.error('❌ Error updating client:', error);
-      // ✅ LocalStorage mein update karo
-      const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
-      const updatedClients = savedClients.map((c, i) => 
-        i === editIndex ? updatedClient : c
-      );
-      localStorage.setItem("clients", JSON.stringify(updatedClients));
+      const updatedClients = [...clients];
+      updatedClients[editIndex] = updatedClient;
       setClients(updatedClients);
+      localStorage.setItem("clients", JSON.stringify(updatedClients));
       addNotification(`Client Updated (Local): ${updatedClient.name}`);
       addActivity(`Client Updated (Local)`);
     }
@@ -193,9 +132,7 @@ function Clients() {
     setEditData(null);
   };
 
-  // ✅ Safe filter
-  const clientsList = Array.isArray(clients) ? clients : [];
-  const activeClients = clientsList.filter(client => client?.status === "Active").length;
+  const activeClients = clients.filter(client => client.status === "Active").length;
 
   if (loading) {
     return (
@@ -251,16 +188,16 @@ function Clients() {
               </tr>
             </thead>
             <tbody>
-              {clientsList.length === 0 ? (
+              {clients.length === 0 ? (
                 <tr>
                   <td colSpan="6" className="text-center py-12 text-gray-400">
                     No Clients Found
                   </td>
                 </tr>
               ) : (
-                clientsList
+                clients
                   .filter((client) =>
-                    client?.name?.toLowerCase().includes(searchTerm.toLowerCase())
+                    client.name?.toLowerCase().includes(searchTerm.toLowerCase())
                   )
                   .map((client, index) => (
                     <tr
@@ -330,7 +267,7 @@ function Clients() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
         <div className="glass-card p-4 md:p-5">
           <p className="text-gray-400">Total Clients</p>
-          <h2 className="text-4xl font-bold mt-2">{clientsList.length}</h2>
+          <h2 className="text-4xl font-bold mt-2">{clients.length}</h2>
         </div>
         <div className="glass-card p-4 md:p-5">
           <p className="text-gray-400">Active Clients</p>
@@ -338,7 +275,7 @@ function Clients() {
         </div>
         <div className="glass-card p-4 md:p-5">
           <p className="text-gray-400">Inactive Clients</p>
-          <h2 className="text-4xl font-bold text-red-400 mt-2">{clientsList.length - activeClients}</h2>
+          <h2 className="text-4xl font-bold text-red-400 mt-2">{clients.length - activeClients}</h2>
         </div>
         <div className="glass-card p-4 md:p-5">
           <p className="text-gray-400">Growth</p>
