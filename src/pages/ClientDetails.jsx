@@ -23,7 +23,7 @@ function ClientDetails() {
   const [openContractModal, setOpenContractModal] = useState(false);
   const [editContract, setEditContract] = useState(null);
 
-  // ✅ Fetch client function - using useCallback to avoid recreation
+  // ✅ Fetch client function - FIXED with force re-render
   const fetchClient = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
@@ -70,14 +70,15 @@ function ClientDetails() {
         }
       }
       
-      setClient(clientData);
+      // ✅ FORCE RE-RENDER - New object reference
+      setClient({ ...clientData });
       
     } catch (error) {
       console.error('❌ Error fetching client:', error);
       const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
       const foundClient = savedClients.find(c => String(c.id) === String(id) || String(c._id) === String(id));
       if (foundClient) {
-        setClient(foundClient);
+        setClient({ ...foundClient });
         console.log('✅ Client loaded from localStorage fallback:', foundClient);
       } else {
         setClient(null);
@@ -102,18 +103,6 @@ function ClientDetails() {
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [id, fetchClient]);
-
-  // ✅ Refresh data when URL changes (navigation from clients page)
-  useEffect(() => {
-    const handleRouteChange = () => {
-      if (id) {
-        console.log('🔄 Route changed, refreshing client data...');
-        fetchClient();
-      }
-    };
-    window.addEventListener('popstate', handleRouteChange);
-    return () => window.removeEventListener('popstate', handleRouteChange);
   }, [id, fetchClient]);
 
   // ✅ Fetch registrations from backend
