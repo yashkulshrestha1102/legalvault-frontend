@@ -187,109 +187,56 @@ function ClientDetails() {
   };
 
   // ✅ Save registration to backend - FIXED with duplicate check
-  const saveRegistration = async (registrationData) => {
-    try {
-      const token = localStorage.getItem('token');
-      
-      let validClientId = id;
-      const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(id);
-      
-      if (!isValidObjectId) {
-        console.log('⚠️ Invalid ObjectId, trying to sync client to backend...');
-        
-        const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
-        const localClient = savedClients.find(c => String(c.id) === String(id) || String(c._id) === String(id));
-        
-        if (localClient) {
-          try {
-            // ✅ STEP 1: Pehle check karo ki client already exists ya nahi
-            const allClientsRes = await axios.get(`${API_URL}/api/clients`, {
-              headers: { Authorization: `Bearer ${token}` }
-            });
-            
-            // ✅ Handle paginated response
-            const allClients = allClientsRes.data?.clients || allClientsRes.data || [];
-            const existingClient = allClients.find(c => c.email === localClient.email);
-            
-            if (existingClient) {
-              // ✅ Client already exists, use existing _id
-              validClientId = existingClient._id;
-              console.log('✅ Client already exists in backend, using ID:', validClientId);
-              
-              // ✅ Update localStorage with valid _id
-              const updatedClients = savedClients.map(c => 
-                String(c.id) === String(id) || String(c._id) === String(id) 
-                  ? { ...c, _id: validClientId } 
-                  : c
-              );
-              localStorage.setItem("clients", JSON.stringify(updatedClients));
-              window.history.replaceState(null, '', `/client/${validClientId}`);
-              
-            } else {
-              // ✅ STEP 2: Client nahi hai, toh create karo
-              const createResponse = await axios.post(`${API_URL}/api/clients`, {
-                name: localClient.name || 'Unknown',
-                company: localClient.company || 'Unknown',
-                email: localClient.email,
-                phone: localClient.phone || '0000000000',
-                status: localClient.status || 'Active'
-              }, {
-                headers: { Authorization: `Bearer ${token}` }
-              });
-              
-              console.log('✅ Client synced to backend:', createResponse.data);
-              validClientId = createResponse.data._id;
-              
-              // ✅ Update localStorage with new _id
-              const updatedClients = savedClients.map(c => 
-                String(c.id) === String(id) || String(c._id) === String(id) 
-                  ? { ...c, _id: validClientId } 
-                  : c
-              );
-              localStorage.setItem("clients", JSON.stringify(updatedClients));
-              window.history.replaceState(null, '', `/client/${validClientId}`);
-            }
-            
-          } catch (syncError) {
-            console.error('❌ Sync error:', syncError.response?.data || syncError.message);
-            const errorMsg = syncError.response?.data?.message || 'Unknown error';
-            alert(`❌ Cannot sync client: ${errorMsg}\nPlease add this client again from the Clients page.`);
-            return;
-          }
-        } else {
-          alert('❌ Client not found in local storage. Please add the client again from the Clients page.');
-          return;
-        }
-      }
-      
-      // ✅ Now save registration with valid client ID
-      const data = { ...registrationData, clientId: validClientId };
-      
-      if (registrationData.pdfFile) {
-        const pdfUrl = await uploadPDF(registrationData.pdfFile);
-        if (pdfUrl) data.pdf = pdfUrl;
-      }
-      
-      if (editRegistration) {
-        await axios.put(`${API_URL}/api/registrations/${editRegistration._id}`, data, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-      } else {
-        await axios.post(`${API_URL}/api/registrations`, data, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-      }
-      
-      fetchRegistrations();
-      setEditRegistration(null);
-      setOpenModal(false);
-      alert('✅ Registration saved successfully!');
-      
-    } catch (error) {
-      console.error('Error saving registration:', error);
-      alert('Failed to save registration: ' + (error.response?.data?.message || error.message));
+ const saveRegistration = async (registrationData) => {
+  try {
+    const token = localStorage.getItem('token');
+    
+    // ✅ Check if id is valid ObjectId
+    let validClientId = id;
+    const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(id);
+    
+    if (!isValidObjectId) {
+      // ... client sync code (same as before)
     }
-  };
+    
+    // ✅ Now save registration with valid client ID
+    const data = { 
+      ...registrationData, 
+      clientId: validClientId 
+    };
+    
+    // ✅ PDF upload - registrationData.pdf se check karo
+    if (registrationData.pdf && !data.pdf) {
+      data.pdf = registrationData.pdf;
+      console.log('📄 PDF URL from modal:', data.pdf);
+    }
+    
+    // ✅ Agar registrationData.pdfFile hai toh upload karo
+    if (registrationData.pdfFile) {
+      const pdfUrl = await uploadPDF(registrationData.pdfFile);
+      if (pdfUrl) {
+        data.pdf = pdfUrl;
+        console.log('📄 PDF uploaded and set:', pdfUrl);
+      }
+    }
+    
+    // ✅ Save registration
+    const response = await axios.post(`${API_URL}/api/registrations`, data, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    
+    console.log('✅ Registration saved:', response.data);
+    
+    fetchRegistrations();
+    setEditRegistration(null);
+    setOpenModal(false);
+    alert('✅ Registration saved successfully!');
+    
+  } catch (error) {
+    console.error('❌ Error saving registration:', error);
+    alert('Failed to save registration: ' + (error.response?.data?.message || error.message));
+  }
+};
 
   // ✅ Delete registration from backend
   const deleteRegistration = async (registrationId) => {

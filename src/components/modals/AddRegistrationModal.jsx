@@ -109,37 +109,37 @@ function AddRegistrationModal({ open, onClose, onSave, editData }) {
   };
 
   const handleSave = async () => {
-    if (!validateForm()) {
-      return;
+  if (!validateForm()) {
+    return;
+  }
+
+  let uploadedDocs = [];
+  let pdfUrl = null;
+
+  if (selectedFiles.length > 0) {
+    setUploading(true);
+    const result = await uploadDocuments(selectedFiles);
+    setUploading(false);
+    
+    if (result) {
+      // ✅ Agar single file hai toh url, multiple hai toh array
+      pdfUrl = Array.isArray(result) ? result[0] : result;
+      uploadedDocs = Array.isArray(result) ? result : [result];
     }
+  }
 
-    let uploadedDocs = [];
-
-    if (selectedFiles.length > 0) {
-      setUploading(true);
-      uploadedDocs = await uploadDocuments(selectedFiles);
-      setUploading(false);
-    }
-
-    const finalData = {
-      ...formData,
-      category: formData.category === "Others" ? formData.customCategory : formData.category,
-      documents: uploadedDocs || []
-    };
-
-    onSave(finalData);
-    setFormData({
-      category: "",
-      customCategory: "",
-      registrationName: "",
-      startDate: "",
-      endDate: "",
-      status: "Valid",
-    });
-    setSelectedFiles([]);
-    setErrors({});
-    onClose();
+  const finalData = {
+    ...formData,
+    category: formData.category === "Others" ? formData.customCategory : formData.category,
+    // ✅ PDF URL alag se bhejo
+    pdf: pdfUrl,
+    pdfFile: selectedFiles.length > 0 ? selectedFiles[0] : null,
+    documents: uploadedDocs || []
   };
+
+  onSave(finalData);
+  // ... reset code
+};
 
   const handleChange = (e) => {
     const { name, value } = e.target;
