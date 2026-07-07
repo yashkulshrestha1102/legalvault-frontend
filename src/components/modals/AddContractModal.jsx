@@ -82,19 +82,14 @@ function AddContractModal({
     return Object.keys(newErrors).length === 0;
   };
 
-  // ✅ Handle Save - PDF URL pass karo
   const handleSave = () => {
     if (!validateForm()) return;
-
     const finalData = {
       ...formData,
       contractType: formData.contractType === "Others" ? formData.customContractType : formData.contractType,
-      // ✅ PDF URL ko pdf field mein bhejo
       pdf: formData.pdfUrl || formData.pdf || ""
     };
-
     onSave(finalData);
-
     setFormData({
       contractType: "",
       customContractType: "",
@@ -130,17 +125,14 @@ function AddContractModal({
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
     if (file.type !== 'application/pdf') {
       setErrors(prev => ({ ...prev, pdf: "Please upload a valid PDF file" }));
       return;
     }
-
     if (file.size > 10 * 1024 * 1024) {
       setErrors(prev => ({ ...prev, pdf: "File size should be less than 10MB" }));
       return;
     }
-
     const reader = new FileReader();
     reader.onload = () => {
       setFormData((prev) => ({
@@ -171,31 +163,33 @@ function AddContractModal({
     { value: "Others", label: "Others" },
   ];
 
+  // ✅ Responsive Select Styles
   const customSelectStyles = {
-    control: (provided, state) => ({
+    control: (provided) => ({
       ...provided,
-      background: "rgba(255,255,255,0.04)",
-      backdropFilter: "blur(25px)",
-      border: state.isFocused ? "1px solid rgba(59,130,246,.5)" : "1px solid rgba(255,255,255,.08)",
-      borderRadius: "24px",
-      minHeight: "56px",
+      backgroundColor: "rgba(255,255,255,0.04)",
+      border: "1px solid rgba(255,255,255,0.08)",
+      borderRadius: "12px",
+      minHeight: "48px",
       boxShadow: "none",
       color: "#fff",
+      "&:hover": {
+        borderColor: "rgba(59,130,246,0.5)"
+      }
     }),
     menu: (provided) => ({
       ...provided,
-      background: "rgba(15,23,42,.95)",
-      backdropFilter: "blur(30px)",
-      borderRadius: "20px",
-      overflow: "hidden",
-      border: "1px solid rgba(255,255,255,.08)",
+      backgroundColor: "rgba(15,23,42,0.95)",
+      borderRadius: "12px",
+      border: "1px solid rgba(255,255,255,0.08)",
       zIndex: 9999,
     }),
     option: (provided, state) => ({
       ...provided,
-      background: state.isFocused ? "rgba(59,130,246,.20)" : "transparent",
+      backgroundColor: state.isFocused ? "rgba(59,130,246,0.20)" : "transparent",
       color: "#fff",
       cursor: "pointer",
+      padding: "10px 16px",
     }),
     singleValue: (provided) => ({
       ...provided,
@@ -203,7 +197,7 @@ function AddContractModal({
     }),
     placeholder: (provided) => ({
       ...provided,
-      color: "rgba(255,255,255,.6)",
+      color: "rgba(255,255,255,0.6)",
     }),
     input: (provided) => ({
       ...provided,
@@ -218,11 +212,9 @@ function AddContractModal({
 
   const errorSelectStyles = {
     ...customSelectStyles,
-    control: (provided, state) => ({
-      ...customSelectStyles.control(provided, state),
-      border: errors.contractType || errors.status 
-        ? "1px solid rgba(255,0,0,0.5)" 
-        : customSelectStyles.control(provided, state).border,
+    control: (provided) => ({
+      ...customSelectStyles.control(provided),
+      border: "1px solid rgba(255,0,0,0.5)",
     }),
   };
 
@@ -230,132 +222,214 @@ function AddContractModal({
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-[9999] p-4">
-      <div className="glass p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-        <h2 className="text-2xl font-bold mb-6 text-white">
+      {/* ✅ Responsive Modal */}
+      <div className="glass p-4 sm:p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-white">
           {editData ? "Edit Contract" : "Add Contract"}
         </h2>
 
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
+          {/* Contract Type */}
           <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">
+              Contract Type <span className="text-red-400">*</span>
+            </label>
             <Select
               styles={errorSelectStyles}
               options={contractOptions}
-              placeholder="Select Contract Type *"
+              placeholder="Select Contract Type"
               value={formData.contractType ? { value: formData.contractType, label: formData.contractType } : null}
               onChange={(selected) => handleSelectChange("contractType", selected?.value || "")}
             />
-            {errors.contractType && <p className="text-red-400 text-sm mt-1">{errors.contractType}</p>}
+            {errors.contractType && (
+              <p className="text-red-400 text-sm mt-1">{errors.contractType}</p>
+            )}
           </div>
 
+          {/* Custom Contract Type */}
           {formData.contractType === "Others" && (
             <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">
+                Custom Contract Type <span className="text-red-400">*</span>
+              </label>
               <input
                 type="text"
                 name="customContractType"
-                placeholder="Enter Custom Contract Type *"
+                placeholder="Enter custom contract type"
                 value={formData.customContractType}
                 onChange={handleChange}
-                className={`glass-card p-4 w-full text-white outline-none ${errors.customContractType ? "border-2 border-red-500" : ""}`}
+                className={`w-full glass-card p-3 sm:p-4 text-white outline-none ${
+                  errors.customContractType ? "border-2 border-red-500" : ""
+                }`}
               />
-              {errors.customContractType && <p className="text-red-400 text-sm mt-1">{errors.customContractType}</p>}
+              {errors.customContractType && (
+                <p className="text-red-400 text-sm mt-1">{errors.customContractType}</p>
+              )}
             </div>
           )}
 
+          {/* Contract Name */}
           <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">
+              Contract Name <span className="text-red-400">*</span>
+            </label>
             <input
               type="text"
               name="contractName"
-              placeholder="Contract Name *"
+              placeholder="Enter contract name"
               value={formData.contractName}
               onChange={handleChange}
-              className={`glass-card p-4 w-full text-white outline-none ${errors.contractName ? "border-2 border-red-500" : ""}`}
+              className={`w-full glass-card p-3 sm:p-4 text-white outline-none ${
+                errors.contractName ? "border-2 border-red-500" : ""
+              }`}
             />
-            {errors.contractName && <p className="text-red-400 text-sm mt-1">{errors.contractName}</p>}
+            {errors.contractName && (
+              <p className="text-red-400 text-sm mt-1">{errors.contractName}</p>
+            )}
           </div>
 
+          {/* First Party */}
           <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">
+              First Party <span className="text-red-400">*</span>
+            </label>
             <input
               type="text"
               name="firstParty"
-              placeholder="First Party *"
+              placeholder="Enter first party"
               value={formData.firstParty}
               onChange={handleChange}
-              className={`glass-card p-4 w-full text-white outline-none ${errors.firstParty ? "border-2 border-red-500" : ""}`}
+              className={`w-full glass-card p-3 sm:p-4 text-white outline-none ${
+                errors.firstParty ? "border-2 border-red-500" : ""
+              }`}
             />
-            {errors.firstParty && <p className="text-red-400 text-sm mt-1">{errors.firstParty}</p>}
+            {errors.firstParty && (
+              <p className="text-red-400 text-sm mt-1">{errors.firstParty}</p>
+            )}
           </div>
 
+          {/* Second Party */}
           <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">
+              Second Party <span className="text-red-400">*</span>
+            </label>
             <input
               type="text"
               name="secondParty"
-              placeholder="Second Party *"
+              placeholder="Enter second party"
               value={formData.secondParty}
               onChange={handleChange}
-              className={`glass-card p-4 w-full text-white outline-none ${errors.secondParty ? "border-2 border-red-500" : ""}`}
+              className={`w-full glass-card p-3 sm:p-4 text-white outline-none ${
+                errors.secondParty ? "border-2 border-red-500" : ""
+              }`}
             />
-            {errors.secondParty && <p className="text-red-400 text-sm mt-1">{errors.secondParty}</p>}
+            {errors.secondParty && (
+              <p className="text-red-400 text-sm mt-1">{errors.secondParty}</p>
+            )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Dates - Responsive Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">
+                Start Date <span className="text-red-400">*</span>
+              </label>
               <input
                 type="date"
                 name="startDate"
                 value={formData.startDate}
                 onChange={handleChange}
-                className={`glass-card p-4 w-full text-white outline-none ${errors.startDate ? "border-2 border-red-500" : ""}`}
+                className={`w-full glass-card p-3 sm:p-4 text-white outline-none ${
+                  errors.startDate ? "border-2 border-red-500" : ""
+                }`}
               />
-              {errors.startDate && <p className="text-red-400 text-sm mt-1">{errors.startDate}</p>}
+              {errors.startDate && (
+                <p className="text-red-400 text-sm mt-1">{errors.startDate}</p>
+              )}
             </div>
             <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">
+                End Date <span className="text-red-400">*</span>
+              </label>
               <input
                 type="date"
                 name="endDate"
                 value={formData.endDate}
                 onChange={handleChange}
-                className={`glass-card p-4 w-full text-white outline-none ${errors.endDate ? "border-2 border-red-500" : ""}`}
+                className={`w-full glass-card p-3 sm:p-4 text-white outline-none ${
+                  errors.endDate ? "border-2 border-red-500" : ""
+                }`}
               />
-              {errors.endDate && <p className="text-red-400 text-sm mt-1">{errors.endDate}</p>}
+              {errors.endDate && (
+                <p className="text-red-400 text-sm mt-1">{errors.endDate}</p>
+              )}
             </div>
           </div>
 
+          {/* Status */}
           <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">
+              Status <span className="text-red-400">*</span>
+            </label>
             <select
               name="status"
               value={formData.status}
               onChange={handleChange}
-              className={`glass-card p-4 w-full text-white outline-none bg-transparent ${errors.status ? "border-2 border-red-500" : ""}`}
+              className={`w-full glass-card p-3 sm:p-4 text-white outline-none bg-transparent ${
+                errors.status ? "border-2 border-red-500" : ""
+              }`}
             >
               <option className="bg-slate-900" value="Active">Active</option>
               <option className="bg-slate-900" value="Expired">Expired</option>
               <option className="bg-slate-900" value="Renewed">Renewed</option>
               <option className="bg-slate-900" value="Terminated">Terminated</option>
             </select>
-            {errors.status && <p className="text-red-400 text-sm mt-1">{errors.status}</p>}
+            {errors.status && (
+              <p className="text-red-400 text-sm mt-1">{errors.status}</p>
+            )}
           </div>
 
-          <div>
-            <input
-              type="file"
-              accept=".pdf"
-              onChange={handleFileChange}
-              className={`glass-card p-4 w-full text-white ${errors.pdf ? "border-2 border-red-500" : ""}`}
-            />
-            {errors.pdf && <p className="text-red-400 text-sm mt-1">{errors.pdf}</p>}
+          {/* PDF Upload */}
+          <div className="glass-card p-3 sm:p-4">
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Upload PDF <span className="text-gray-400 text-xs">(max 10MB)</span>
+            </label>
+            <div className="relative">
+              <input
+                type="file"
+                accept=".pdf"
+                onChange={handleFileChange}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+              />
+              <div className={`glass-card p-3 text-center text-gray-400 border border-dashed ${
+                errors.pdf ? 'border-red-500' : 'border-gray-600'
+              }`}>
+                <span>📎 {formData.pdf ? formData.pdf : 'Choose PDF file'}</span>
+              </div>
+            </div>
+            {errors.pdf && (
+              <p className="text-red-400 text-sm mt-1">{errors.pdf}</p>
+            )}
             {formData.pdf && !errors.pdf && (
-              <div className="glass-card p-4 text-green-400 mt-2">
-                ✅ Selected File: {formData.pdf}
+              <div className="text-green-400 text-sm mt-2">
+                ✅ Selected: {formData.pdf}
               </div>
             )}
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row justify-end gap-3 mt-8">
-          <button onClick={onClose} className="glass-card px-6 py-3 text-white">
+        {/* Footer - Responsive Buttons */}
+        <div className="flex flex-col sm:flex-row justify-end gap-3 mt-6 sm:mt-8">
+          <button
+            onClick={onClose}
+            className="glass-card px-4 sm:px-6 py-2 sm:py-3 text-white w-full sm:w-auto order-2 sm:order-1"
+          >
             Cancel
           </button>
-          <button onClick={handleSave} className="glass-card px-6 py-3 text-white blue-glow">
+          <button
+            onClick={handleSave}
+            className="glass-card px-4 sm:px-6 py-2 sm:py-3 text-white blue-glow w-full sm:w-auto order-1 sm:order-2"
+          >
             {editData ? "Update Contract" : "Save Contract"}
           </button>
         </div>
