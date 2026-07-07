@@ -21,7 +21,6 @@ function AddContractModal({
     pdfUrl: "",
   });
 
-  // ✅ Validation Errors State
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
@@ -45,89 +44,57 @@ function AddContractModal({
         pdfUrl: "",
       });
     }
-    // ✅ Modal open/close par errors clear
     setErrors({});
   }, [editData, open]);
 
-  // ✅ Validation Function
   const validateForm = () => {
     const newErrors = {};
-
-    // 1. Contract Type Validation
-    if (!formData.contractType) {
-      newErrors.contractType = "Contract type is required";
-    }
-
-    // 2. Custom Contract Type Validation (if "Others" selected)
+    if (!formData.contractType) newErrors.contractType = "Contract type is required";
     if (formData.contractType === "Others" && !formData.customContractType.trim()) {
       newErrors.customContractType = "Please enter custom contract type";
     }
-
-    // 3. Contract Name Validation
     if (!formData.contractName.trim()) {
       newErrors.contractName = "Contract name is required";
     } else if (formData.contractName.trim().length < 2) {
       newErrors.contractName = "Contract name must be at least 2 characters";
     }
-
-    // 4. First Party Validation
     if (!formData.firstParty.trim()) {
       newErrors.firstParty = "First party is required";
     } else if (formData.firstParty.trim().length < 2) {
       newErrors.firstParty = "First party must be at least 2 characters";
     }
-
-    // 5. Second Party Validation
     if (!formData.secondParty.trim()) {
       newErrors.secondParty = "Second party is required";
     } else if (formData.secondParty.trim().length < 2) {
       newErrors.secondParty = "Second party must be at least 2 characters";
     }
-
-    // 6. Start Date Validation
-    if (!formData.startDate) {
-      newErrors.startDate = "Start date is required";
-    }
-
-    // 7. End Date Validation
+    if (!formData.startDate) newErrors.startDate = "Start date is required";
     if (!formData.endDate) {
       newErrors.endDate = "End date is required";
     } else if (formData.startDate && formData.endDate < formData.startDate) {
       newErrors.endDate = "End date must be after start date";
     }
-
-    // 8. Status Validation
-    if (!formData.status) {
-      newErrors.status = "Please select a status";
-    }
-
-    // 9. PDF Validation (Optional - but if user selects, check format)
+    if (!formData.status) newErrors.status = "Please select a status";
     if (formData.pdfFile && formData.pdfFile.type !== 'application/pdf') {
       newErrors.pdf = "Please upload a valid PDF file";
     }
-
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0; // ✅ True if no errors
+    return Object.keys(newErrors).length === 0;
   };
 
-  // ✅ Handle Save - Validation Check Ke Saath
+  // ✅ Handle Save - PDF URL pass karo
   const handleSave = () => {
-    // ✅ Pehle validate karo
-    if (!validateForm()) {
-      return; // Agar errors hain toh save mat karo
-    }
+    if (!validateForm()) return;
 
     const finalData = {
       ...formData,
-      contractType:
-        formData.contractType === "Others"
-          ? formData.customContractType
-          : formData.contractType,
+      contractType: formData.contractType === "Others" ? formData.customContractType : formData.contractType,
+      // ✅ PDF URL ko pdf field mein bhejo
+      pdf: formData.pdfUrl || formData.pdf || ""
     };
 
     onSave(finalData);
 
-    // ✅ Form Reset After Successful Save
     setFormData({
       contractType: "",
       customContractType: "",
@@ -145,17 +112,14 @@ function AddContractModal({
     onClose();
   };
 
-  // ✅ Handle Input Change - Live Error Clear
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    // ✅ Error clear on typing
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
     }
   };
 
-  // ✅ Handle Select Change - Live Error Clear
   const handleSelectChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) {
@@ -163,18 +127,15 @@ function AddContractModal({
     }
   };
 
-  // ✅ Handle File Change with Validation
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    // ✅ Check if file is PDF
     if (file.type !== 'application/pdf') {
       setErrors(prev => ({ ...prev, pdf: "Please upload a valid PDF file" }));
       return;
     }
 
-    // ✅ Check file size (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
       setErrors(prev => ({ ...prev, pdf: "File size should be less than 10MB" }));
       return;
@@ -188,7 +149,6 @@ function AddContractModal({
         pdfFile: file,
         pdfUrl: reader.result,
       }));
-      // ✅ Clear PDF error if any
       if (errors.pdf) {
         setErrors(prev => ({ ...prev, pdf: "" }));
       }
@@ -216,9 +176,7 @@ function AddContractModal({
       ...provided,
       background: "rgba(255,255,255,0.04)",
       backdropFilter: "blur(25px)",
-      border: state.isFocused
-        ? "1px solid rgba(59,130,246,.5)"
-        : "1px solid rgba(255,255,255,.08)",
+      border: state.isFocused ? "1px solid rgba(59,130,246,.5)" : "1px solid rgba(255,255,255,.08)",
       borderRadius: "24px",
       minHeight: "56px",
       boxShadow: "none",
@@ -235,9 +193,7 @@ function AddContractModal({
     }),
     option: (provided, state) => ({
       ...provided,
-      background: state.isFocused
-        ? "rgba(59,130,246,.20)"
-        : "transparent",
+      background: state.isFocused ? "rgba(59,130,246,.20)" : "transparent",
       color: "#fff",
       cursor: "pointer",
     }),
@@ -257,12 +213,9 @@ function AddContractModal({
       ...provided,
       color: "#fff",
     }),
-    indicatorSeparator: () => ({
-      display: "none",
-    }),
+    indicatorSeparator: () => ({ display: "none" }),
   };
 
-  // ✅ Error style for Select
   const errorSelectStyles = {
     ...customSelectStyles,
     control: (provided, state) => ({
@@ -283,28 +236,17 @@ function AddContractModal({
         </h2>
 
         <div className="space-y-4">
-          {/* ✅ Contract Type Select with Error */}
           <div>
             <Select
               styles={errorSelectStyles}
               options={contractOptions}
               placeholder="Select Contract Type *"
-              value={
-                formData.contractType
-                  ? {
-                      value: formData.contractType,
-                      label: formData.contractType,
-                    }
-                  : null
-              }
+              value={formData.contractType ? { value: formData.contractType, label: formData.contractType } : null}
               onChange={(selected) => handleSelectChange("contractType", selected?.value || "")}
             />
-            {errors.contractType && (
-              <p className="text-red-400 text-sm mt-1">{errors.contractType}</p>
-            )}
+            {errors.contractType && <p className="text-red-400 text-sm mt-1">{errors.contractType}</p>}
           </div>
 
-          {/* ✅ Custom Contract Type Input with Error */}
           {formData.contractType === "Others" && (
             <div>
               <input
@@ -313,17 +255,12 @@ function AddContractModal({
                 placeholder="Enter Custom Contract Type *"
                 value={formData.customContractType}
                 onChange={handleChange}
-                className={`glass-card p-4 w-full text-white outline-none ${
-                  errors.customContractType ? "border-2 border-red-500" : ""
-                }`}
+                className={`glass-card p-4 w-full text-white outline-none ${errors.customContractType ? "border-2 border-red-500" : ""}`}
               />
-              {errors.customContractType && (
-                <p className="text-red-400 text-sm mt-1">{errors.customContractType}</p>
-              )}
+              {errors.customContractType && <p className="text-red-400 text-sm mt-1">{errors.customContractType}</p>}
             </div>
           )}
 
-          {/* ✅ Contract Name with Error */}
           <div>
             <input
               type="text"
@@ -331,16 +268,11 @@ function AddContractModal({
               placeholder="Contract Name *"
               value={formData.contractName}
               onChange={handleChange}
-              className={`glass-card p-4 w-full text-white outline-none ${
-                errors.contractName ? "border-2 border-red-500" : ""
-              }`}
+              className={`glass-card p-4 w-full text-white outline-none ${errors.contractName ? "border-2 border-red-500" : ""}`}
             />
-            {errors.contractName && (
-              <p className="text-red-400 text-sm mt-1">{errors.contractName}</p>
-            )}
+            {errors.contractName && <p className="text-red-400 text-sm mt-1">{errors.contractName}</p>}
           </div>
 
-          {/* ✅ First Party with Error */}
           <div>
             <input
               type="text"
@@ -348,16 +280,11 @@ function AddContractModal({
               placeholder="First Party *"
               value={formData.firstParty}
               onChange={handleChange}
-              className={`glass-card p-4 w-full text-white outline-none ${
-                errors.firstParty ? "border-2 border-red-500" : ""
-              }`}
+              className={`glass-card p-4 w-full text-white outline-none ${errors.firstParty ? "border-2 border-red-500" : ""}`}
             />
-            {errors.firstParty && (
-              <p className="text-red-400 text-sm mt-1">{errors.firstParty}</p>
-            )}
+            {errors.firstParty && <p className="text-red-400 text-sm mt-1">{errors.firstParty}</p>}
           </div>
 
-          {/* ✅ Second Party with Error */}
           <div>
             <input
               type="text"
@@ -365,16 +292,11 @@ function AddContractModal({
               placeholder="Second Party *"
               value={formData.secondParty}
               onChange={handleChange}
-              className={`glass-card p-4 w-full text-white outline-none ${
-                errors.secondParty ? "border-2 border-red-500" : ""
-              }`}
+              className={`glass-card p-4 w-full text-white outline-none ${errors.secondParty ? "border-2 border-red-500" : ""}`}
             />
-            {errors.secondParty && (
-              <p className="text-red-400 text-sm mt-1">{errors.secondParty}</p>
-            )}
+            {errors.secondParty && <p className="text-red-400 text-sm mt-1">{errors.secondParty}</p>}
           </div>
 
-          {/* ✅ Start Date & End Date with Errors */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <input
@@ -382,13 +304,9 @@ function AddContractModal({
                 name="startDate"
                 value={formData.startDate}
                 onChange={handleChange}
-                className={`glass-card p-4 w-full text-white outline-none ${
-                  errors.startDate ? "border-2 border-red-500" : ""
-                }`}
+                className={`glass-card p-4 w-full text-white outline-none ${errors.startDate ? "border-2 border-red-500" : ""}`}
               />
-              {errors.startDate && (
-                <p className="text-red-400 text-sm mt-1">{errors.startDate}</p>
-              )}
+              {errors.startDate && <p className="text-red-400 text-sm mt-1">{errors.startDate}</p>}
             </div>
             <div>
               <input
@@ -396,49 +314,35 @@ function AddContractModal({
                 name="endDate"
                 value={formData.endDate}
                 onChange={handleChange}
-                className={`glass-card p-4 w-full text-white outline-none ${
-                  errors.endDate ? "border-2 border-red-500" : ""
-                }`}
+                className={`glass-card p-4 w-full text-white outline-none ${errors.endDate ? "border-2 border-red-500" : ""}`}
               />
-              {errors.endDate && (
-                <p className="text-red-400 text-sm mt-1">{errors.endDate}</p>
-              )}
+              {errors.endDate && <p className="text-red-400 text-sm mt-1">{errors.endDate}</p>}
             </div>
           </div>
 
-          {/* ✅ Status Select with Error */}
           <div>
             <select
               name="status"
               value={formData.status}
               onChange={handleChange}
-              className={`glass-card p-4 w-full text-white outline-none bg-transparent ${
-                errors.status ? "border-2 border-red-500" : ""
-              }`}
+              className={`glass-card p-4 w-full text-white outline-none bg-transparent ${errors.status ? "border-2 border-red-500" : ""}`}
             >
               <option className="bg-slate-900" value="Active">Active</option>
               <option className="bg-slate-900" value="Expired">Expired</option>
               <option className="bg-slate-900" value="Renewed">Renewed</option>
               <option className="bg-slate-900" value="Terminated">Terminated</option>
             </select>
-            {errors.status && (
-              <p className="text-red-400 text-sm mt-1">{errors.status}</p>
-            )}
+            {errors.status && <p className="text-red-400 text-sm mt-1">{errors.status}</p>}
           </div>
 
-          {/* ✅ PDF Upload with Error */}
           <div>
             <input
               type="file"
               accept=".pdf"
               onChange={handleFileChange}
-              className={`glass-card p-4 w-full text-white ${
-                errors.pdf ? "border-2 border-red-500" : ""
-              }`}
+              className={`glass-card p-4 w-full text-white ${errors.pdf ? "border-2 border-red-500" : ""}`}
             />
-            {errors.pdf && (
-              <p className="text-red-400 text-sm mt-1">{errors.pdf}</p>
-            )}
+            {errors.pdf && <p className="text-red-400 text-sm mt-1">{errors.pdf}</p>}
             {formData.pdf && !errors.pdf && (
               <div className="glass-card p-4 text-green-400 mt-2">
                 ✅ Selected File: {formData.pdf}
@@ -448,16 +352,10 @@ function AddContractModal({
         </div>
 
         <div className="flex flex-col sm:flex-row justify-end gap-3 mt-8">
-          <button
-            onClick={onClose}
-            className="glass-card px-6 py-3 text-white"
-          >
+          <button onClick={onClose} className="glass-card px-6 py-3 text-white">
             Cancel
           </button>
-          <button
-            onClick={handleSave}
-            className="glass-card px-6 py-3 text-white blue-glow"
-          >
+          <button onClick={handleSave} className="glass-card px-6 py-3 text-white blue-glow">
             {editData ? "Update Contract" : "Save Contract"}
           </button>
         </div>
