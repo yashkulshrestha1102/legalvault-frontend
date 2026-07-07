@@ -44,40 +44,26 @@ function AddRegistrationModal({ open, onClose, onSave, editData }) {
 
   const validateForm = () => {
     const newErrors = {};
-
-    if (!formData.category) {
-      newErrors.category = "Registration type is required";
-    }
-
+    if (!formData.category) newErrors.category = "Registration type is required";
     if (formData.category === "Others" && !formData.customCategory.trim()) {
       newErrors.customCategory = "Please enter custom registration type";
     }
-
     if (!formData.registrationName.trim()) {
       newErrors.registrationName = "Registration name is required";
     } else if (formData.registrationName.trim().length < 2) {
       newErrors.registrationName = "Registration name must be at least 2 characters";
     }
-
-    if (!formData.startDate) {
-      newErrors.startDate = "Start date is required";
-    }
-
+    if (!formData.startDate) newErrors.startDate = "Start date is required";
     if (!formData.endDate) {
       newErrors.endDate = "End date is required";
     } else if (formData.startDate && formData.endDate < formData.startDate) {
       newErrors.endDate = "End date must be after start date";
     }
-
-    if (!formData.status) {
-      newErrors.status = "Please select a status";
-    }
-
+    if (!formData.status) newErrors.status = "Please select a status";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  // ✅ FIXED: Correct endpoint and field name
   const uploadDocuments = async (files) => {
     try {
       const token = localStorage.getItem('token');
@@ -85,20 +71,16 @@ function AddRegistrationModal({ open, onClose, onSave, editData }) {
         alert('Please login again');
         return null;
       }
-
       const formData = new FormData();
       for (const file of files) {
-        formData.append('pdf', file); // ✅ 'pdf' not 'documents'
+        formData.append('pdf', file);
       }
-      
-      // ✅ CORRECT ENDPOINT
       const response = await axios.post(`${API_URL}/api/pdfs/pdf`, formData, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'multipart/form-data'
         }
       });
-      
       console.log('✅ PDF uploaded:', response.data);
       return response.data.url || response.data.files || [];
     } catch (error) {
@@ -109,37 +91,45 @@ function AddRegistrationModal({ open, onClose, onSave, editData }) {
   };
 
   const handleSave = async () => {
-  if (!validateForm()) {
-    return;
-  }
-
-  let uploadedDocs = [];
-  let pdfUrl = null;
-
-  if (selectedFiles.length > 0) {
-    setUploading(true);
-    const result = await uploadDocuments(selectedFiles);
-    setUploading(false);
-    
-    if (result) {
-      // ✅ Agar single file hai toh url, multiple hai toh array
-      pdfUrl = Array.isArray(result) ? result[0] : result;
-      uploadedDocs = Array.isArray(result) ? result : [result];
+    if (!validateForm()) {
+      return;
     }
-  }
 
-  const finalData = {
-    ...formData,
-    category: formData.category === "Others" ? formData.customCategory : formData.category,
-    // ✅ PDF URL alag se bhejo
-    pdf: pdfUrl,
-    pdfFile: selectedFiles.length > 0 ? selectedFiles[0] : null,
-    documents: uploadedDocs || []
+    let uploadedDocs = [];
+    let pdfUrl = null;
+
+    if (selectedFiles.length > 0) {
+      setUploading(true);
+      const result = await uploadDocuments(selectedFiles);
+      setUploading(false);
+      
+      if (result) {
+        pdfUrl = Array.isArray(result) ? result[0] : result;
+        uploadedDocs = Array.isArray(result) ? result : [result];
+      }
+    }
+
+    const finalData = {
+      ...formData,
+      category: formData.category === "Others" ? formData.customCategory : formData.category,
+      pdf: pdfUrl,
+      pdfFile: selectedFiles.length > 0 ? selectedFiles[0] : null,
+      documents: uploadedDocs || []
+    };
+
+    onSave(finalData);
+    setFormData({
+      category: "",
+      customCategory: "",
+      registrationName: "",
+      startDate: "",
+      endDate: "",
+      status: "Valid",
+    });
+    setSelectedFiles([]);
+    setErrors({});
+    onClose();
   };
-
-  onSave(finalData);
-  // ... reset code
-};
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -158,7 +148,6 @@ function AddRegistrationModal({ open, onClose, onSave, editData }) {
 
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
-    // ✅ File size validation
     const validFiles = files.filter(file => {
       if (file.size > 20 * 1024 * 1024) {
         alert(`❌ ${file.name} is too large (max 20MB)`);
@@ -205,14 +194,14 @@ function AddRegistrationModal({ open, onClose, onSave, editData }) {
     { value: "Expired", label: "Expired" },
   ];
 
-  // ✅ React Select Styles - ONLY ONCE
+  // ✅ Responsive Select Styles
   const customSelectStyles = {
     control: (provided) => ({
       ...provided,
       backgroundColor: "rgba(255,255,255,0.04)",
       border: "1px solid rgba(255,255,255,0.08)",
-      borderRadius: "24px",
-      minHeight: "56px",
+      borderRadius: "12px",
+      minHeight: "48px",
       boxShadow: "none",
       color: "#fff",
       "&:hover": {
@@ -222,7 +211,7 @@ function AddRegistrationModal({ open, onClose, onSave, editData }) {
     menu: (provided) => ({
       ...provided,
       backgroundColor: "rgba(15,23,42,0.95)",
-      borderRadius: "20px",
+      borderRadius: "12px",
       border: "1px solid rgba(255,255,255,0.08)",
       zIndex: 9999,
     }),
@@ -252,7 +241,6 @@ function AddRegistrationModal({ open, onClose, onSave, editData }) {
     indicatorSeparator: () => ({ display: "none" }),
   };
 
-  // ✅ Error Select Styles - ONLY ONCE
   const errorSelectStyles = {
     ...customSelectStyles,
     control: (provided) => ({
@@ -265,18 +253,22 @@ function AddRegistrationModal({ open, onClose, onSave, editData }) {
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-[9999] p-4">
-      <div className="glass p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-        <h2 className="text-2xl font-bold mb-6 text-white">
+      {/* ✅ Responsive Modal */}
+      <div className="glass p-4 sm:p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-white">
           {editData ? "Edit Registration" : "Add Registration"}
         </h2>
 
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           {/* Registration Type */}
           <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">
+              Registration Type <span className="text-red-400">*</span>
+            </label>
             <Select
               styles={errorSelectStyles}
               options={registrationOptions}
-              placeholder="Select Registration Type *"
+              placeholder="Select Registration Type"
               value={formData.category ? { value: formData.category, label: formData.category } : null}
               onChange={(selected) => handleSelectChange("category", selected?.value || "")}
             />
@@ -288,13 +280,16 @@ function AddRegistrationModal({ open, onClose, onSave, editData }) {
           {/* Custom Category */}
           {formData.category === "Others" && (
             <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">
+                Custom Registration <span className="text-red-400">*</span>
+              </label>
               <input
                 type="text"
                 name="customCategory"
-                placeholder="Enter Custom Registration *"
+                placeholder="Enter custom registration type"
                 value={formData.customCategory}
                 onChange={handleChange}
-                className={`glass-card p-4 w-full text-white outline-none ${
+                className={`w-full glass-card p-3 sm:p-4 text-white outline-none ${
                   errors.customCategory ? "border-2 border-red-500" : ""
                 }`}
               />
@@ -306,13 +301,16 @@ function AddRegistrationModal({ open, onClose, onSave, editData }) {
 
           {/* Registration Name */}
           <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">
+              Registration Name <span className="text-red-400">*</span>
+            </label>
             <input
               type="text"
               name="registrationName"
-              placeholder="Registration Name *"
+              placeholder="Enter registration name"
               value={formData.registrationName}
               onChange={handleChange}
-              className={`glass-card p-4 w-full text-white outline-none ${
+              className={`w-full glass-card p-3 sm:p-4 text-white outline-none ${
                 errors.registrationName ? "border-2 border-red-500" : ""
               }`}
             />
@@ -321,15 +319,18 @@ function AddRegistrationModal({ open, onClose, onSave, editData }) {
             )}
           </div>
 
-          {/* Dates */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Dates - Responsive Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">
+                Start Date <span className="text-red-400">*</span>
+              </label>
               <input
                 type="date"
                 name="startDate"
                 value={formData.startDate}
                 onChange={handleChange}
-                className={`glass-card p-4 w-full text-white outline-none ${
+                className={`w-full glass-card p-3 sm:p-4 text-white outline-none ${
                   errors.startDate ? "border-2 border-red-500" : ""
                 }`}
               />
@@ -338,12 +339,15 @@ function AddRegistrationModal({ open, onClose, onSave, editData }) {
               )}
             </div>
             <div>
+              <label className="block text-sm font-medium text-gray-300 mb-1">
+                End Date <span className="text-red-400">*</span>
+              </label>
               <input
                 type="date"
                 name="endDate"
                 value={formData.endDate}
                 onChange={handleChange}
-                className={`glass-card p-4 w-full text-white outline-none ${
+                className={`w-full glass-card p-3 sm:p-4 text-white outline-none ${
                   errors.endDate ? "border-2 border-red-500" : ""
                 }`}
               />
@@ -355,10 +359,13 @@ function AddRegistrationModal({ open, onClose, onSave, editData }) {
 
           {/* Status */}
           <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">
+              Status <span className="text-red-400">*</span>
+            </label>
             <Select
               styles={errorSelectStyles}
               options={statusOptions}
-              placeholder="Select Status *"
+              placeholder="Select Status"
               value={{ value: formData.status, label: formData.status }}
               onChange={(selected) => handleSelectChange("status", selected?.value || "")}
             />
@@ -367,29 +374,39 @@ function AddRegistrationModal({ open, onClose, onSave, editData }) {
             )}
           </div>
 
-          {/* File Upload */}
-          <div className="glass-card p-4">
-            <label className="block text-sm text-gray-400 mb-2">
+          {/* File Upload - Responsive */}
+          <div className="glass-card p-3 sm:p-4">
+            <label className="block text-sm font-medium text-gray-300 mb-2">
               Upload Documents (PDF, JPG, PNG)
             </label>
-            <input
-              type="file"
-              multiple
-              accept=".pdf,.jpg,.jpeg,.png"
-              onChange={handleFileChange}
-              className="w-full text-white file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-cyan-500/20 file:text-cyan-400 hover:file:bg-cyan-500/30"
-            />
+            <div className="relative">
+              <input
+                type="file"
+                multiple
+                accept=".pdf,.jpg,.jpeg,.png"
+                onChange={handleFileChange}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+              />
+              <div className="glass-card p-3 text-center text-gray-400 border border-dashed border-gray-600">
+                <span>📎 Choose Files</span>
+                {selectedFiles.length > 0 && (
+                  <span className="ml-2 text-green-400">
+                    ({selectedFiles.length} files selected)
+                  </span>
+                )}
+              </div>
+            </div>
             
             {selectedFiles.length > 0 && (
-              <div className="mt-3 space-y-2">
+              <div className="mt-3 space-y-2 max-h-32 overflow-y-auto">
                 {selectedFiles.map((file, index) => (
-                  <div key={index} className="flex items-center justify-between glass-card p-2">
-                    <span className="text-sm text-white truncate">
+                  <div key={index} className="flex items-center justify-between glass-card p-2 text-sm">
+                    <span className="text-white truncate flex-1">
                       {file.name} ({(file.size / 1024).toFixed(1)} KB)
                     </span>
                     <button
                       onClick={() => removeFile(index)}
-                      className="text-red-400 hover:text-red-300"
+                      className="text-red-400 hover:text-red-300 ml-2 flex-shrink-0"
                     >
                       ✕
                     </button>
@@ -406,14 +423,18 @@ function AddRegistrationModal({ open, onClose, onSave, editData }) {
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row justify-end gap-3 mt-8">
-          <button onClick={onClose} className="glass-card px-6 py-3 text-white">
+        {/* Footer - Responsive Buttons */}
+        <div className="flex flex-col sm:flex-row justify-end gap-3 mt-6 sm:mt-8">
+          <button
+            onClick={onClose}
+            className="glass-card px-4 sm:px-6 py-2 sm:py-3 text-white w-full sm:w-auto order-2 sm:order-1"
+          >
             Cancel
           </button>
           <button
             onClick={handleSave}
             disabled={uploading}
-            className={`glass-card px-6 py-3 text-white blue-glow ${
+            className={`glass-card px-4 sm:px-6 py-2 sm:py-3 text-white blue-glow w-full sm:w-auto order-1 sm:order-2 ${
               uploading ? 'opacity-50 cursor-not-allowed' : ''
             }`}
           >
