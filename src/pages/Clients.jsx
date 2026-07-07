@@ -56,6 +56,7 @@ function Clients() {
       addNotification(`Client Added: ${newClient.name}`);
       addActivity(`Client Added`);
       fetchClients();
+      setOpenModal(false);
     } catch (error) {
       console.error('❌ Error adding client:', error.response?.data || error.message);
       const clientWithId = {
@@ -107,59 +108,65 @@ function Clients() {
     }
   };
 
- const updateClient = async (updatedClient) => {
-  try {
-    const token = localStorage.getItem('token');
-    const clientId = updatedClient._id || updatedClient.id;
-    
-    if (!clientId) {
-      console.error('❌ No client ID found:', updatedClient);
-      alert('Error: Client ID not found. Please refresh and try again.');
-      return;
-    }
-    
-    console.log('📤 Updating client ID:', clientId);
-    const response = await axios.put(`${API_URL}/api/clients/${clientId}`, updatedClient, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    
-    console.log('✅ Client updated in backend:', response.data);
-    addNotification(`Client Updated: ${updatedClient.name}`);
-    addActivity(`Client Updated`);
-    
-    // ✅ Update localStorage
-    const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
-    const updatedClients = savedClients.map(c => 
-      (c._id === clientId || c.id === clientId) ? response.data : c
-    );
-    localStorage.setItem("clients", JSON.stringify(updatedClients));
-    
-    // ✅ Update clients state
-    setClients(updatedClients);
-    
-    // ✅ If on client details page, redirect to refresh
-    const currentPath = window.location.pathname;
-    if (currentPath.includes('/client/')) {
+  // ✅ Updated updateClient function
+  const updateClient = async (updatedClient) => {
+    try {
+      const token = localStorage.getItem('token');
+      const clientId = updatedClient._id || updatedClient.id;
+      
+      if (!clientId) {
+        console.error('❌ No client ID found:', updatedClient);
+        alert('Error: Client ID not found. Please refresh and try again.');
+        return;
+      }
+      
+      console.log('📤 Updating client ID:', clientId);
+      const response = await axios.put(`${API_URL}/api/clients/${clientId}`, updatedClient, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      console.log('✅ Client updated in backend:', response.data);
+      addNotification(`Client Updated: ${updatedClient.name}`);
+      addActivity(`Client Updated`);
+      
+      // ✅ Update localStorage
+      const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
+      const updatedClients = savedClients.map(c => 
+        (c._id === clientId || c.id === clientId) ? response.data : c
+      );
+      localStorage.setItem("clients", JSON.stringify(updatedClients));
+      
+      // ✅ Update clients state
+      setClients(updatedClients);
+      
+      // ✅ CLOSE MODAL FIRST
+      setOpenModal(false);
+      setEditIndex(null);
+      setEditData(null);
+      
+      // ✅ Navigate to client details with fresh data
       navigate(`/client/${clientId}`, { replace: true });
-      // ✅ Force reload to get fresh data from backend
-      setTimeout(() => window.location.reload(), 100);
+      
+      // ✅ Small delay then reload to ensure fresh data
+      setTimeout(() => {
+        window.location.reload();
+      }, 200);
+      
+    } catch (error) {
+      console.error('❌ Error updating client:', error);
+      alert('Failed to update client: ' + (error.response?.data?.message || error.message));
+      
+      // ✅ Fallback: Update localStorage
+      const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
+      const updatedClients = savedClients.map((c, i) => 
+        i === editIndex ? updatedClient : c
+      );
+      localStorage.setItem("clients", JSON.stringify(updatedClients));
+      setClients(updatedClients);
+      addNotification(`Client Updated (Local): ${updatedClient.name}`);
+      addActivity(`Client Updated (Local)`);
     }
-    
-  } catch (error) {
-    console.error('❌ Error updating client:', error);
-    // ✅ Fallback: Update localStorage
-    const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
-    const updatedClients = savedClients.map((c, i) => 
-      i === editIndex ? updatedClient : c
-    );
-    localStorage.setItem("clients", JSON.stringify(updatedClients));
-    setClients(updatedClients);
-    addNotification(`Client Updated (Local): ${updatedClient.name}`);
-    addActivity(`Client Updated (Local)`);
-  }
-  setEditIndex(null);
-  setEditData(null);
-};
+  };
 
   const activeClients = clients.filter(client => client.status === "Active").length;
 

@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useEffect, useState, useContext } from "react";
+import { useEffect, useState, useContext, useCallback } from "react";
 import axios from 'axios';
 import MainLayout from "../layouts/MainLayout";
 import AuthContext from '../context/AuthContext';
@@ -23,76 +23,98 @@ function ClientDetails() {
   const [openContractModal, setOpenContractModal] = useState(false);
   const [editContract, setEditContract] = useState(null);
 
-  // ✅ Fetch client from backend - FIXED
-  useEffect(() => {
-    const fetchClient = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        console.log('📥 Fetching client with ID:', id);
-        
-        const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(id);
-        let clientData = null;
-        
-        if (isValidObjectId) {
-          // ✅ PEHLE BACKEND SE FETCH KARO
-          try {
-            const response = await axios.get(`${API_URL}/api/clients/${id}`, {
-              headers: { Authorization: `Bearer ${token}` }
-            });
-            clientData = response.data;
-            console.log('✅ Client fetched from backend:', clientData);
-            
-            // ✅ Update localStorage with latest data
-            const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
-            const updatedClients = savedClients.map(c => 
-              String(c._id) === String(id) || String(c.id) === String(id) ? clientData : c
-            );
-            localStorage.setItem("clients", JSON.stringify(updatedClients));
-            
-          } catch (backendError) {
-            console.warn('⚠️ Backend fetch failed, trying localStorage...', backendError);
-            // ✅ Fallback: localStorage se try karo
-            const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
-            const foundClient = savedClients.find(c => String(c._id) === String(id) || String(c.id) === String(id));
-            if (foundClient) {
-              clientData = foundClient;
-              console.log('✅ Client loaded from localStorage fallback:', clientData);
-            } else {
-              throw new Error('Client not found anywhere');
-            }
-          }
-        } else {
-          // ✅ Invalid ObjectId - localStorage se hi load karo
-          console.warn('⚠️ Invalid ObjectId format, loading from localStorage...');
+  // ✅ Fetch client function - using useCallback to avoid recreation
+  const fetchClient = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('token');
+      console.log('📥 Fetching client with ID:', id);
+      
+      const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(id);
+      let clientData = null;
+      
+      if (isValidObjectId) {
+        try {
+          const response = await axios.get(`${API_URL}/api/clients/${id}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          clientData = response.data;
+          console.log('✅ Client fetched from backend:', clientData);
+          
+          // ✅ Update localStorage with latest data
           const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
-          const foundClient = savedClients.find(c => String(c.id) === String(id) || String(c._id) === String(id));
+          const updatedClients = savedClients.map(c => 
+            String(c._id) === String(id) || String(c.id) === String(id) ? clientData : c
+          );
+          localStorage.setItem("clients", JSON.stringify(updatedClients));
+          
+        } catch (backendError) {
+          console.warn('⚠️ Backend fetch failed, trying localStorage...', backendError);
+          const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
+          const foundClient = savedClients.find(c => String(c._id) === String(id) || String(c.id) === String(id));
           if (foundClient) {
             clientData = foundClient;
-            console.log('✅ Client found in localStorage:', clientData);
+            console.log('✅ Client loaded from localStorage fallback:', clientData);
           } else {
-            throw new Error('Client not found');
+            throw new Error('Client not found anywhere');
           }
         }
-        
-        setClient(clientData);
-        
-      } catch (error) {
-        console.error('❌ Error fetching client:', error);
-        // ✅ Last resort: localStorage fallback
+      } else {
+        console.warn('⚠️ Invalid ObjectId format, loading from localStorage...');
         const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
         const foundClient = savedClients.find(c => String(c.id) === String(id) || String(c._id) === String(id));
         if (foundClient) {
-          setClient(foundClient);
-          console.log('✅ Client loaded from localStorage fallback:', foundClient);
+          clientData = foundClient;
+          console.log('✅ Client found in localStorage:', clientData);
         } else {
-          setClient(null);
+          throw new Error('Client not found');
         }
-      } finally {
-        setLoading(false);
+      }
+      
+      setClient(clientData);
+      
+    } catch (error) {
+      console.error('❌ Error fetching client:', error);
+      const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
+      const foundClient = savedClients.find(c => String(c.id) === String(id) || String(c._id) === String(id));
+      if (foundClient) {
+        setClient(foundClient);
+        console.log('✅ Client loaded from localStorage fallback:', foundClient);
+      } else {
+        setClient(null);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  // ✅ Fetch client on mount and when id changes
+  useEffect(() => {
+    fetchClient();
+  }, [fetchClient]);
+
+  // ✅ Refresh data when page becomes visible (tab switch)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && id) {
+        console.log('🔄 Page visible, refreshing client data...');
+        fetchClient();
       }
     };
-    fetchClient();
-  }, [id]);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [id, fetchClient]);
+
+  // ✅ Refresh data when URL changes (navigation from clients page)
+  useEffect(() => {
+    const handleRouteChange = () => {
+      if (id) {
+        console.log('🔄 Route changed, refreshing client data...');
+        fetchClient();
+      }
+    };
+    window.addEventListener('popstate', handleRouteChange);
+    return () => window.removeEventListener('popstate', handleRouteChange);
+  }, [id, fetchClient]);
 
   // ✅ Fetch registrations from backend
   const fetchRegistrations = async () => {
