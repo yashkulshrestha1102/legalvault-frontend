@@ -152,52 +152,57 @@ export default function AddClientModal({
       <div className="absolute top-20 left-20 w-72 h-72 bg-blue-500/20 rounded-full blur-[120px]" />
       <div className="absolute bottom-20 right-20 w-72 h-72 bg-purple-500/20 rounded-full blur-[120px]" />
 
-      {/* Modal */}
+      {/* ✅ Responsive Modal */}
       <div
         className="
         glass
         w-full
         max-w-xl
-        p-8
+        p-4 sm:p-8
         relative
         overflow-hidden
+        max-h-[90vh]
+        overflow-y-auto
         "
       >
         {/* Header */}
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex justify-between items-center mb-4 sm:mb-8">
           <div className="flex items-center gap-3">
-            <div className="glass-icon text-cyan-400">
-              <FaUserPlus />
+            <div className="glass-icon text-cyan-400 w-10 h-10 sm:w-12 sm:h-12">
+              <FaUserPlus className="text-sm sm:text-base" />
             </div>
             <div>
-              <h2 className="text-3xl font-bold">
+              <h2 className="text-xl sm:text-3xl font-bold">
                 {editData ? "Edit Client" : "Add New Client"}
               </h2>
-              <p className="text-gray-400 text-sm mt-1">
+              <p className="text-xs sm:text-sm text-gray-400 mt-0.5 sm:mt-1">
                 Client Information Management
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="glass-icon hover:scale-110 transition-all"
+            className="glass-icon hover:scale-110 transition-all w-10 h-10 sm:w-12 sm:h-12"
           >
-            <FaTimes />
+            <FaTimes className="text-sm sm:text-base" />
           </button>
         </div>
 
         {/* Form */}
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           {/* Client Name */}
           <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">
+              Client Name <span className="text-red-400">*</span>
+            </label>
             <input
               type="text"
               name="name"
-              placeholder="Client Name *"
+              placeholder="Enter client name"
               value={formData.name}
               onChange={handleChange}
               className={`
-                w-full glass-card p-4 outline-none placeholder:text-gray-400
+                w-full glass-card p-3 sm:p-4 outline-none placeholder:text-gray-400 text-white
                 ${errors.name ? "border-2 border-red-500" : ""}
               `}
             />
@@ -208,14 +213,17 @@ export default function AddClientModal({
 
           {/* Company Name */}
           <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">
+              Company Name <span className="text-red-400">*</span>
+            </label>
             <input
               type="text"
               name="company"
-              placeholder="Company Name *"
+              placeholder="Enter company name"
               value={formData.company}
               onChange={handleChange}
               className={`
-                w-full glass-card p-4 outline-none placeholder:text-gray-400
+                w-full glass-card p-3 sm:p-4 outline-none placeholder:text-gray-400 text-white
                 ${errors.company ? "border-2 border-red-500" : ""}
               `}
             />
@@ -226,14 +234,17 @@ export default function AddClientModal({
 
           {/* Contact Person */}
           <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">
+              Contact Person
+            </label>
             <input
               type="text"
               name="contactPerson"
-              placeholder="Contact Person Name"
+              placeholder="Enter contact person name"
               value={formData.contactPerson}
               onChange={handleChange}
               className={`
-                w-full glass-card p-4 outline-none placeholder:text-gray-400
+                w-full glass-card p-3 sm:p-4 outline-none placeholder:text-gray-400 text-white
                 ${errors.contactPerson ? "border-2 border-red-500" : ""}
               `}
             />
@@ -244,14 +255,17 @@ export default function AddClientModal({
 
           {/* Email */}
           <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">
+              Email Address <span className="text-red-400">*</span>
+            </label>
             <input
               type="email"
               name="email"
-              placeholder="Email Address *"
+              placeholder="Enter email address"
               value={formData.email}
               onChange={handleChange}
               className={`
-                w-full glass-card p-4 outline-none placeholder:text-gray-400
+                w-full glass-card p-3 sm:p-4 outline-none placeholder:text-gray-400 text-white
                 ${errors.email ? "border-2 border-red-500" : ""}
               `}
             />
@@ -262,14 +276,17 @@ export default function AddClientModal({
 
           {/* Phone */}
           <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">
+              Phone Number <span className="text-red-400">*</span>
+            </label>
             <input
               type="text"
               name="phone"
-              placeholder="Phone Number *"
+              placeholder="Enter phone number"
               value={formData.phone}
               onChange={handleChange}
               className={`
-                w-full glass-card p-4 outline-none placeholder:text-gray-400
+                w-full glass-card p-3 sm:p-4 outline-none placeholder:text-gray-400 text-white
                 ${errors.phone ? "border-2 border-red-500" : ""}
               `}
             />
@@ -280,23 +297,29 @@ export default function AddClientModal({
 
           {/* Onboarding Date */}
           <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">
+              Onboarding Date
+            </label>
             <input
               type="date"
               name="onboardingDate"
               value={formData.onboardingDate}
               onChange={handleChange}
-              className="w-full glass-card p-4 outline-none"
+              className="w-full glass-card p-3 sm:p-4 outline-none text-white"
             />
           </div>
 
           {/* Status */}
           <div>
+            <label className="block text-sm font-medium text-gray-300 mb-1">
+              Status <span className="text-red-400">*</span>
+            </label>
             <select
               name="status"
               value={formData.status}
               onChange={handleChange}
               className={`
-                w-full glass-card p-4 outline-none cursor-pointer
+                w-full glass-card p-3 sm:p-4 outline-none cursor-pointer text-white bg-transparent
                 ${errors.status ? "border-2 border-red-500" : ""}
               `}
             >
@@ -313,19 +336,19 @@ export default function AddClientModal({
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="flex justify-end gap-4 mt-8">
+        {/* Footer - Responsive Buttons */}
+        <div className="flex flex-col sm:flex-row justify-end gap-3 mt-6 sm:mt-8">
           <button
             onClick={onClose}
-            className="glass-card px-6 py-3 hover:scale-105 transition-all"
+            className="glass-card px-4 sm:px-6 py-2 sm:py-3 text-white w-full sm:w-auto order-2 sm:order-1 text-sm sm:text-base"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
             className="
-            px-6
-            py-3
+            px-4 sm:px-6
+            py-2 sm:py-3
             rounded-2xl
             bg-gradient-to-r
             from-cyan-500
@@ -337,6 +360,9 @@ export default function AddClientModal({
             transition-all
             shadow-lg
             shadow-cyan-500/30
+            w-full sm:w-auto
+            order-1 sm:order-2
+            text-sm sm:text-base
             "
           >
             {editData ? "Update Client" : "Save Client"}
