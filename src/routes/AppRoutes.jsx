@@ -11,6 +11,8 @@ import Profile from "../pages/Profile";
 import RegistrationDetails from "../pages/RegistrationDetails";
 import ContractDetails from "../pages/ContractDetails";
 import AuditLog from '../pages/AuditLog';
+import Settings from "../pages/Settings";
+
 
 // ✅ Import actual folder pages
 import RegistrationsPage from "../pages/folders/RegistrationsPage";
@@ -155,6 +157,12 @@ const AppRoutes = () => {
           </ProtectedFolder>
         </ProtectedRoute>
       } />
+     <Route path="/settings" element={
+  <ProtectedRoute>
+    <Settings />
+  </ProtectedRoute>
+} />
+
     </Routes>
   );
 };
