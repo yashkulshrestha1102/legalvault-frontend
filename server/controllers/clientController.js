@@ -1,17 +1,45 @@
 const Client = require('../models/Client');
 const mongoose = require('mongoose');
 
-// ✅ Helper: Validate ObjectId
 const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
-
-// ✅ Helper: Sanitize input
 const sanitizeString = (str) => str?.trim() || '';
 
-// ✅ Get all clients (with soft delete filter)
+// ✅ Get all clients with pagination
 exports.getClients = async (req, res) => {
   try {
-    const clients = await Client.find({ isDeleted: false }).sort({ createdAt: -1 });
-    res.json(clients);
+    const { page = 1, limit = 50, search = '' } = req.query;
+    
+    const query = { isDeleted: false };
+    
+    // ✅ Search filter
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { company: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } }
+      ];
+    }
+    
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    
+    // ✅ Select only required fields for speed
+    const clients = await Client.find(query)
+      .select('name company email phone status _id')
+      .limit(parseInt(limit))
+      .skip(skip)
+      .sort({ createdAt: -1 });
+    
+    const total = await Client.countDocuments(query);
+    
+    res.json({
+      clients,
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        pages: Math.ceil(total / parseInt(limit))
+      }
+    });
   } catch (error) {
     console.error('❌ Get clients error:', error);
     res.status(500).json({ message: error.message });
@@ -23,12 +51,13 @@ exports.getClientById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // ✅ ObjectId validation
     if (!isValidObjectId(id)) {
       return res.status(400).json({ message: 'Invalid client ID format' });
     }
 
-    const client = await Client.findOne({ _id: id, isDeleted: false });
+    const client = await Client.findOne({ _id: id, isDeleted: false })
+      .select('name company email phone status contactPerson onboardingDate createdBy createdAt');
+    
     if (!client) {
       return res.status(404).json({ message: 'Client not found' });
     }
@@ -44,7 +73,6 @@ exports.createClient = async (req, res) => {
   try {
     const { name, company, email, phone, status } = req.body;
 
-    // ✅ Sanitize inputs
     const sanitized = {
       name: sanitizeString(name),
       company: sanitizeString(company),
@@ -54,12 +82,10 @@ exports.createClient = async (req, res) => {
       createdBy: req.user.id
     };
 
-    // ✅ Check if email is valid
     if (!sanitized.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(sanitized.email)) {
       return res.status(400).json({ message: 'Valid email is required' });
     }
 
-    // ✅ Check if client already exists
     const existingClient = await Client.findOne({ email: sanitized.email });
     if (existingClient) {
       return res.status(400).json({ message: 'Client with this email already exists' });
@@ -79,14 +105,12 @@ exports.updateClient = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // ✅ ObjectId validation
     if (!isValidObjectId(id)) {
       return res.status(400).json({ message: 'Invalid client ID format' });
     }
 
     const { name, company, email, phone, status } = req.body;
 
-    // ✅ Sanitize inputs
     const updateData = {};
     if (name !== undefined) updateData.name = sanitizeString(name);
     if (company !== undefined) updateData.company = sanitizeString(company);
@@ -121,7 +145,6 @@ exports.deleteClient = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // ✅ ObjectId validation
     if (!isValidObjectId(id)) {
       return res.status(400).json({ message: 'Invalid client ID format' });
     }

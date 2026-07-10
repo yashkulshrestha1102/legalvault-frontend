@@ -23,12 +23,11 @@ requiredEnv.forEach(key => {
 });
 console.log('✅ All environment variables are set');
 
-// ✅ CORS - Dynamic Origin (WITHOUT app.options('*', cors()))
+// ✅ CORS
 const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173,http://localhost:5174,https://legalvault-frontend-two.vercel.app').split(',');
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps, curl)
     if (!origin) return callback(null, true);
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
@@ -42,11 +41,20 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// ✅ Morgan (Request Logging)
+// ✅ Morgan
 app.use(morgan('dev'));
 
-// ✅ Compression
-app.use(compression());
+// ✅ Compression - Faster responses
+app.use(compression({
+  level: 6, // Compression level (1-9)
+  threshold: 1024, // Only compress > 1KB
+  filter: (req, res) => {
+    if (req.headers['x-no-compression']) {
+      return false;
+    }
+    return compression.filter(req, res);
+  }
+}));
 
 // ✅ Rate Limiting
 const limiter = rateLimit({
@@ -56,7 +64,7 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-// ✅ Security - Helmet with fine-tuned configuration
+// ✅ Security - Helmet
 app.use(helmet({
   crossOriginEmbedderPolicy: true,
   crossOriginOpenerPolicy: true,
@@ -74,6 +82,14 @@ app.use(helmet({
 // ✅ Body Parser
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// ✅ Cache Headers for static routes
+app.use('/api/clients', (req, res, next) => {
+  if (req.method === 'GET') {
+    res.set('Cache-Control', 'public, max-age=60'); // 1 minute cache
+  }
+  next();
+});
 
 // ✅ Audit Log Middleware
 app.use(auditLog);
@@ -111,9 +127,8 @@ app.use((req, res) => {
   res.status(404).json({ message: 'Route not found' });
 });
 
-// ✅ Global Error Handler - FIXED (No stack trace in production)
+// ✅ Global Error Handler
 app.use((err, req, res, next) => {
-  // ✅ Log error internally
   console.error('❌ Error:', {
     message: err.message,
     stack: err.stack,
@@ -123,12 +138,10 @@ app.use((err, req, res, next) => {
     ip: req.ip
   });
 
-  // ✅ Hide stack traces in production
   const isDevelopment = process.env.NODE_ENV === 'development';
   
   res.status(err.status || 500).json({
     message: err.message || 'Something went wrong!',
-    // ✅ Only send details in development
     ...(isDevelopment && { 
       error: err,
       stack: err.stack 

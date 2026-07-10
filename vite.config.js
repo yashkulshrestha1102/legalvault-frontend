@@ -7,18 +7,35 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
-  // ✅ Force CSS to be included in build
   css: {
     modules: {
       scopeBehaviour: 'global',
     },
   },
   build: {
-    // ✅ Ensure CSS is not purged too aggressively
+    // ✅ Code splitting - smaller chunks
     rollupOptions: {
       output: {
-        manualChunks: undefined,
-      },
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'ui-vendor': ['react-select', 'framer-motion', 'react-icons'],
+          'chart-vendor': ['recharts'],
+          'export-vendor': ['jspdf', 'jspdf-autotable', 'xlsx'],
+        }
+      }
     },
+    // ✅ Minify
+    minify: 'terser',
+    // ✅ Remove console logs in production
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+      }
+    },
+    // ✅ Smaller chunks
+    chunkSizeWarningLimit: 500,
+    // ✅ Source maps for debugging (optional)
+    sourcemap: false,
   },
 })
