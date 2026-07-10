@@ -23,11 +23,15 @@ requiredEnv.forEach(key => {
 });
 console.log('✅ All environment variables are set');
 
-// ✅ CORS
-const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173,http://localhost:5174,https://legalvault-frontend-two.vercel.app').split(',');
+// ✅ CORS - Updated with new Vercel URL
+const allowedOrigins = (process.env.CORS_ORIGIN || 
+  'http://localhost:5173,http://localhost:5174,https://legalvault-frontend-two.vercel.app,https://legalvault-ochre.vercel.app').split(',');
+
 app.set('trust proxy', 1);
+
 app.use(cors({
   origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps, curl)
     if (!origin) return callback(null, true);
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
@@ -46,8 +50,8 @@ app.use(morgan('dev'));
 
 // ✅ Compression - Faster responses
 app.use(compression({
-  level: 6, // Compression level (1-9)
-  threshold: 1024, // Only compress > 1KB
+  level: 6,
+  threshold: 1024,
   filter: (req, res) => {
     if (req.headers['x-no-compression']) {
       return false;
@@ -86,7 +90,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // ✅ Cache Headers for static routes
 app.use('/api/clients', (req, res, next) => {
   if (req.method === 'GET') {
-    res.set('Cache-Control', 'public, max-age=60'); // 1 minute cache
+    res.set('Cache-Control', 'public, max-age=60');
   }
   next();
 });
