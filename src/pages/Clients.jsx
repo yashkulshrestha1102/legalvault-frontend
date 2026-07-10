@@ -22,6 +22,7 @@ function Clients() {
   const [editData, setEditData] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // ✅ FIXED fetchClients - handles paginated response
   const fetchClients = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -29,13 +30,21 @@ function Clients() {
         headers: { Authorization: `Bearer ${token}` }
       });
       console.log('✅ Clients fetched from backend:', response.data);
-      setClients(response.data);
+      
+      // ✅ FIX: Handle paginated response
+      let clientsData = response.data;
+      
+      // Agar response object hai aur usme 'clients' property hai (paginated)
+      if (clientsData && typeof clientsData === 'object' && !Array.isArray(clientsData)) {
+        clientsData = clientsData.clients || [];
+      }
+      
+      // Ensure it's always an array
+      setClients(Array.isArray(clientsData) ? clientsData : []);
     } catch (error) {
       console.error('❌ Error fetching clients:', error);
       const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
-      if (savedClients.length > 0) {
-        setClients(savedClients);
-      }
+      setClients(Array.isArray(savedClients) ? savedClients : []);
     } finally {
       setLoading(false);
     }
@@ -108,7 +117,6 @@ function Clients() {
     }
   };
 
-  // ✅ Updated updateClient function
   const updateClient = async (updatedClient) => {
     try {
       const token = localStorage.getItem('token');
@@ -129,25 +137,19 @@ function Clients() {
       addNotification(`Client Updated: ${updatedClient.name}`);
       addActivity(`Client Updated`);
       
-      // ✅ Update localStorage
       const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
       const updatedClients = savedClients.map(c => 
         (c._id === clientId || c.id === clientId) ? response.data : c
       );
       localStorage.setItem("clients", JSON.stringify(updatedClients));
-      
-      // ✅ Update clients state
       setClients(updatedClients);
       
-      // ✅ CLOSE MODAL FIRST
       setOpenModal(false);
       setEditIndex(null);
       setEditData(null);
       
-      // ✅ Navigate to client details with fresh data
       navigate(`/client/${clientId}`, { replace: true });
       
-      // ✅ Small delay then reload to ensure fresh data
       setTimeout(() => {
         window.location.reload();
       }, 200);
@@ -156,7 +158,6 @@ function Clients() {
       console.error('❌ Error updating client:', error);
       alert('Failed to update client: ' + (error.response?.data?.message || error.message));
       
-      // ✅ Fallback: Update localStorage
       const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
       const updatedClients = savedClients.map((c, i) => 
         i === editIndex ? updatedClient : c
@@ -168,7 +169,8 @@ function Clients() {
     }
   };
 
-  const activeClients = clients.filter(client => client.status === "Active").length;
+  const clientsList = Array.isArray(clients) ? clients : [];
+  const activeClients = clientsList.filter(client => client?.status === "Active").length;
 
   if (loading) {
     return (
@@ -224,16 +226,16 @@ function Clients() {
               </tr>
             </thead>
             <tbody>
-              {clients.length === 0 ? (
+              {clientsList.length === 0 ? (
                 <tr>
                   <td colSpan="6" className="text-center py-12 text-gray-400">
                     No Clients Found
                   </td>
                 </tr>
               ) : (
-                clients
+                clientsList
                   .filter((client) =>
-                    client.name?.toLowerCase().includes(searchTerm.toLowerCase())
+                    client?.name?.toLowerCase().includes(searchTerm.toLowerCase())
                   )
                   .map((client, index) => (
                     <tr
@@ -303,7 +305,7 @@ function Clients() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
         <div className="glass-card p-4 md:p-5">
           <p className="text-gray-400">Total Clients</p>
-          <h2 className="text-4xl font-bold mt-2">{clients.length}</h2>
+          <h2 className="text-4xl font-bold mt-2">{clientsList.length}</h2>
         </div>
         <div className="glass-card p-4 md:p-5">
           <p className="text-gray-400">Active Clients</p>
@@ -311,7 +313,7 @@ function Clients() {
         </div>
         <div className="glass-card p-4 md:p-5">
           <p className="text-gray-400">Inactive Clients</p>
-          <h2 className="text-4xl font-bold text-red-400 mt-2">{clients.length - activeClients}</h2>
+          <h2 className="text-4xl font-bold text-red-400 mt-2">{clientsList.length - activeClients}</h2>
         </div>
         <div className="glass-card p-4 md:p-5">
           <p className="text-gray-400">Growth</p>
