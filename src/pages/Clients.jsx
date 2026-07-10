@@ -14,6 +14,7 @@ const API_URL = 'https://legalvault-jm2n.onrender.com';
 function Clients() {
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
+  const isAdmin = user?.role === 'admin';
 
   const [openModal, setOpenModal] = useState(false);
   const [clients, setClients] = useState([]);
@@ -31,15 +32,12 @@ function Clients() {
       });
       console.log('✅ API Response:', response.data);
       
-      // ✅ FIX: Safely extract clients array from paginated response
       let clientsData = [];
       const data = response.data;
       
       if (Array.isArray(data)) {
-        // Direct array response
         clientsData = data;
       } else if (data && typeof data === 'object') {
-        // Paginated response: { clients: [...], pagination: {...} }
         if (Array.isArray(data.clients)) {
           clientsData = data.clients;
         } else if (Array.isArray(data.data)) {
@@ -50,7 +48,6 @@ function Clients() {
       console.log('✅ Extracted clients:', clientsData);
       console.log('✅ Is Array?', Array.isArray(clientsData));
       
-      // ✅ Always set as array
       setClients(Array.isArray(clientsData) ? clientsData : []);
       
     } catch (error) {
@@ -234,13 +231,15 @@ function Clients() {
                 <th className="p-3 text-left">Email</th>
                 <th className="p-3 text-left">Phone</th>
                 <th className="p-3 text-left">Status</th>
+                {/* ✅ Assigned To Column - Only for Admin */}
+                {isAdmin && <th className="p-3 text-left">Assigned To</th>}
                 <th className="p-3 text-left">Actions</th>
               </tr>
             </thead>
             <tbody>
               {clientsList.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="text-center py-12 text-gray-400">
+                  <td colSpan={isAdmin ? 7 : 6} className="text-center py-12 text-gray-400">
                     No Clients Found
                   </td>
                 </tr>
@@ -276,6 +275,22 @@ function Clients() {
                           {client.status}
                         </span>
                       </td>
+                      {/* ✅ Assigned To Column - Only for Admin */}
+                      {isAdmin && (
+                        <td className="p-3">
+                          {client.assignedTo && client.assignedTo.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {client.assignedTo.map((u) => (
+                                <span key={u._id || u} className="px-2 py-1 bg-cyan-500/20 text-cyan-400 rounded-full text-xs">
+                                  {u.name || u}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-gray-500 text-sm">Unassigned</span>
+                          )}
+                        </td>
+                      )}
                       <td className="p-3">
                         <div className="flex gap-4">
                           <FaEye

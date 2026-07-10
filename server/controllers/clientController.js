@@ -4,14 +4,22 @@ const mongoose = require('mongoose');
 const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 const sanitizeString = (str) => str?.trim() || '';
 
-// ✅ Get all clients - DIRECT ARRAY (no pagination)
+// ✅ Get all clients (filtered by role)
 exports.getClients = async (req, res) => {
   try {
-    const clients = await Client.find({ isDeleted: false })
-      .select('name company email phone status _id contactPerson onboardingDate')
+    const user = req.user;
+    const query = { isDeleted: false };
+    
+    // ✅ If not admin, filter by assignedTo
+    if (user.role !== 'admin') {
+      query.assignedTo = { $in: [user.id] };
+    }
+    
+    const clients = await Client.find(query)
+      .select('name company email phone status _id contactPerson onboardingDate assignedTo folderPermissions')
+      .populate('assignedTo', 'name email role')
       .sort({ createdAt: -1 });
     
-    // ✅ Direct array response
     res.json(clients);
   } catch (error) {
     console.error('❌ Get clients error:', error);
@@ -19,20 +27,29 @@ exports.getClients = async (req, res) => {
   }
 };
 
-// ✅ Get single client
+// ✅ Get single client (with access check)
 exports.getClientById = async (req, res) => {
   try {
     const { id } = req.params;
+    const user = req.user;
 
     if (!isValidObjectId(id)) {
       return res.status(400).json({ message: 'Invalid client ID format' });
     }
 
-    const client = await Client.findOne({ _id: id, isDeleted: false })
-      .select('name company email phone status contactPerson onboardingDate createdBy createdAt');
+    const query = { _id: id, isDeleted: false };
+    
+    // ✅ If not admin, check assignedTo
+    if (user.role !== 'admin') {
+      query.assignedTo = { $in: [user.id] };
+    }
+
+    const client = await Client.findOne(query)
+      .select('name company email phone status contactPerson onboardingDate createdBy createdAt assignedTo folderPermissions')
+      .populate('assignedTo', 'name email role');
     
     if (!client) {
-      return res.status(404).json({ message: 'Client not found' });
+      return res.status(404).json({ message: 'Client not found or access denied' });
     }
     res.json(client);
   } catch (error) {
@@ -41,10 +58,15 @@ exports.getClientById = async (req, res) => {
   }
 };
 
-// ✅ Create client
+// ✅ Create client (Admin only)
 exports.createClient = async (req, res) => {
   try {
-    const { name, company, email, phone, status } = req.body;
+    const { name, company, email, phone, status, contactPerson, onboardingDate, assignedTo, folderPermissions } = req.body;
+
+    // ✅ Only admin can create clients
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Only admin can create clients' });
+    }
 
     const sanitized = {
       name: sanitizeString(name),
@@ -52,6 +74,10 @@ exports.createClient = async (req, res) => {
       email: sanitizeString(email).toLowerCase(),
       phone: sanitizeString(phone),
       status: status || 'Active',
+      contactPerson: sanitizeString(contactPerson || ''),
+      onboardingDate: onboardingDate || '',
+      assignedTo: assignedTo || [],
+      folderPermissions: folderPermissions || [],
       createdBy: req.user.id
     };
 
@@ -66,23 +92,31 @@ exports.createClient = async (req, res) => {
 
     const client = new Client(sanitized);
     await client.save();
-    res.status(201).json(client);
+    
+    const populatedClient = await Client.findById(client._id)
+      .populate('assignedTo', 'name email role');
+    
+    res.status(201).json(populatedClient);
   } catch (error) {
     console.error('❌ Create client error:', error);
     res.status(400).json({ message: error.message });
   }
 };
 
-// ✅ Update client
+// ✅ Update client (Admin only)
 exports.updateClient = async (req, res) => {
   try {
     const { id } = req.params;
+
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Only admin can update clients' });
+    }
 
     if (!isValidObjectId(id)) {
       return res.status(400).json({ message: 'Invalid client ID format' });
     }
 
-    const { name, company, email, phone, status } = req.body;
+    const { name, company, email, phone, status, contactPerson, onboardingDate, assignedTo, folderPermissions } = req.body;
 
     const updateData = {};
     if (name !== undefined) updateData.name = sanitizeString(name);
@@ -96,12 +130,16 @@ exports.updateClient = async (req, res) => {
     }
     if (phone !== undefined) updateData.phone = sanitizeString(phone);
     if (status !== undefined) updateData.status = status;
+    if (contactPerson !== undefined) updateData.contactPerson = sanitizeString(contactPerson);
+    if (onboardingDate !== undefined) updateData.onboardingDate = onboardingDate;
+    if (assignedTo !== undefined) updateData.assignedTo = assignedTo;
+    if (folderPermissions !== undefined) updateData.folderPermissions = folderPermissions;
 
     const client = await Client.findOneAndUpdate(
       { _id: id, isDeleted: false },
       updateData,
       { new: true, runValidators: true }
-    );
+    ).populate('assignedTo', 'name email role');
 
     if (!client) {
       return res.status(404).json({ message: 'Client not found' });
@@ -113,10 +151,14 @@ exports.updateClient = async (req, res) => {
   }
 };
 
-// ✅ Soft Delete client
+// ✅ Delete client (Admin only)
 exports.deleteClient = async (req, res) => {
   try {
     const { id } = req.params;
+
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Only admin can delete clients' });
+    }
 
     if (!isValidObjectId(id)) {
       return res.status(400).json({ message: 'Invalid client ID format' });
@@ -141,11 +183,19 @@ exports.deleteClient = async (req, res) => {
 // ✅ Dashboard stats
 exports.getDashboardStats = async (req, res) => {
   try {
-    const totalClients = await Client.countDocuments({ isDeleted: false });
+    const user = req.user;
+    const query = { isDeleted: false };
+    
+    if (user.role !== 'admin') {
+      query.assignedTo = { $in: [user.id] };
+    }
+    
+    const totalClients = await Client.countDocuments(query);
     const activeClients = await Client.countDocuments({ 
-      status: 'Active', 
-      isDeleted: false 
+      ...query,
+      status: 'Active'
     });
+    
     res.json({
       totalClients,
       activeCases: 89,

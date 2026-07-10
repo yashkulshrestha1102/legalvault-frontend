@@ -17,7 +17,9 @@ const validateClient = [
   body('company').notEmpty().withMessage('Company is required'),
   body('email').isEmail().withMessage('Valid email is required'),
   body('phone').isLength({ min: 10, max: 15 }).withMessage('Phone must be 10-15 digits'),
-  body('status').optional().isIn(['Active', 'Inactive'])
+  body('status').optional().isIn(['Active', 'Inactive']),
+  body('assignedTo').optional().isArray().withMessage('assignedTo must be an array'),
+  body('folderPermissions').optional().isArray().withMessage('folderPermissions must be an array')
 ];
 
 const handleValidation = (req, res, next) => {

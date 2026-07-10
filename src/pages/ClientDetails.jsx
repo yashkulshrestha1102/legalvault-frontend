@@ -22,7 +22,7 @@ function ClientDetails() {
   const [contracts, setContracts] = useState([]);
   const [openContractModal, setOpenContractModal] = useState(false);
   const [editContract, setEditContract] = useState(null);
-  const [refreshKey, setRefreshKey] = useState(0); // ✅ Force re-render
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // ✅ Fetch client function
   const fetchClient = useCallback(async () => {
@@ -73,7 +73,7 @@ function ClientDetails() {
       
       // ✅ FORCE RE-RENDER - New object reference
       setClient({ ...clientData });
-      setRefreshKey(prev => prev + 1); // ✅ Force re-render
+      setRefreshKey(prev => prev + 1);
       
     } catch (error) {
       console.error('❌ Error fetching client:', error);
@@ -110,7 +110,6 @@ function ClientDetails() {
 
   // ✅ Force refresh when component mounts
   useEffect(() => {
-    // Force a re-render when the component mounts
     setRefreshKey(prev => prev + 1);
   }, []);
 
@@ -478,34 +477,34 @@ function ClientDetails() {
     setOpenContractModal(true);
   };
 
-  // ✅ User permissions
-  const permissions = user?.folderPermissions || [];
+  // ✅ FIXED: Folder Permissions based on client
   const role = user?.role || 'user';
-
+  
+  // ✅ Get folder permissions from client (if assigned)
+  const clientFolderPermissions = client?.folderPermissions || [];
+  
   const allFolders = [
-    { label: "Registrations / Certifications", value: "registrations" },
-    { label: "Contracts", value: "contracts" },
-    { label: "Policies", value: "policies" },
-    { label: "Corporate Secretariat", value: "corporateSecretariat" },
-    { label: "HR", value: "hr" },
-    { label: "GST", value: "gst" },
-    { label: "Income Tax", value: "incomeTax" },
-    { label: "Financials", value: "financials" }
+    { label: "Registrations / Certifications", value: "registrations", id: "registrations" },
+    { label: "Contracts", value: "contracts", id: "contracts" },
+    { label: "Policies", value: "policies", id: "policies" },
+    { label: "Corporate Secretariat", value: "corporateSecretariat", id: "corporate-secretariat" },
+    { label: "HR", value: "hr", id: "hr" },
+    { label: "GST", value: "gst", id: "gst" },
+    { label: "Income Tax", value: "incomeTax", id: "income-tax" },
+    { label: "Financials", value: "financials", id: "financials" }
   ];
 
+  // ✅ Filter folders based on client permissions
   const accessibleFolders = allFolders.filter(f => {
+    // ✅ Admin can see all
     if (role === 'admin') return true;
-    const folderIdMap = {
-      'registrations': 'registrations',
-      'contracts': 'contracts',
-      'policies': 'policies',
-      'corporateSecretariat': 'corporate-secretariat',
-      'hr': 'hr',
-      'gst': 'gst',
-      'incomeTax': 'income-tax',
-      'financials': 'financials'
-    };
-    return permissions.includes(folderIdMap[f.value] || f.value);
+    
+    // ✅ Check if user is assigned to this client
+    const isAssigned = client?.assignedTo?.some(u => u._id === user?.id || u === user?.id);
+    if (!isAssigned) return false;
+    
+    // ✅ Check if folder is in client's permissions
+    return clientFolderPermissions.includes(f.id);
   });
 
   if (loading) {
@@ -532,7 +531,7 @@ function ClientDetails() {
   }
 
   return (
-    <MainLayout key={refreshKey}> {/* ✅ Force re-render on refreshKey change */}
+    <MainLayout key={refreshKey}>
       <div className="space-y-6">
         {/* Client Header */}
         <div className="glass p-6">
@@ -559,17 +558,40 @@ function ClientDetails() {
               <h3 className="font-semibold mt-1">{client.status}</h3>
             </div>
           </div>
+          {/* ✅ Show Assigned Users */}
+          {role === 'admin' && client.assignedTo && client.assignedTo.length > 0 && (
+            <div className="mt-4 glass-card p-3">
+              <p className="text-gray-400 text-sm">Assigned To:</p>
+              <div className="flex flex-wrap gap-2 mt-1">
+                {client.assignedTo.map((u) => (
+                  <span key={u._id || u} className="px-3 py-1 bg-cyan-500/20 text-cyan-400 rounded-full text-sm">
+                    {u.name || u}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Folders Grid */}
-        {accessibleFolders.length > 0 && (
+        {accessibleFolders.length > 0 ? (
           <div className="grid md:grid-cols-4 gap-5">
             {accessibleFolders.map((folder) => (
-              <div key={folder.value} onClick={() => setSelectedFolder(folder.value)} className="glass-card p-6 cursor-pointer hover:scale-105 transition-all duration-300">
+              <div 
+                key={folder.value} 
+                onClick={() => setSelectedFolder(folder.value)} 
+                className="glass-card p-6 cursor-pointer hover:scale-105 transition-all duration-300"
+              >
                 <div className="text-5xl mb-4">📁</div>
                 <h3 className="font-semibold">{folder.label}</h3>
               </div>
             ))}
+          </div>
+        ) : (
+          <div className="glass-card p-6 text-center text-gray-400">
+            {role === 'admin' 
+              ? 'No folders available' 
+              : 'You do not have access to any folders for this client'}
           </div>
         )}
 
