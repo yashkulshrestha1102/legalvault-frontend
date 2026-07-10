@@ -13,10 +13,9 @@ export default defineConfig({
     },
   },
   build: {
-    // ✅ Remove manualChunks - let Vite handle it
+    // ✅ Simple chunk splitting without manualChunks
     rollupOptions: {
       output: {
-        // ✅ Simple chunk splitting
         assetFileNames: 'assets/[name]-[hash].[ext]',
         chunkFileNames: 'assets/[name]-[hash].js',
         entryFileNames: 'assets/[name]-[hash].js',
