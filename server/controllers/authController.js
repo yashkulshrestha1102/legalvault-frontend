@@ -4,6 +4,12 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const { sendPasswordResetEmail } = require('../utils/email');
 
+// ✅ Helper: Validate email format
+const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+// ✅ Helper: Sanitize input
+const sanitizeString = (str) => str?.trim() || '';
+
 // ✅ Register
 exports.register = async (req, res) => {
   try {
@@ -11,14 +17,26 @@ exports.register = async (req, res) => {
     
     console.log('📝 Register attempt:', { name, email, role });
 
-    // ✅ Additional validation (backup)
+    // ✅ Validation
     if (!name || !email || !password) {
       return res.status(400).json({ message: 'Name, email, and password are required' });
     }
 
-    const existingUser = await User.findOne({ email });
+    if (!isValidEmail(email)) {
+      return res.status(400).json({ message: 'Please enter a valid email address' });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ message: 'Password must be at least 6 characters' });
+    }
+
+    // ✅ Sanitize
+    const sanitizedName = sanitizeString(name);
+    const sanitizedEmail = sanitizeString(email).toLowerCase();
+
+    const existingUser = await User.findOne({ email: sanitizedEmail });
     if (existingUser) {
-      console.log('❌ User already exists:', email);
+      console.log('❌ User already exists:', sanitizedEmail);
       return res.status(400).json({ message: 'User already exists' });
     }
 
@@ -26,14 +44,14 @@ exports.register = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, salt);
 
     const user = new User({ 
-      name, 
-      email, 
+      name: sanitizedName, 
+      email: sanitizedEmail, 
       password: hashedPassword, 
       role: role || 'user' 
     });
     await user.save();
 
-    console.log('✅ User registered successfully:', email);
+    console.log('✅ User registered successfully:', sanitizedEmail);
     res.status(201).json({ message: 'User registered successfully' });
   } catch (error) {
     console.error('❌ Register error:', error);
@@ -52,7 +70,13 @@ exports.login = async (req, res) => {
       return res.status(400).json({ message: 'Email and password are required' });
     }
 
-    const user = await User.findOne({ email });
+    if (!isValidEmail(email)) {
+      return res.status(400).json({ message: 'Please enter a valid email address' });
+    }
+
+    const sanitizedEmail = sanitizeString(email).toLowerCase();
+
+    const user = await User.findOne({ email: sanitizedEmail });
     console.log('👤 User found:', user ? 'Yes' : 'No');
     
     if (!user) {
@@ -70,7 +94,7 @@ exports.login = async (req, res) => {
       { expiresIn: '7d' }
     );
 
-    console.log('✅ Login successful:', email);
+    console.log('✅ Login successful:', sanitizedEmail);
     console.log('📁 Folder Permissions from DB:', user.folderPermissions);
 
     res.json({
@@ -99,7 +123,13 @@ exports.forgotPassword = async (req, res) => {
       return res.status(400).json({ message: 'Email is required' });
     }
 
-    const user = await User.findOne({ email });
+    if (!isValidEmail(email)) {
+      return res.status(400).json({ message: 'Please enter a valid email address' });
+    }
+
+    const sanitizedEmail = sanitizeString(email).toLowerCase();
+
+    const user = await User.findOne({ email: sanitizedEmail });
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
@@ -109,8 +139,8 @@ exports.forgotPassword = async (req, res) => {
     user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
     await user.save();
 
-    console.log('📧 Sending password reset email to:', email);
-    await sendPasswordResetEmail(email, resetToken);
+    console.log('📧 Sending password reset email to:', sanitizedEmail);
+    await sendPasswordResetEmail(sanitizedEmail, resetToken);
     res.json({ message: 'Password reset email sent successfully' });
   } catch (error) {
     console.error('❌ Forgot password error:', error);
