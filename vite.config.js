@@ -7,28 +7,13 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
-  css: {
-    modules: {
-      scopeBehaviour: 'global',
-    },
-  },
   build: {
-    // ✅ Simple chunk splitting without manualChunks
-    rollupOptions: {
-      output: {
-        assetFileNames: 'assets/[name]-[hash].[ext]',
-        chunkFileNames: 'assets/[name]-[hash].js',
-        entryFileNames: 'assets/[name]-[hash].js',
-      }
-    },
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true,
-        drop_debugger: true,
-      }
-    },
-    chunkSizeWarningLimit: 500,
+    // ✅ Remove all complex options
+    minify: 'esbuild',
     sourcemap: false,
+    chunkSizeWarningLimit: 500,
+  },
+  server: {
+    port: 5173,
   },
 })
