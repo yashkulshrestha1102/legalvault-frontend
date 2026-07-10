@@ -13,14 +13,30 @@ export default defineConfig({
     },
   },
   build: {
-    // ✅ Code splitting - smaller chunks
+    // ✅ Code splitting - using function
     rollupOptions: {
       output: {
-        manualChunks: {
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'ui-vendor': ['react-select', 'framer-motion', 'react-icons'],
-          'chart-vendor': ['recharts'],
-          'export-vendor': ['jspdf', 'jspdf-autotable', 'xlsx'],
+        manualChunks: (id) => {
+          if (id.includes('node_modules')) {
+            // React vendor
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) {
+              return 'react-vendor';
+            }
+            // UI vendor
+            if (id.includes('react-select') || id.includes('framer-motion') || id.includes('react-icons')) {
+              return 'ui-vendor';
+            }
+            // Chart vendor
+            if (id.includes('recharts')) {
+              return 'chart-vendor';
+            }
+            // Export vendor
+            if (id.includes('jspdf') || id.includes('xlsx') || id.includes('jspdf-autotable')) {
+              return 'export-vendor';
+            }
+            // Other vendor
+            return 'vendor';
+          }
         }
       }
     },
@@ -35,7 +51,7 @@ export default defineConfig({
     },
     // ✅ Smaller chunks
     chunkSizeWarningLimit: 500,
-    // ✅ Source maps for debugging (optional)
+    // ✅ Source maps off
     sourcemap: false,
   },
 })
