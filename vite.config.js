@@ -13,45 +13,23 @@ export default defineConfig({
     },
   },
   build: {
-    // ✅ Code splitting - using function
+    // ✅ Remove manualChunks - let Vite handle it
     rollupOptions: {
       output: {
-        manualChunks: (id) => {
-          if (id.includes('node_modules')) {
-            // React vendor
-            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) {
-              return 'react-vendor';
-            }
-            // UI vendor
-            if (id.includes('react-select') || id.includes('framer-motion') || id.includes('react-icons')) {
-              return 'ui-vendor';
-            }
-            // Chart vendor
-            if (id.includes('recharts')) {
-              return 'chart-vendor';
-            }
-            // Export vendor
-            if (id.includes('jspdf') || id.includes('xlsx') || id.includes('jspdf-autotable')) {
-              return 'export-vendor';
-            }
-            // Other vendor
-            return 'vendor';
-          }
-        }
+        // ✅ Simple chunk splitting
+        assetFileNames: 'assets/[name]-[hash].[ext]',
+        chunkFileNames: 'assets/[name]-[hash].js',
+        entryFileNames: 'assets/[name]-[hash].js',
       }
     },
-    // ✅ Minify
     minify: 'terser',
-    // ✅ Remove console logs in production
     terserOptions: {
       compress: {
         drop_console: true,
         drop_debugger: true,
       }
     },
-    // ✅ Smaller chunks
     chunkSizeWarningLimit: 500,
-    // ✅ Source maps off
     sourcemap: false,
   },
 })
