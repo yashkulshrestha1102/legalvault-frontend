@@ -4,42 +4,15 @@ const mongoose = require('mongoose');
 const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 const sanitizeString = (str) => str?.trim() || '';
 
-// ✅ Get all clients with pagination
+// ✅ Get all clients - DIRECT ARRAY (no pagination)
 exports.getClients = async (req, res) => {
   try {
-    const { page = 1, limit = 50, search = '' } = req.query;
-    
-    const query = { isDeleted: false };
-    
-    // ✅ Search filter
-    if (search) {
-      query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { company: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } }
-      ];
-    }
-    
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-    
-    // ✅ Select only required fields for speed
-    const clients = await Client.find(query)
-      .select('name company email phone status _id')
-      .limit(parseInt(limit))
-      .skip(skip)
+    const clients = await Client.find({ isDeleted: false })
+      .select('name company email phone status _id contactPerson onboardingDate')
       .sort({ createdAt: -1 });
     
-    const total = await Client.countDocuments(query);
-    
-    res.json({
-      clients,
-      pagination: {
-        total,
-        page: parseInt(page),
-        limit: parseInt(limit),
-        pages: Math.ceil(total / parseInt(limit))
-      }
-    });
+    // ✅ Direct array response
+    res.json(clients);
   } catch (error) {
     console.error('❌ Get clients error:', error);
     res.status(500).json({ message: error.message });

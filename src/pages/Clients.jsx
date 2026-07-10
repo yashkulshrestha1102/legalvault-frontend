@@ -22,25 +22,37 @@ function Clients() {
   const [editData, setEditData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // ✅ FIXED fetchClients - handles paginated response
+  // ✅ FIXED fetchClients
   const fetchClients = async () => {
     try {
       const token = localStorage.getItem('token');
       const response = await axios.get(`${API_URL}/api/clients`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      console.log('✅ Clients fetched from backend:', response.data);
+      console.log('✅ API Response:', response.data);
       
-      // ✅ FIX: Handle paginated response
-      let clientsData = response.data;
+      // ✅ FIX: Safely extract clients array from paginated response
+      let clientsData = [];
+      const data = response.data;
       
-      // Agar response object hai aur usme 'clients' property hai (paginated)
-      if (clientsData && typeof clientsData === 'object' && !Array.isArray(clientsData)) {
-        clientsData = clientsData.clients || [];
+      if (Array.isArray(data)) {
+        // Direct array response
+        clientsData = data;
+      } else if (data && typeof data === 'object') {
+        // Paginated response: { clients: [...], pagination: {...} }
+        if (Array.isArray(data.clients)) {
+          clientsData = data.clients;
+        } else if (Array.isArray(data.data)) {
+          clientsData = data.data;
+        }
       }
       
-      // Ensure it's always an array
+      console.log('✅ Extracted clients:', clientsData);
+      console.log('✅ Is Array?', Array.isArray(clientsData));
+      
+      // ✅ Always set as array
       setClients(Array.isArray(clientsData) ? clientsData : []);
+      
     } catch (error) {
       console.error('❌ Error fetching clients:', error);
       const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
