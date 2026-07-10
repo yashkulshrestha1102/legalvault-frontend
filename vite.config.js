@@ -7,16 +7,8 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
-  css: {
-    postcss: {
-      plugins: [
-        require('@tailwindcss/postcss'),
-      ],
-    },
-  },
   build: {
     minify: 'esbuild',
     sourcemap: false,
-    cssMinify: true,
   },
 })
