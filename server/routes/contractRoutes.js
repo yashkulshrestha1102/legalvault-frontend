@@ -1,7 +1,27 @@
 const express = require('express');
 const router = express.Router();
+const { body, validationResult } = require('express-validator');
 const auth = require('../middleware/auth');
 const Contract = require('../models/Contract');
+
+// ✅ Validation Rules
+const validateContract = [
+  body('clientId').notEmpty().withMessage('Client ID is required'),
+  body('contractType').notEmpty().withMessage('Contract type is required'),
+  body('contractName').notEmpty().withMessage('Contract name is required'),
+  body('firstParty').notEmpty().withMessage('First party is required'),
+  body('secondParty').notEmpty().withMessage('Second party is required'),
+  body('startDate').notEmpty().withMessage('Start date is required'),
+  body('endDate').notEmpty().withMessage('End date is required')
+];
+
+const handleValidation = (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+  next();
+};
 
 // ✅ GET - All contracts for a client
 router.get('/client/:clientId', auth, async (req, res) => {
@@ -16,7 +36,7 @@ router.get('/client/:clientId', auth, async (req, res) => {
   }
 });
 
-// ✅ GET - Single contract by ID (MISSING ROUTE - ADD THIS)
+// ✅ GET - Single contract by ID
 router.get('/:id', auth, async (req, res) => {
   try {
     const contract = await Contract.findOne({ 
@@ -35,7 +55,7 @@ router.get('/:id', auth, async (req, res) => {
 });
 
 // ✅ POST - Create contract
-router.post('/', auth, async (req, res) => {
+router.post('/', auth, validateContract, handleValidation, async (req, res) => {
   try {
     const contract = new Contract({
       ...req.body,
@@ -50,7 +70,7 @@ router.post('/', auth, async (req, res) => {
 });
 
 // ✅ PUT - Update contract
-router.put('/:id', auth, async (req, res) => {
+router.put('/:id', auth, validateContract, handleValidation, async (req, res) => {
   try {
     const contract = await Contract.findOneAndUpdate(
       { _id: req.params.id, isDeleted: false },

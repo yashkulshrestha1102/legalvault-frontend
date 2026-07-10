@@ -11,6 +11,11 @@ exports.register = async (req, res) => {
     
     console.log('📝 Register attempt:', { name, email, role });
 
+    // ✅ Additional validation (backup)
+    if (!name || !email || !password) {
+      return res.status(400).json({ message: 'Name, email, and password are required' });
+    }
+
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       console.log('❌ User already exists:', email);
@@ -42,6 +47,10 @@ exports.login = async (req, res) => {
     const { email, password } = req.body;
     
     console.log('🔐 Login attempt:', { email });
+
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Email and password are required' });
+    }
 
     const user = await User.findOne({ email });
     console.log('👤 User found:', user ? 'Yes' : 'No');
@@ -86,6 +95,10 @@ exports.forgotPassword = async (req, res) => {
     const { email } = req.body;
     console.log('🔑 Forgot password attempt:', { email });
 
+    if (!email) {
+      return res.status(400).json({ message: 'Email is required' });
+    }
+
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
@@ -110,6 +123,13 @@ exports.resetPassword = async (req, res) => {
   try {
     const { token, newPassword } = req.body;
     console.log('🔑 Reset password attempt');
+
+    if (!token || !newPassword) {
+      return res.status(400).json({ message: 'Token and new password are required' });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: 'Password must be at least 6 characters' });
+    }
 
     const user = await User.findOne({
       resetPasswordToken: token,

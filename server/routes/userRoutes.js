@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { body, validationResult } = require('express-validator');
 const auth = require('../middleware/auth');
 const admin = require('../middleware/admin');
 const User = require('../models/User');
@@ -12,6 +13,24 @@ const ALLOWED_FOLDERS = [
   'hr', 'gst', 'income-tax', 'financials'
 ];
 
+// ✅ Validation Rules
+const validateUser = [
+  body('name').notEmpty().withMessage('Name is required'),
+  body('email').isEmail().withMessage('Valid email is required'),
+  body('password').optional().isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+  body('role').optional().isIn(['admin', 'lawyer', 'consultant', 'manager']).withMessage('Invalid role'),
+  body('status').optional().isIn(['Active', 'Inactive']).withMessage('Invalid status'),
+  body('folderPermissions').optional().isArray().withMessage('Folder permissions must be an array')
+];
+
+const handleValidation = (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+  next();
+};
+
 // GET - All users (Admin only)
 router.get('/', [auth, admin], async (req, res) => {
   try {
@@ -23,7 +42,7 @@ router.get('/', [auth, admin], async (req, res) => {
 });
 
 // POST - Create user (Admin only)
-router.post('/', [auth, admin], async (req, res) => {
+router.post('/', [auth, admin], validateUser, handleValidation, async (req, res) => {
   try {
     console.log('📥 POST /api/users - Request body:', req.body);
 
@@ -76,8 +95,8 @@ router.post('/', [auth, admin], async (req, res) => {
   }
 });
 
-// ✅ PUT - Update user (Allow users to update their own profile)
-router.put('/:id', auth, async (req, res) => {
+// ✅ PUT - Update user
+router.put('/:id', auth, validateUser, handleValidation, async (req, res) => {
   try {
     const { name, email, department, role, status, phone, folderPermissions, password } = req.body;
     
@@ -86,12 +105,10 @@ router.put('/:id', auth, async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // ✅ Check if user is updating their own profile or is admin
     if (req.user.id !== req.params.id && req.user.role !== 'admin') {
       return res.status(403).json({ message: 'You can only update your own profile' });
     }
 
-    // ✅ Build update data
     const updateData = {
       name: name || existingUser.name,
       department: department || existingUser.department || 'General',
@@ -99,7 +116,6 @@ router.put('/:id', auth, async (req, res) => {
       status: status || existingUser.status || 'Active'
     };
 
-    // ✅ Only admin can update role, email, and folderPermissions
     if (req.user.role === 'admin') {
       if (role) updateData.role = role;
       if (email) updateData.email = email;
@@ -108,7 +124,6 @@ router.put('/:id', auth, async (req, res) => {
       }
     }
 
-    // ✅ If password is provided, hash it
     if (password) {
       if (password.length < 6) {
         return res.status(400).json({ message: 'Password must be at least 6 characters' });
