@@ -25,7 +25,7 @@ console.log('✅ All environment variables are set');
 
 // ✅ CORS
 const allowedOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173,http://localhost:5174,https://legalvault-frontend-two.vercel.app').split(',');
-
+app.set('trust proxy', 1);
 app.use(cors({
   origin: function (origin, callback) {
     if (!origin) return callback(null, true);
