@@ -56,8 +56,20 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-// ✅ Security
-app.use(helmet());
+// ✅ Security - Helmet with fine-tuned configuration
+app.use(helmet({
+  crossOriginEmbedderPolicy: true,
+  crossOriginOpenerPolicy: true,
+  crossOriginResourcePolicy: { policy: "same-origin" },
+  dnsPrefetchControl: true,
+  frameguard: { action: "deny" },
+  hidePoweredBy: true,
+  hsts: true,
+  ieNoOpen: true,
+  noSniff: true,
+  referrerPolicy: { policy: "strict-origin-when-cross-origin" },
+  xssFilter: true
+}));
 
 // ✅ Body Parser
 app.use(express.json({ limit: '10mb' }));
@@ -99,18 +111,35 @@ app.use((req, res) => {
   res.status(404).json({ message: 'Route not found' });
 });
 
-// ✅ Global Error Handler
+// ✅ Global Error Handler - FIXED (No stack trace in production)
 app.use((err, req, res, next) => {
-  console.error('Error:', err.stack);
+  // ✅ Log error internally
+  console.error('❌ Error:', {
+    message: err.message,
+    stack: err.stack,
+    status: err.status || 500,
+    path: req.path,
+    method: req.method,
+    ip: req.ip
+  });
+
+  // ✅ Hide stack traces in production
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  
   res.status(err.status || 500).json({
     message: err.message || 'Something went wrong!',
-    error: process.env.NODE_ENV === 'development' ? err : {}
+    // ✅ Only send details in development
+    ...(isDevelopment && { 
+      error: err,
+      stack: err.stack 
+    })
   });
 });
 
 const PORT = process.env.PORT || 5000;
 const server = app.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
+  console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
 });
 
 // ✅ Graceful Shutdown
