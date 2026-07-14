@@ -13,20 +13,29 @@ const ALLOWED_FOLDERS = [
   'hr', 'gst', 'income-tax', 'financials'
 ];
 
-// ✅ Validation Rules
+// ✅ Validation Rules - FIXED
 const validateUser = [
   body('name').notEmpty().withMessage('Name is required'),
   body('email').isEmail().withMessage('Valid email is required'),
-  body('password').optional().isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+  body('password')
+    .if((value, { req }) => req.method === 'POST') // ✅ Password required only for POST
+    .isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
   body('role').optional().isIn(['admin', 'lawyer', 'consultant', 'manager']).withMessage('Invalid role'),
   body('status').optional().isIn(['Active', 'Inactive']).withMessage('Invalid status'),
-  body('folderPermissions').optional().isArray().withMessage('Folder permissions must be an array'),
-  body('folderPermissions.*').optional().isString().withMessage('Each folder permission must be a string')
+  body('folderPermissions')
+    .optional()
+    .isArray().withMessage('Folder permissions must be an array')
+    .custom((value) => {
+      if (!Array.isArray(value)) return true;
+      // ✅ Allow empty array
+      return value.every(item => typeof item === 'string');
+    }).withMessage('Each folder permission must be a string')
 ];
 
 const handleValidation = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
+    console.log('❌ Validation errors:', errors.array());
     return res.status(400).json({ errors: errors.array() });
   }
   next();
