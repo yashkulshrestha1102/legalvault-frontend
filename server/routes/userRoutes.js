@@ -20,7 +20,8 @@ const validateUser = [
   body('password').optional().isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
   body('role').optional().isIn(['admin', 'lawyer', 'consultant', 'manager']).withMessage('Invalid role'),
   body('status').optional().isIn(['Active', 'Inactive']).withMessage('Invalid status'),
-  body('folderPermissions').optional().isArray().withMessage('Folder permissions must be an array')
+  body('folderPermissions').optional().isArray().withMessage('Folder permissions must be an array'),
+  body('folderPermissions.*').optional().isString().withMessage('Each folder permission must be a string')
 ];
 
 const handleValidation = (req, res, next) => {
@@ -63,6 +64,7 @@ router.post('/', [auth, admin], validateUser, handleValidation, async (req, res)
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
+    // ✅ Filter valid folder permissions
     let validPermissions = [];
     if (folderPermissions && Array.isArray(folderPermissions)) {
       validPermissions = folderPermissions.filter(f => ALLOWED_FOLDERS.includes(f));
