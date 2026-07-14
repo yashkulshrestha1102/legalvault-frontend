@@ -150,10 +150,14 @@ export default function AddUserModal({ open, onClose, onSave, editData }) {
       ? formData.folderPermissions.filter(item => typeof item === 'string')
       : [];
 
+    // ✅ Ensure role is proper case
+    const role = formData.role || 'Consultant';
+
     // ✅ Debug log
     console.log('📤 AddUserModal - Sending:', {
       name: formData.name,
       email: formData.email,
+      role: role,
       folderPermissions: folderPermissions
     });
 
@@ -163,7 +167,7 @@ export default function AddUserModal({ open, onClose, onSave, editData }) {
       phone: formData.phone,
       password: formData.password,
       department: formData.department,
-      role: formData.role,
+      role: role,
       status: formData.status,
       folderPermissions: folderPermissions,
       avatar: formData.avatar,
