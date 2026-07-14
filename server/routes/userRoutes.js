@@ -13,28 +13,33 @@ const ALLOWED_FOLDERS = [
   'hr', 'gst', 'income-tax', 'financials'
 ];
 
-// ✅ Validation Rules - FIXED (Relaxed for folderPermissions)
+// ✅ Validation Rules - Role case-insensitive
 const validateUser = [
   body('name').notEmpty().withMessage('Name is required'),
   body('email').isEmail().withMessage('Valid email is required'),
   body('password')
     .if((value, { req }) => req.method === 'POST')
     .isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
-  body('role').optional().isIn(['admin', 'lawyer', 'consultant', 'manager']).withMessage('Invalid role'),
+  // ✅ Role validation - case insensitive
+  body('role')
+    .optional()
+    .custom((value) => {
+      if (!value) return true;
+      const allowedRoles = ['admin', 'lawyer', 'consultant', 'manager'];
+      return allowedRoles.includes(value.toLowerCase());
+    })
+    .withMessage('Invalid role'),
   body('status').optional().isIn(['Active', 'Inactive']).withMessage('Invalid status'),
-  // ✅ folderPermissions validation relaxed: allow empty array or array of strings
   body('folderPermissions')
     .optional()
     .customSanitizer(value => {
-      // Ensure it's always an array
       if (!value) return [];
       if (!Array.isArray(value)) return [value];
       return value;
     })
     .custom((value) => {
       if (!Array.isArray(value)) return true;
-      // ✅ Filter out non-string items
-      return true; // We'll filter in the controller
+      return true;
     })
 ];
 
@@ -84,16 +89,19 @@ router.post('/', [auth, admin], validateUser, handleValidation, async (req, res)
     let validPermissions = [];
     if (folderPermissions && Array.isArray(folderPermissions)) {
       validPermissions = folderPermissions
-        .filter(f => typeof f === 'string') // Only keep strings
-        .filter(f => ALLOWED_FOLDERS.includes(f)); // Only keep allowed ones
+        .filter(f => typeof f === 'string')
+        .filter(f => ALLOWED_FOLDERS.includes(f));
     }
+
+    // ✅ Ensure role is stored in lowercase
+    const normalizedRole = role ? role.toLowerCase() : 'user';
 
     const user = new User({
       name,
       email,
       password: hashedPassword,
       department: department || 'General',
-      role: role || 'user',
+      role: normalizedRole,
       status: status || 'Active',
       phone: phone || '',
       folderPermissions: validPermissions
@@ -137,7 +145,7 @@ router.put('/:id', auth, validateUser, handleValidation, async (req, res) => {
     };
 
     if (req.user.role === 'admin') {
-      if (role) updateData.role = role;
+      if (role) updateData.role = role.toLowerCase();
       if (email) updateData.email = email;
       if (folderPermissions) {
         updateData.folderPermissions = folderPermissions
