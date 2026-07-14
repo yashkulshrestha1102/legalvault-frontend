@@ -13,29 +13,35 @@ const ALLOWED_FOLDERS = [
   'hr', 'gst', 'income-tax', 'financials'
 ];
 
-// ✅ Validation Rules - FIXED
+// ✅ Validation Rules - FIXED (Relaxed for folderPermissions)
 const validateUser = [
   body('name').notEmpty().withMessage('Name is required'),
   body('email').isEmail().withMessage('Valid email is required'),
   body('password')
-    .if((value, { req }) => req.method === 'POST') // ✅ Password required only for POST
+    .if((value, { req }) => req.method === 'POST')
     .isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
   body('role').optional().isIn(['admin', 'lawyer', 'consultant', 'manager']).withMessage('Invalid role'),
   body('status').optional().isIn(['Active', 'Inactive']).withMessage('Invalid status'),
+  // ✅ folderPermissions validation relaxed: allow empty array or array of strings
   body('folderPermissions')
     .optional()
-    .isArray().withMessage('Folder permissions must be an array')
+    .customSanitizer(value => {
+      // Ensure it's always an array
+      if (!value) return [];
+      if (!Array.isArray(value)) return [value];
+      return value;
+    })
     .custom((value) => {
       if (!Array.isArray(value)) return true;
-      // ✅ Allow empty array
-      return value.every(item => typeof item === 'string');
-    }).withMessage('Each folder permission must be a string')
+      // ✅ Filter out non-string items
+      return true; // We'll filter in the controller
+    })
 ];
 
 const handleValidation = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    console.log('❌ Validation errors:', errors.array());
+    console.log('❌ Validation errors:', JSON.stringify(errors.array(), null, 2));
     return res.status(400).json({ errors: errors.array() });
   }
   next();
@@ -47,6 +53,7 @@ router.get('/', [auth, admin], async (req, res) => {
     const users = await User.find().select('-password');
     res.json(users);
   } catch (error) {
+    console.error('❌ GET users error:', error);
     res.status(500).json({ message: error.message });
   }
 });
@@ -54,7 +61,7 @@ router.get('/', [auth, admin], async (req, res) => {
 // POST - Create user (Admin only)
 router.post('/', [auth, admin], validateUser, handleValidation, async (req, res) => {
   try {
-    console.log('📥 POST /api/users - Request body:', req.body);
+    console.log('📥 POST /api/users - Request body:', JSON.stringify(req.body, null, 2));
 
     const { name, email, password, department, role, status, phone, folderPermissions } = req.body;
     
@@ -73,10 +80,12 @@ router.post('/', [auth, admin], validateUser, handleValidation, async (req, res)
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // ✅ Filter valid folder permissions
+    // ✅ Filter valid folder permissions (ensure array of strings)
     let validPermissions = [];
     if (folderPermissions && Array.isArray(folderPermissions)) {
-      validPermissions = folderPermissions.filter(f => ALLOWED_FOLDERS.includes(f));
+      validPermissions = folderPermissions
+        .filter(f => typeof f === 'string') // Only keep strings
+        .filter(f => ALLOWED_FOLDERS.includes(f)); // Only keep allowed ones
     }
 
     const user = new User({
@@ -131,7 +140,9 @@ router.put('/:id', auth, validateUser, handleValidation, async (req, res) => {
       if (role) updateData.role = role;
       if (email) updateData.email = email;
       if (folderPermissions) {
-        updateData.folderPermissions = folderPermissions.filter(f => ALLOWED_FOLDERS.includes(f));
+        updateData.folderPermissions = folderPermissions
+          .filter(f => typeof f === 'string')
+          .filter(f => ALLOWED_FOLDERS.includes(f));
       }
     }
 
@@ -172,6 +183,7 @@ router.delete('/:id', [auth, admin], async (req, res) => {
     await User.findByIdAndDelete(req.params.id);
     res.json({ message: 'User deleted successfully' });
   } catch (error) {
+    console.error('❌ DELETE error:', error);
     res.status(500).json({ message: error.message });
   }
 });
