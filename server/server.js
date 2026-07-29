@@ -23,28 +23,14 @@ requiredEnv.forEach(key => {
 });
 console.log('✅ All environment variables are set');
 
-// ✅ ============================================
-// ✅ MANUAL SECURITY HEADERS (Render fix)
-// ✅ ============================================
+// ✅ Force security headers
 app.use((req, res, next) => {
-  // ✅ Strict Transport Security (HSTS)
-  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
-  
-  // ✅ Prevent MIME type sniffing
   res.setHeader('X-Content-Type-Options', 'nosniff');
-  
-  // ✅ Prevent clickjacking
   res.setHeader('X-Frame-Options', 'DENY');
-  
-  // ✅ Referrer policy
-  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-  
-  // ✅ XSS protection
   res.setHeader('X-XSS-Protection', '1; mode=block');
-  
-  // ✅ Remove X-Powered-By
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
   res.removeHeader('X-Powered-By');
-  
   next();
 });
 
