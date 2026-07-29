@@ -82,6 +82,38 @@ router.post('/upload', auth, upload.array('documents', 50), async (req, res) => 
   }
 });
 
+// ✅ Rename document
+router.put('/:id/rename', auth, async (req, res) => {
+  try {
+    const { newName } = req.body;
+    if (!newName || newName.trim() === '') {
+      return res.status(400).json({ message: 'New name is required' });
+    }
+
+    const doc = await Document.findOneAndUpdate(
+      { _id: req.params.id, isDeleted: false },
+      { 
+        $set: { 
+          filename: newName.trim(),
+          originalName: newName.trim()
+        } 
+      },
+      { new: true }
+    );
+    
+    if (!doc) {
+      return res.status(404).json({ message: 'Document not found' });
+    }
+    
+    res.json({ 
+      message: 'Document renamed successfully', 
+      document: doc 
+    });
+  } catch (error) {
+    console.error('Rename error:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
 // ✅ Get all documents for a client
 router.get('/client/:clientId', auth, async (req, res) => {
   try {
