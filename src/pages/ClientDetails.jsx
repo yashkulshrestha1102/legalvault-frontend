@@ -29,6 +29,10 @@ function ClientDetails() {
   const [uploadingDocs, setUploadingDocs] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState([]);
 
+  // ✅ Rename state
+  const [renamingId, setRenamingId] = useState(null);
+  const [newFileName, setNewFileName] = useState('');
+
   // ✅ Fetch client function
   const fetchClient = useCallback(async () => {
     try {
@@ -224,6 +228,52 @@ function ClientDetails() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
+  // ✅ Rename document
+  const renameDocument = async (docId, newName) => {
+    if (!newName || newName.trim() === '') {
+      alert('Please enter a valid name');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.put(`${API_URL}/api/documents/${docId}/rename`, {
+        newName: newName.trim()
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      console.log('✅ Document renamed:', response.data);
+      fetchDocuments();
+      setRenamingId(null);
+      setNewFileName('');
+    } catch (error) {
+      console.error('Rename error:', error);
+      alert('Failed to rename document');
+    }
+  };
+
+  // ✅ Start rename
+  const startRename = (doc) => {
+    setRenamingId(doc._id);
+    setNewFileName(doc.filename);
+  };
+
+  // ✅ Cancel rename
+  const cancelRename = () => {
+    setRenamingId(null);
+    setNewFileName('');
+  };
+
+  // ✅ Handle rename key press
+  const handleRenameKeyDown = (e, docId) => {
+    if (e.key === 'Enter') {
+      renameDocument(docId, newFileName);
+    } else if (e.key === 'Escape') {
+      cancelRename();
+    }
+  };
+
   // ✅ Upload documents
   const uploadDocuments = async (files) => {
     if (files.length === 0) {
@@ -331,7 +381,7 @@ function ClientDetails() {
     }
   };
 
-  // ✅ View PDF - Direct URL with token as query param
+  // ✅ View PDF
   const viewPDF = (pdfUrl) => {
     if (!pdfUrl) return;
     const token = localStorage.getItem('token');
@@ -342,7 +392,7 @@ function ClientDetails() {
     window.open(`${pdfUrl}?token=${token}`, '_blank');
   };
 
-  // ✅ Download PDF - Direct URL with token as query param
+  // ✅ Download PDF
   const downloadPDF = (pdfUrl) => {
     if (!pdfUrl) return;
     const token = localStorage.getItem('token');
@@ -353,7 +403,7 @@ function ClientDetails() {
     window.open(`${pdfUrl}?token=${token}`, '_blank');
   };
 
-  // ✅ Save registration to backend - FIXED (Edit working)
+  // ✅ Save registration
   const saveRegistration = async (registrationData) => {
     try {
       const token = localStorage.getItem('token');
@@ -448,7 +498,7 @@ function ClientDetails() {
     }
   };
 
-  // ✅ Delete registration from backend
+  // ✅ Delete registration
   const deleteRegistration = async (registrationId) => {
     if (!window.confirm("Delete Registration?")) return;
     try {
@@ -463,7 +513,7 @@ function ClientDetails() {
     }
   };
 
-  // ✅ Save contract to backend - FIXED (Edit working)
+  // ✅ Save contract
   const saveContract = async (contractData) => {
     try {
       const token = localStorage.getItem('token');
@@ -555,7 +605,7 @@ function ClientDetails() {
     }
   };
 
-  // ✅ Delete contract from backend
+  // ✅ Delete contract
   const deleteContract = async (contractId) => {
     if (!window.confirm("Delete Contract?")) return;
     try {
@@ -608,7 +658,7 @@ function ClientDetails() {
     { label: "GST", value: "gst", id: "gst" },
     { label: "Income Tax", value: "incomeTax", id: "income-tax" },
     { label: "Financials", value: "financials", id: "financials" },
-{ label: "📁 Client Repository", value: "documents", id: "documents" }
+    { label: "📁 Client Repository", value: "documents", id: "documents" }
   ];
 
   const accessibleFolders = allFolders.filter(f => {
@@ -837,7 +887,7 @@ function ClientDetails() {
           </div>
         )}
 
-        {/* ✅ Documents / Files Folder */}
+        {/* ✅ Client Repository Folder */}
         {selectedFolder === "documents" && (
           <div className="glass p-6">
             <div className="flex justify-between items-center mb-6 flex-wrap gap-3">
@@ -903,9 +953,39 @@ function ClientDetails() {
                           </span>
                         </div>
                       )}
-                      <p className="text-sm font-medium text-center truncate w-full" title={doc.filename}>
-                        {doc.filename}
-                      </p>
+
+                      {/* ✅ Editable File Name */}
+                      {renamingId === doc._id ? (
+                        <div className="w-full flex items-center gap-2 mb-1">
+                          <input
+                            type="text"
+                            value={newFileName}
+                            onChange={(e) => setNewFileName(e.target.value)}
+                            onKeyDown={(e) => handleRenameKeyDown(e, doc._id)}
+                            onBlur={() => renameDocument(doc._id, newFileName)}
+                            className="glass-card px-2 py-1 text-sm w-full text-white outline-none focus:border-cyan-400/40"
+                            autoFocus
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-full flex items-center justify-center gap-2 mb-1">
+                          <p 
+                            className="text-sm font-medium text-center truncate cursor-pointer hover:text-cyan-400 transition flex-1"
+                            title="Double-click to rename"
+                            onDoubleClick={() => startRename(doc)}
+                          >
+                            {doc.filename}
+                          </p>
+                          <button
+                            onClick={() => startRename(doc)}
+                            className="text-gray-400 hover:text-cyan-400 transition text-xs"
+                            title="Rename"
+                          >
+                            ✏️
+                          </button>
+                        </div>
+                      )}
+
                       <p className="text-xs text-gray-400">{(doc.fileSize / 1024).toFixed(1)} KB</p>
                       <div className="flex gap-2 mt-3 flex-wrap justify-center">
                         <button
