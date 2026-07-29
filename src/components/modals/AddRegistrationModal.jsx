@@ -81,8 +81,16 @@ function AddRegistrationModal({ open, onClose, onSave, editData }) {
           'Content-Type': 'multipart/form-data'
         }
       });
-      console.log('✅ PDF uploaded:', response.data);
-      return response.data.url || response.data.files || [];
+      console.log('✅ PDFs uploaded:', response.data);
+      
+      // ✅ Return array of URLs
+      if (response.data.urls) {
+        return response.data.urls;
+      }
+      if (response.data.url) {
+        return [response.data.url];
+      }
+      return response.data.files || [];
     } catch (error) {
       console.error('❌ Upload error:', error.response?.data || error.message);
       alert('PDF upload failed. Please try again.');
@@ -95,26 +103,22 @@ function AddRegistrationModal({ open, onClose, onSave, editData }) {
       return;
     }
 
-    let uploadedDocs = [];
-    let pdfUrl = null;
+    let pdfUrls = [];
 
     if (selectedFiles.length > 0) {
       setUploading(true);
       const result = await uploadDocuments(selectedFiles);
       setUploading(false);
       
-      if (result) {
-        pdfUrl = Array.isArray(result) ? result[0] : result;
-        uploadedDocs = Array.isArray(result) ? result : [result];
+      if (result && Array.isArray(result)) {
+        pdfUrls = result;
       }
     }
 
     const finalData = {
       ...formData,
       category: formData.category === "Others" ? formData.customCategory : formData.category,
-      pdf: pdfUrl,
-      pdfFile: selectedFiles.length > 0 ? selectedFiles[0] : null,
-      documents: uploadedDocs || []
+      pdfs: pdfUrls,  // ✅ Array of PDF URLs
     };
 
     onSave(finalData);
@@ -253,7 +257,6 @@ function AddRegistrationModal({ open, onClose, onSave, editData }) {
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-[9999] p-4">
-      {/* ✅ Responsive Modal */}
       <div className="glass p-4 sm:p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-white">
           {editData ? "Edit Registration" : "Add Registration"}
@@ -374,10 +377,10 @@ function AddRegistrationModal({ open, onClose, onSave, editData }) {
             )}
           </div>
 
-          {/* File Upload - Responsive */}
+          {/* File Upload - Multiple */}
           <div className="glass-card p-3 sm:p-4">
             <label className="block text-sm font-medium text-gray-300 mb-2">
-              Upload Documents (PDF, JPG, PNG)
+              Upload Documents (PDF, JPG, PNG) <span className="text-xs text-gray-400">(Multiple files allowed)</span>
             </label>
             <div className="relative">
               <input
@@ -398,7 +401,7 @@ function AddRegistrationModal({ open, onClose, onSave, editData }) {
             </div>
             
             {selectedFiles.length > 0 && (
-              <div className="mt-3 space-y-2 max-h-32 overflow-y-auto">
+              <div className="mt-3 space-y-2 max-h-40 overflow-y-auto">
                 {selectedFiles.map((file, index) => (
                   <div key={index} className="flex items-center justify-between glass-card p-2 text-sm">
                     <span className="text-white truncate flex-1">
@@ -423,7 +426,7 @@ function AddRegistrationModal({ open, onClose, onSave, editData }) {
           </div>
         </div>
 
-        {/* Footer - Responsive Buttons */}
+        {/* Footer */}
         <div className="flex flex-col sm:flex-row justify-end gap-3 mt-6 sm:mt-8">
           <button
             onClick={onClose}

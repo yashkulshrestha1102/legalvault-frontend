@@ -2,6 +2,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import axios from 'axios';
 import MainLayout from "../layouts/MainLayout";
+import { FaFilePdf, FaEye, FaDownload } from "react-icons/fa";
 
 const API_URL = 'https://legalvault-jm2n.onrender.com';
 
@@ -39,18 +40,7 @@ function RegistrationDetails() {
       return;
     }
     const finalUrl = `${pdfUrl}?token=${token}`;
-    console.log('📄 View PDF - Final URL:', finalUrl);
-    
-    const newWindow = window.open(finalUrl, '_blank');
-    if (!newWindow) {
-      const link = document.createElement('a');
-      link.href = finalUrl;
-      link.target = '_blank';
-      link.rel = 'noopener noreferrer';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
+    window.open(finalUrl, '_blank');
   };
 
   // ✅ Download PDF - Direct URL with token
@@ -63,7 +53,6 @@ function RegistrationDetails() {
         return;
       }
       const finalUrl = `${pdfUrl}?token=${token}`;
-      console.log('⬇️ Download PDF - Final URL:', finalUrl);
       
       const response = await axios.get(finalUrl, {
         responseType: 'blob'
@@ -82,6 +71,12 @@ function RegistrationDetails() {
       console.error('❌ Download error:', error);
       alert('Failed to download PDF');
     }
+  };
+
+  // ✅ Get filename from URL
+  const getFileName = (url) => {
+    if (!url) return 'document.pdf';
+    return url.split('/').pop() || 'document.pdf';
   };
 
   if (loading) {
@@ -126,6 +121,9 @@ function RegistrationDetails() {
       : 'Valid'
     : 'N/A';
 
+  // ✅ Get PDFs array
+  const pdfs = registration.pdfs || (registration.pdf ? [registration.pdf] : []);
+
   return (
     <MainLayout>
       <div className="p-6">
@@ -158,30 +156,39 @@ function RegistrationDetails() {
               <h3 className={`font-semibold mt-1 ${statusColor}`}>{statusText}</h3>
             </div>
 
-            <div className="glass-card p-4">
-              <p className="text-gray-400 text-sm">PDF Document</p>
-              {registration.pdf ? (
-                <div className="mt-2">
-                  <p className="text-sm text-gray-400 break-all mb-2">
-                    {registration.pdf.split('/').pop() || 'PDF Document'}
-                  </p>
-                  <div className="flex gap-3 flex-wrap">
-                    <button
-                      onClick={() => viewPDF(registration.pdf)}
-                      className="glass-card px-4 py-2 text-cyan-400 hover:scale-105 transition"
-                    >
-                      📄 View PDF
-                    </button>
-                    <button
-                      onClick={() => downloadPDF(registration.pdf)}
-                      className="glass-card px-4 py-2 text-green-400 hover:scale-105 transition"
-                    >
-                      ⬇️ Download PDF
-                    </button>
-                  </div>
-                </div>
+            {/* ✅ Multiple PDF Documents */}
+            <div className="glass-card p-4 md:col-span-2">
+              <p className="text-gray-400 text-sm mb-3">📄 Documents ({pdfs.length})</p>
+              {pdfs.length === 0 ? (
+                <h3 className="font-semibold mt-1 text-gray-400">No documents uploaded</h3>
               ) : (
-                <h3 className="font-semibold mt-1 text-gray-400">No PDF uploaded</h3>
+                <div className="space-y-2">
+                  {pdfs.map((pdfUrl, index) => (
+                    <div key={index} className="glass-card p-3 flex items-center justify-between hover:bg-white/5 transition">
+                      <div className="flex items-center gap-3">
+                        <FaFilePdf className="text-red-400 text-xl" />
+                        <div>
+                          <p className="font-medium text-sm">{getFileName(pdfUrl)}</p>
+                          <p className="text-xs text-gray-400">Document {index + 1}</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => viewPDF(pdfUrl)}
+                          className="glass-card px-3 py-1.5 text-cyan-400 hover:scale-105 transition text-sm flex items-center gap-1"
+                        >
+                          <FaEye className="text-xs" /> View
+                        </button>
+                        <button
+                          onClick={() => downloadPDF(pdfUrl)}
+                          className="glass-card px-3 py-1.5 text-green-400 hover:scale-105 transition text-sm flex items-center gap-1"
+                        >
+                          <FaDownload className="text-xs" /> Download
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
           </div>

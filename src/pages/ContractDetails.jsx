@@ -2,6 +2,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import axios from 'axios';
 import MainLayout from "../layouts/MainLayout";
+import { FaFilePdf, FaEye, FaDownload } from "react-icons/fa";
 
 const API_URL = 'https://legalvault-jm2n.onrender.com';
 
@@ -11,7 +12,6 @@ function ContractDetails() {
 
   const [contract, setContract] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [pdfPreviewUrl, setPdfPreviewUrl] = useState("");
 
   // ✅ Fetch contract from backend
   useEffect(() => {
@@ -28,16 +28,7 @@ function ContractDetails() {
         setContract(response.data);
       } catch (error) {
         console.error('❌ Error fetching contract:', error);
-        
-        // ✅ Fallback: localStorage se try karo
-        const contracts = JSON.parse(localStorage.getItem(`contracts_${id}`)) || [];
-        const selected = contracts.find(item => String(item.id) === contractId || String(item._id) === contractId);
-        if (selected) {
-          setContract(selected);
-          console.log('✅ Contract loaded from localStorage fallback:', selected);
-        } else {
-          setContract(null);
-        }
+        setContract(null);
       } finally {
         setLoading(false);
       }
@@ -46,22 +37,7 @@ function ContractDetails() {
     if (contractId) {
       fetchContract();
     }
-  }, [id, contractId]);
-
-  // ✅ PDF Preview
-  useEffect(() => {
-    if (contract?.pdfUrl && contract.pdfUrl.startsWith("data:application/pdf")) {
-      fetch(contract.pdfUrl)
-        .then((res) => res.blob())
-        .then((blob) => {
-          const blobUrl = URL.createObjectURL(blob);
-          setPdfPreviewUrl(blobUrl);
-        })
-        .catch((err) => {
-          console.log("PDF Preview Error", err);
-        });
-    }
-  }, [contract]);
+  }, [contractId]);
 
   // ✅ View PDF with token
   const viewPDF = (pdfUrl) => {
@@ -84,8 +60,8 @@ function ContractDetails() {
         return;
       }
       
-      const response = await axios.get(pdfUrl, {
-        headers: { Authorization: `Bearer ${token}` },
+      const finalUrl = `${pdfUrl}?token=${token}`;
+      const response = await axios.get(finalUrl, {
         responseType: 'blob'
       });
       
@@ -102,6 +78,12 @@ function ContractDetails() {
       console.error('❌ Download error:', error);
       alert('Failed to download PDF');
     }
+  };
+
+  // ✅ Get filename from URL
+  const getFileName = (url) => {
+    if (!url) return 'document.pdf';
+    return url.split('/').pop() || 'document.pdf';
   };
 
   if (loading) {
@@ -126,6 +108,9 @@ function ContractDetails() {
       </MainLayout>
     );
   }
+
+  // ✅ Get PDFs array
+  const pdfs = contract.pdfs || (contract.pdf ? [contract.pdf] : []);
 
   return (
     <MainLayout>
@@ -183,43 +168,42 @@ function ContractDetails() {
             </h3>
           </div>
 
-          <div className="glass-card p-4">
-            <p className="text-gray-400 text-sm">PDF Document</p>
-            {contract.pdf ? (
-              <div className="mt-2">
-                <p className="text-sm text-gray-400 break-all mb-2">
-                  {contract.pdf.split('/').pop() || 'PDF Document'}
-                </p>
-                <div className="flex gap-3 flex-wrap">
-                  <button
-                    onClick={() => viewPDF(contract.pdf)}
-                    className="glass-card px-4 py-2 text-cyan-400 hover:scale-105 transition"
-                  >
-                    📄 View PDF
-                  </button>
-                  <button
-                    onClick={() => downloadPDF(contract.pdf)}
-                    className="glass-card px-4 py-2 text-green-400 hover:scale-105 transition"
-                  >
-                    ⬇️ Download PDF
-                  </button>
-                </div>
-              </div>
+          {/* ✅ Multiple PDF Documents */}
+          <div className="glass-card p-4 md:col-span-2">
+            <p className="text-gray-400 text-sm mb-3">📄 Documents ({pdfs.length})</p>
+            {pdfs.length === 0 ? (
+              <h3 className="font-semibold mt-1 text-gray-400">No documents uploaded</h3>
             ) : (
-              <h3 className="font-semibold mt-1 text-gray-400">No PDF uploaded</h3>
+              <div className="space-y-2">
+                {pdfs.map((pdfUrl, index) => (
+                  <div key={index} className="glass-card p-3 flex items-center justify-between hover:bg-white/5 transition">
+                    <div className="flex items-center gap-3">
+                      <FaFilePdf className="text-red-400 text-xl" />
+                      <div>
+                        <p className="font-medium text-sm">{getFileName(pdfUrl)}</p>
+                        <p className="text-xs text-gray-400">Document {index + 1}</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => viewPDF(pdfUrl)}
+                        className="glass-card px-3 py-1.5 text-cyan-400 hover:scale-105 transition text-sm flex items-center gap-1"
+                      >
+                        <FaEye className="text-xs" /> View
+                      </button>
+                      <button
+                        onClick={() => downloadPDF(pdfUrl)}
+                        className="glass-card px-3 py-1.5 text-green-400 hover:scale-105 transition text-sm flex items-center gap-1"
+                      >
+                        <FaDownload className="text-xs" /> Download
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         </div>
-
-        {pdfPreviewUrl && (
-          <iframe
-            src={pdfPreviewUrl}
-            width="100%"
-            height="700"
-            className="mt-5 rounded-lg"
-            title="PDF Preview"
-          />
-        )}
       </div>
     </MainLayout>
   );

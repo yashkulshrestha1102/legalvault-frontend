@@ -6,7 +6,8 @@ const RegistrationSchema = new mongoose.Schema({
   registrationName: { type: String, required: true },
   startDate: { type: String, required: true },
   endDate: { type: String, required: true },
-  pdf: { type: String, default: '' },
+  // ✅ Changed: Single PDF to Multiple PDFs
+  pdfs: { type: [String], default: [] },  // Array of PDF URLs
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   isDeleted: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now }

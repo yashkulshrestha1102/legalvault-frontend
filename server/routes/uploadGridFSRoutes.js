@@ -7,57 +7,71 @@ const PDF = require('../models/PDF');
 const { ObjectId } = require('mongodb');
 const jwt = require('jsonwebtoken');
 
-// ✅ Upload PDF
-router.post('/pdf', auth, upload.single('pdf'), async (req, res) => {
+// ✅ Upload Multiple PDFs
+router.post('/pdf', auth, upload.array('pdf', 10), async (req, res) => {
   try {
-    console.log('📥 Upload request received');
+    console.log('📥 Upload request received - Files:', req.files?.length || 0);
     
-    if (!req.file) {
-      return res.status(400).json({ message: 'No file uploaded' });
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ message: 'No files uploaded' });
     }
 
     const bucket = getGridFS();
     const { clientId, registrationId } = req.body;
+    const uploadedFiles = [];
 
-    const uploadStream = bucket.openUploadStream(req.file.originalname, {
-      contentType: req.file.mimetype,
-      metadata: {
-        uploadedBy: req.user.id,
-        clientId: clientId || null,
-        registrationId: registrationId || null,
-        uploadDate: new Date()
-      }
-    });
-
-    uploadStream.end(req.file.buffer);
-
-    uploadStream.on('finish', async () => {
-      const pdfDoc = new PDF({
-        filename: req.file.originalname,
-        contentType: req.file.mimetype,
-        size: req.file.size,
-        uploadedBy: req.user.id,
-        clientId: clientId || null,
-        registrationId: registrationId || null,
-        fileId: uploadStream.id
+    for (const file of req.files) {
+      const uploadStream = bucket.openUploadStream(file.originalname, {
+        contentType: file.mimetype,
+        metadata: {
+          uploadedBy: req.user.id,
+          clientId: clientId || null,
+          registrationId: registrationId || null,
+          uploadDate: new Date()
+        }
       });
 
-      await pdfDoc.save();
+      uploadStream.end(file.buffer);
 
-      const host = req.get('host');
-      const protocol = 'https';
-      const url = `${protocol}://${host}/api/pdfs/${uploadStream.id}`;
+      await new Promise((resolve, reject) => {
+        uploadStream.on('finish', async () => {
+          const pdfDoc = new PDF({
+            filename: file.originalname,
+            contentType: file.mimetype,
+            size: file.size,
+            uploadedBy: req.user.id,
+            clientId: clientId || null,
+            registrationId: registrationId || null,
+            fileId: uploadStream.id
+          });
+          await pdfDoc.save();
 
-      res.json({
-        message: 'PDF uploaded successfully',
-        url: url,
-        fileId: uploadStream.id
+          const host = req.get('host');
+          const protocol = 'https';
+          const url = `${protocol}://${host}/api/pdfs/${uploadStream.id}`;
+
+          uploadedFiles.push({
+            url: url,
+            fileId: uploadStream.id,
+            filename: file.originalname,
+            size: file.size,
+            contentType: file.mimetype
+          });
+
+          resolve();
+        });
+
+        uploadStream.on('error', (error) => {
+          console.error('Upload error:', error);
+          reject(error);
+        });
       });
-    });
+    }
 
-    uploadStream.on('error', (error) => {
-      console.error('Upload error:', error);
-      res.status(500).json({ message: 'Upload failed' });
+    res.json({
+      message: 'PDFs uploaded successfully',
+      files: uploadedFiles,
+      urls: uploadedFiles.map(f => f.url)
     });
 
   } catch (error) {
@@ -66,7 +80,7 @@ router.post('/pdf', auth, upload.single('pdf'), async (req, res) => {
   }
 });
 
-// ✅ Get PDF by ID (with query param token support) - ADD THIS ROUTE
+// ✅ Get PDF by ID (with query param token support)
 router.get('/:id', async (req, res) => {
   try {
     let token = req.header('Authorization')?.replace('Bearer ', '');
