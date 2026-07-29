@@ -242,7 +242,7 @@ function ClientDetails() {
     window.open(`${pdfUrl}?token=${token}`, '_blank');
   };
 
-  // ✅ Save registration to backend
+  // ✅ Save registration to backend - FIXED (Edit working)
   const saveRegistration = async (registrationData) => {
     try {
       const token = localStorage.getItem('token');
@@ -310,24 +310,26 @@ function ClientDetails() {
         clientId: validClientId 
       };
       
-      if (registrationData.pdf && !data.pdf) {
-        data.pdf = registrationData.pdf;
-        console.log('📄 PDF URL from modal:', data.pdf);
+      // ✅ Handle multiple PDFs
+      if (registrationData.pdfs && registrationData.pdfs.length > 0) {
+        data.pdfs = registrationData.pdfs;
       }
       
-      if (registrationData.pdfFile) {
-        const pdfUrl = await uploadPDF(registrationData.pdfFile);
-        if (pdfUrl) {
-          data.pdf = pdfUrl;
-          console.log('📄 PDF uploaded and set:', pdfUrl);
-        }
+      // ✅ Check if editing or creating
+      if (editRegistration) {
+        // ✅ UPDATE existing registration
+        const response = await axios.put(`${API_URL}/api/registrations/${editRegistration._id}`, data, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        console.log('✅ Registration updated:', response.data);
+      } else {
+        // ✅ CREATE new registration
+        const response = await axios.post(`${API_URL}/api/registrations`, data, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        console.log('✅ Registration created:', response.data);
       }
       
-      const response = await axios.post(`${API_URL}/api/registrations`, data, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      console.log('✅ Registration saved:', response.data);
       fetchRegistrations();
       setEditRegistration(null);
       setOpenModal(false);
@@ -354,7 +356,7 @@ function ClientDetails() {
     }
   };
 
-  // ✅ Save contract to backend
+  // ✅ Save contract to backend - FIXED (Edit working)
   const saveContract = async (contractData) => {
     try {
       const token = localStorage.getItem('token');
@@ -419,19 +421,24 @@ function ClientDetails() {
       
       const data = { ...contractData, clientId: validClientId };
       
-      if (contractData.pdfFile) {
-        const pdfUrl = await uploadPDF(contractData.pdfFile);
-        if (pdfUrl) data.pdf = pdfUrl;
+      // ✅ Handle multiple PDFs for contract
+      if (contractData.pdfs && contractData.pdfs.length > 0) {
+        data.pdfs = contractData.pdfs;
       }
       
+      // ✅ Check if editing or creating
       if (editContract) {
-        await axios.put(`${API_URL}/api/contracts/${editContract._id}`, data, {
+        // ✅ UPDATE existing contract
+        const response = await axios.put(`${API_URL}/api/contracts/${editContract._id}`, data, {
           headers: { Authorization: `Bearer ${token}` }
         });
+        console.log('✅ Contract updated:', response.data);
       } else {
-        await axios.post(`${API_URL}/api/contracts`, data, {
+        // ✅ CREATE new contract
+        const response = await axios.post(`${API_URL}/api/contracts`, data, {
           headers: { Authorization: `Bearer ${token}` }
         });
+        console.log('✅ Contract created:', response.data);
       }
       
       fetchContracts();
