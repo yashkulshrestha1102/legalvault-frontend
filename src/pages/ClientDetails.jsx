@@ -24,6 +24,11 @@ function ClientDetails() {
   const [editContract, setEditContract] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
+  // ✅ Documents State
+  const [documents, setDocuments] = useState([]);
+  const [uploadingDocs, setUploadingDocs] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState([]);
+
   // ✅ Fetch client function
   const fetchClient = useCallback(async () => {
     try {
@@ -41,7 +46,6 @@ function ClientDetails() {
           clientData = response.data;
           console.log('✅ Client fetched from backend:', clientData);
           
-          // ✅ Update localStorage
           const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
           const updatedClients = savedClients.map(c => 
             String(c._id) === String(id) || String(c.id) === String(id) ? clientData : c
@@ -71,7 +75,6 @@ function ClientDetails() {
         }
       }
       
-      // ✅ FORCE RE-RENDER - New object reference
       setClient({ ...clientData });
       setRefreshKey(prev => prev + 1);
       
@@ -113,7 +116,7 @@ function ClientDetails() {
     setRefreshKey(prev => prev + 1);
   }, []);
 
-  // ✅ Refresh data when URL changes (navigation from clients page)
+  // ✅ Refresh data when URL changes
   useEffect(() => {
     const handleRouteChange = () => {
       if (id) {
@@ -177,7 +180,35 @@ function ClientDetails() {
     }
   };
 
-  // ✅ Load registrations and contracts on mount
+  // ✅ Fetch documents from backend
+  const fetchDocuments = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!id) {
+        console.error('❌ Client ID is undefined!');
+        return;
+      }
+      console.log('📋 Fetching documents for client ID:', id);
+      
+      const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(id);
+      if (!isValidObjectId) {
+        console.warn('⚠️ Invalid ObjectId, skipping documents fetch');
+        setDocuments([]);
+        return;
+      }
+      
+      const response = await axios.get(`${API_URL}/api/documents/client/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      console.log('✅ Documents fetched:', response.data);
+      setDocuments(Array.isArray(response.data) ? response.data : []);
+    } catch (error) {
+      console.error('❌ Error fetching documents:', error.response?.data || error.message);
+      setDocuments([]);
+    }
+  };
+
+  // ✅ Load registrations, contracts, and documents on mount
   useEffect(() => {
     if (id) {
       console.log('🔄 Loading data for client ID:', id);
@@ -185,12 +216,92 @@ function ClientDetails() {
       if (isValidObjectId) {
         fetchRegistrations();
         fetchContracts();
+        fetchDocuments();
       }
     } else {
       console.error('❌ No client ID available');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  // ✅ Upload documents
+  const uploadDocuments = async (files) => {
+    if (files.length === 0) {
+      alert('Please select at least one file');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const formData = new FormData();
+      for (const file of files) {
+        formData.append('documents', file);
+      }
+      formData.append('clientId', id);
+      
+      setUploadingDocs(true);
+      const response = await axios.post(`${API_URL}/api/documents/upload`, formData, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      console.log('✅ Documents uploaded:', response.data);
+      fetchDocuments();
+      setSelectedFiles([]);
+      alert(`✅ ${response.data.files.length} files uploaded successfully!`);
+    } catch (error) {
+      console.error('❌ Upload error:', error);
+      alert('Failed to upload documents');
+    } finally {
+      setUploadingDocs(false);
+    }
+  };
+
+  // ✅ View document
+  const viewDocument = (docUrl) => {
+    if (!docUrl) return;
+    const token = localStorage.getItem('token');
+    window.open(`${docUrl}?token=${token}`, '_blank');
+  };
+
+  // ✅ Download document
+  const downloadDocument = async (docUrl, filename) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(docUrl, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: 'blob'
+      });
+      const blob = new Blob([response.data]);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename || 'document';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Download error:', error);
+      alert('Failed to download document');
+    }
+  };
+
+  // ✅ Delete document
+  const deleteDocument = async (docId) => {
+    if (!window.confirm('Delete this document?')) return;
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`${API_URL}/api/documents/${docId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      fetchDocuments();
+    } catch (error) {
+      console.error('Delete error:', error);
+      alert('Failed to delete document');
+    }
+  };
 
   // mongodbpdf
   const uploadPDF = async (file) => {
@@ -310,20 +421,16 @@ function ClientDetails() {
         clientId: validClientId 
       };
       
-      // ✅ Handle multiple PDFs
       if (registrationData.pdfs && registrationData.pdfs.length > 0) {
         data.pdfs = registrationData.pdfs;
       }
       
-      // ✅ Check if editing or creating
       if (editRegistration) {
-        // ✅ UPDATE existing registration
         const response = await axios.put(`${API_URL}/api/registrations/${editRegistration._id}`, data, {
           headers: { Authorization: `Bearer ${token}` }
         });
         console.log('✅ Registration updated:', response.data);
       } else {
-        // ✅ CREATE new registration
         const response = await axios.post(`${API_URL}/api/registrations`, data, {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -421,20 +528,16 @@ function ClientDetails() {
       
       const data = { ...contractData, clientId: validClientId };
       
-      // ✅ Handle multiple PDFs for contract
       if (contractData.pdfs && contractData.pdfs.length > 0) {
         data.pdfs = contractData.pdfs;
       }
       
-      // ✅ Check if editing or creating
       if (editContract) {
-        // ✅ UPDATE existing contract
         const response = await axios.put(`${API_URL}/api/contracts/${editContract._id}`, data, {
           headers: { Authorization: `Bearer ${token}` }
         });
         console.log('✅ Contract updated:', response.data);
       } else {
-        // ✅ CREATE new contract
         const response = await axios.post(`${API_URL}/api/contracts`, data, {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -484,7 +587,7 @@ function ClientDetails() {
     setOpenContractModal(true);
   };
 
-  // ✅ NEW: Get folder permissions for current user from userPermissions
+  // ✅ Get folder permissions for current user
   const getUserFolderPermissions = () => {
     if (!client || !client.userPermissions) return [];
     const userPerm = client.userPermissions.find(p => 
@@ -493,7 +596,6 @@ function ClientDetails() {
     return userPerm?.folderPermissions || [];
   };
 
-  // ✅ Get user-specific folder permissions
   const userFolderPermissions = getUserFolderPermissions();
   const role = user?.role || 'user';
   
@@ -505,20 +607,14 @@ function ClientDetails() {
     { label: "HR", value: "hr", id: "hr" },
     { label: "GST", value: "gst", id: "gst" },
     { label: "Income Tax", value: "incomeTax", id: "income-tax" },
-    { label: "Financials", value: "financials", id: "financials" }
+    { label: "Financials", value: "financials", id: "financials" },
+    { label: "📁 Documents / Files", value: "documents", id: "documents" }
   ];
 
-  // ✅ Filter folders based on user's permissions
   const accessibleFolders = allFolders.filter(f => {
-    // ✅ Admin can see all
     if (role === 'admin') return true;
-    
-    // ✅ Check if user has permission for this folder
     return userFolderPermissions.includes(f.id);
   });
-
-  // ✅ Get assigned users for admin view
-  const assignedUsers = client?.userPermissions?.map(p => p.userId) || [];
 
   if (loading) {
     return (
@@ -572,7 +668,6 @@ function ClientDetails() {
             </div>
           </div>
           
-          {/* ✅ Show Assigned Users with Folder Count (Admin only) */}
           {role === 'admin' && client.userPermissions && client.userPermissions.length > 0 && (
             <div className="mt-4 glass-card p-3">
               <p className="text-gray-400 text-sm">Assigned Users:</p>
@@ -738,6 +833,104 @@ function ClientDetails() {
                   )}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+
+        {/* ✅ Documents / Files Folder */}
+        {selectedFolder === "documents" && (
+          <div className="glass p-6">
+            <div className="flex justify-between items-center mb-6 flex-wrap gap-3">
+              <h3 className="text-xl font-semibold">📁 Documents / Files</h3>
+              <div className="flex items-center gap-3 flex-wrap">
+                <label className="glass-card px-4 py-2 cursor-pointer hover:scale-105 transition text-sm">
+                  📎 Select Files
+                  <input
+                    type="file"
+                    multiple
+                    accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xlsx,.txt"
+                    onChange={(e) => setSelectedFiles(Array.from(e.target.files))}
+                    className="hidden"
+                  />
+                </label>
+                {selectedFiles.length > 0 && (
+                  <button
+                    onClick={() => uploadDocuments(selectedFiles)}
+                    disabled={uploadingDocs}
+                    className={`glass-card px-4 py-2 blue-glow hover:scale-105 transition text-sm ${
+                      uploadingDocs ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
+                  >
+                    {uploadingDocs ? '⏳ Uploading...' : `📤 Upload ${selectedFiles.length} files`}
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {selectedFiles.length > 0 && (
+              <div className="glass-card p-3 mb-4">
+                <p className="text-sm text-gray-400">Selected files:</p>
+                <div className="flex flex-wrap gap-2 mt-2 max-h-32 overflow-y-auto">
+                  {selectedFiles.map((file, idx) => (
+                    <span key={idx} className="glass-card px-3 py-1 text-sm">
+                      {file.name} ({(file.size / 1024).toFixed(1)} KB)
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {documents.length === 0 ? (
+                <div className="col-span-full text-center py-12 text-gray-400">
+                  No documents uploaded
+                </div>
+              ) : (
+                documents.map((doc) => (
+                  <div key={doc._id} className="glass-card p-4 hover:scale-105 transition-all duration-300">
+                    <div className="flex flex-col items-center">
+                      {doc.mimeType?.startsWith('image/') ? (
+                        <img 
+                          src={`${doc.fileUrl}?token=${localStorage.getItem('token')}`} 
+                          alt={doc.filename}
+                          className="w-full h-32 object-cover rounded-lg mb-3"
+                          onError={(e) => { e.target.style.display = 'none'; }}
+                        />
+                      ) : (
+                        <div className="w-full h-32 flex items-center justify-center bg-white/5 rounded-lg mb-3">
+                          <span className="text-6xl">
+                            {doc.mimeType === 'application/pdf' ? '📄' : '📎'}
+                          </span>
+                        </div>
+                      )}
+                      <p className="text-sm font-medium text-center truncate w-full" title={doc.filename}>
+                        {doc.filename}
+                      </p>
+                      <p className="text-xs text-gray-400">{(doc.fileSize / 1024).toFixed(1)} KB</p>
+                      <div className="flex gap-2 mt-3 flex-wrap justify-center">
+                        <button
+                          onClick={() => viewDocument(doc.fileUrl)}
+                          className="glass-card px-3 py-1 text-cyan-400 hover:scale-105 transition text-xs"
+                        >
+                          👁️ View
+                        </button>
+                        <button
+                          onClick={() => downloadDocument(doc.fileUrl, doc.filename)}
+                          className="glass-card px-3 py-1 text-green-400 hover:scale-105 transition text-xs"
+                        >
+                          ⬇️ Download
+                        </button>
+                        <button
+                          onClick={() => deleteDocument(doc._id)}
+                          className="glass-card px-3 py-1 text-red-400 hover:scale-105 transition text-xs"
+                        >
+                          🗑️ Delete
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         )}
