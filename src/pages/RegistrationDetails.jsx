@@ -94,7 +94,8 @@ function RegistrationDetails() {
       <MainLayout>
         <div className="glass-card p-6">
           <p className="text-red-400">Registration Not Found</p>
-          <button onClick={() => navigate(`/clients/${id}`)} className="glass-card px-4 py-2 mt-4">
+          {/* ✅ FIXED: /clients/ → /client/ */}
+          <button onClick={() => navigate(`/client/${id}`)} className="glass-card px-4 py-2 mt-4">
             ← Back to Client
           </button>
         </div>
@@ -127,7 +128,8 @@ function RegistrationDetails() {
   return (
     <MainLayout>
       <div className="p-6">
-        <button onClick={() => navigate(`/clients/${id}`)} className="glass-card px-4 py-2 mb-6 text-sm hover:scale-105 transition">
+        {/* ✅ FIXED: /clients/ → /client/ */}
+        <button onClick={() => navigate(`/client/${id}`)} className="glass-card px-4 py-2 mb-6 text-sm hover:scale-105 transition">
           ← Back to Client
         </button>
 
