@@ -477,11 +477,18 @@ function ClientDetails() {
     setOpenContractModal(true);
   };
 
-  // ✅ FIXED: Folder Permissions based on client
+  // ✅ NEW: Get folder permissions for current user from userPermissions
+  const getUserFolderPermissions = () => {
+    if (!client || !client.userPermissions) return [];
+    const userPerm = client.userPermissions.find(p => 
+      String(p.userId?._id || p.userId) === String(user?.id)
+    );
+    return userPerm?.folderPermissions || [];
+  };
+
+  // ✅ Get user-specific folder permissions
+  const userFolderPermissions = getUserFolderPermissions();
   const role = user?.role || 'user';
-  
-  // ✅ Get folder permissions from client (if assigned)
-  const clientFolderPermissions = client?.folderPermissions || [];
   
   const allFolders = [
     { label: "Registrations / Certifications", value: "registrations", id: "registrations" },
@@ -494,18 +501,17 @@ function ClientDetails() {
     { label: "Financials", value: "financials", id: "financials" }
   ];
 
-  // ✅ Filter folders based on client permissions
+  // ✅ Filter folders based on user's permissions
   const accessibleFolders = allFolders.filter(f => {
     // ✅ Admin can see all
     if (role === 'admin') return true;
     
-    // ✅ Check if user is assigned to this client
-    const isAssigned = client?.assignedTo?.some(u => u._id === user?.id || u === user?.id);
-    if (!isAssigned) return false;
-    
-    // ✅ Check if folder is in client's permissions
-    return clientFolderPermissions.includes(f.id);
+    // ✅ Check if user has permission for this folder
+    return userFolderPermissions.includes(f.id);
   });
+
+  // ✅ Get assigned users for admin view
+  const assignedUsers = client?.userPermissions?.map(p => p.userId) || [];
 
   if (loading) {
     return (
@@ -558,15 +564,19 @@ function ClientDetails() {
               <h3 className="font-semibold mt-1">{client.status}</h3>
             </div>
           </div>
-          {/* ✅ Show Assigned Users */}
-          {role === 'admin' && client.assignedTo && client.assignedTo.length > 0 && (
+          
+          {/* ✅ Show Assigned Users with Folder Count (Admin only) */}
+          {role === 'admin' && client.userPermissions && client.userPermissions.length > 0 && (
             <div className="mt-4 glass-card p-3">
-              <p className="text-gray-400 text-sm">Assigned To:</p>
-              <div className="flex flex-wrap gap-2 mt-1">
-                {client.assignedTo.map((u) => (
-                  <span key={u._id || u} className="px-3 py-1 bg-cyan-500/20 text-cyan-400 rounded-full text-sm">
-                    {u.name || u}
-                  </span>
+              <p className="text-gray-400 text-sm">Assigned Users:</p>
+              <div className="flex flex-wrap gap-3 mt-1">
+                {client.userPermissions.map((p) => (
+                  <div key={String(p.userId?._id || p.userId)} className="px-3 py-1 bg-cyan-500/20 text-cyan-400 rounded-full text-sm flex items-center gap-2">
+                    <span>{p.userId?.name || 'Unknown'}</span>
+                    <span className="text-xs bg-cyan-500/30 px-1.5 py-0.5 rounded">
+                      {p.folderPermissions?.length || 0} folders
+                    </span>
+                  </div>
                 ))}
               </div>
             </div>

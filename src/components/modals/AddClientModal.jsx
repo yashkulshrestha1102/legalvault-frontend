@@ -22,14 +22,13 @@ export default function AddClientModal({
     phone: "",
     onboardingDate: "",
     status: "Active",
-    assignedTo: [],
-    folderPermissions: [],
+    // ✅ New: userPermissions array
+    userPermissions: [],
   });
 
   const [users, setUsers] = useState([]);
   const [errors, setErrors] = useState({});
 
-  // ✅ Folder list
   const ALL_FOLDERS = [
     { id: 'registrations', label: 'Registrations / Certifications' },
     { id: 'contracts', label: 'Contracts' },
@@ -70,8 +69,7 @@ export default function AddClientModal({
         phone: editData.phone || "",
         onboardingDate: editData.onboardingDate || "",
         status: editData.status || "Active",
-        assignedTo: editData.assignedTo?.map(u => u._id || u) || [],
-        folderPermissions: editData.folderPermissions || [],
+        userPermissions: editData.userPermissions || [],
       });
     } else {
       setFormData({
@@ -82,8 +80,7 @@ export default function AddClientModal({
         phone: "",
         onboardingDate: "",
         status: "Active",
-        assignedTo: [],
-        folderPermissions: [],
+        userPermissions: [],
       });
     }
     setErrors({});
@@ -124,8 +121,7 @@ export default function AddClientModal({
         phone: "",
         onboardingDate: "",
         status: "Active",
-        assignedTo: [],
-        folderPermissions: [],
+        userPermissions: [],
       });
       setErrors({});
       onClose();
@@ -140,33 +136,68 @@ export default function AddClientModal({
     }
   };
 
-  const toggleUser = (userId) => {
+  // ✅ Toggle user permission
+  const toggleUserPermission = (userId, folderId) => {
     setFormData(prev => {
-      const current = prev.assignedTo || [];
-      if (current.includes(userId)) {
-        return { ...prev, assignedTo: current.filter(id => id !== userId) };
-      } else {
-        return { ...prev, assignedTo: [...current, userId] };
+      const userPermissions = [...(prev.userPermissions || [])];
+      let userPerm = userPermissions.find(p => p.userId === userId);
+      
+      if (!userPerm) {
+        userPerm = { userId, folderPermissions: [] };
+        userPermissions.push(userPerm);
       }
+      
+      const folderIndex = userPerm.folderPermissions.indexOf(folderId);
+      if (folderIndex > -1) {
+        userPerm.folderPermissions.splice(folderIndex, 1);
+      } else {
+        userPerm.folderPermissions.push(folderId);
+      }
+      
+      // ✅ Remove user if no folders selected
+      if (userPerm.folderPermissions.length === 0) {
+        return {
+          ...prev,
+          userPermissions: userPermissions.filter(p => p.userId !== userId)
+        };
+      }
+      
+      return { ...prev, userPermissions };
     });
   };
 
-  const toggleFolder = (folderId) => {
+  // ✅ Toggle all folders for a user
+  const toggleAllFoldersForUser = (userId) => {
     setFormData(prev => {
-      const current = prev.folderPermissions || [];
-      if (current.includes(folderId)) {
-        return { ...prev, folderPermissions: current.filter(id => id !== folderId) };
-      } else {
-        return { ...prev, folderPermissions: [...current, folderId] };
+      const userPermissions = [...(prev.userPermissions || [])];
+      let userPerm = userPermissions.find(p => p.userId === userId);
+      
+      if (!userPerm) {
+        userPerm = { userId, folderPermissions: [] };
+        userPermissions.push(userPerm);
       }
+      
+      if (userPerm.folderPermissions.length === ALL_FOLDERS.length) {
+        userPerm.folderPermissions = [];
+      } else {
+        userPerm.folderPermissions = ALL_FOLDERS.map(f => f.id);
+      }
+      
+      return { ...prev, userPermissions };
     });
+  };
+
+  // ✅ Check if user has a folder permission
+  const hasUserFolderPermission = (userId, folderId) => {
+    const userPerm = formData.userPermissions?.find(p => p.userId === userId);
+    return userPerm?.folderPermissions.includes(folderId) || false;
   };
 
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/40 backdrop-blur-md p-4">
-      <div className="glass w-full max-w-xl p-4 sm:p-8 relative overflow-hidden max-h-[90vh] overflow-y-auto">
+      <div className="glass w-full max-w-2xl p-4 sm:p-8 relative overflow-hidden max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-4 sm:mb-8">
           <div className="flex items-center gap-3">
             <div className="glass-icon text-cyan-400 w-10 h-10 sm:w-12 sm:h-12">
@@ -233,43 +264,50 @@ export default function AddClientModal({
 
           {/* ✅ Access Control - Only for Admin */}
           {isAdmin && (
-            <>
-              <div className="border-t border-white/10 pt-4">
-                <h3 className="text-lg font-semibold text-white mb-3">🔐 Access Control</h3>
-                
-                {/* Assign To */}
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Assign To (Select users)</label>
-                  <div className="glass-card p-3 space-y-2 max-h-40 overflow-y-auto">
-                    {users.length === 0 ? (
-                      <p className="text-gray-400 text-sm">No users available</p>
-                    ) : (
-                      users.filter(u => u._id !== user._id).map((u) => (
-                        <label key={u._id} className="flex items-center gap-2 cursor-pointer p-1 hover:bg-white/5 rounded">
-                          <input type="checkbox" checked={formData.assignedTo.includes(u._id)} onChange={() => toggleUser(u._id)} className="w-4 h-4 accent-cyan-500" />
-                          <span className="text-sm text-white">{u.name} ({u.role})</span>
-                        </label>
-                      ))
-                    )}
-                  </div>
-                  <p className="text-xs text-gray-400 mt-1">Selected: {formData.assignedTo.length} users</p>
-                </div>
-
-                {/* Folder Permissions */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">Folder Permissions</label>
-                  <div className="glass-card p-3 grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-40 overflow-y-auto">
-                    {ALL_FOLDERS.map((folder) => (
-                      <label key={folder.id} className="flex items-center gap-2 cursor-pointer p-1 hover:bg-white/5 rounded">
-                        <input type="checkbox" checked={formData.folderPermissions.includes(folder.id)} onChange={() => toggleFolder(folder.id)} className="w-4 h-4 accent-cyan-500" />
-                        <span className="text-sm text-white">{folder.label}</span>
-                      </label>
-                    ))}
-                  </div>
-                  <p className="text-xs text-gray-400 mt-1">Selected: {formData.folderPermissions.length} folders</p>
-                </div>
-              </div>
-            </>
+            <div className="border-t border-white/10 pt-4">
+              <h3 className="text-lg font-semibold text-white mb-3">🔐 Access Control</h3>
+              
+              {users.length === 0 ? (
+                <p className="text-gray-400 text-sm">No users available</p>
+              ) : (
+                users.filter(u => u._id !== user._id).map((u) => {
+                  const userPerm = formData.userPermissions?.find(p => p.userId === u._id);
+                  const hasPermissions = userPerm?.folderPermissions?.length > 0;
+                  
+                  return (
+                    <div key={u._id} className="glass-card p-3 mb-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-white">{u.name} <span className="text-gray-400 text-xs">({u.role})</span></span>
+                        <button
+                          onClick={() => toggleAllFoldersForUser(u._id)}
+                          className="text-xs bg-cyan-500/20 px-2 py-1 rounded hover:bg-cyan-500/30 transition"
+                        >
+                          {hasPermissions ? 'Deselect All' : 'Select All'}
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-1">
+                        {ALL_FOLDERS.map((folder) => (
+                          <label key={folder.id} className="flex items-center gap-2 cursor-pointer p-1 hover:bg-white/5 rounded text-sm">
+                            <input
+                              type="checkbox"
+                              checked={hasUserFolderPermission(u._id, folder.id)}
+                              onChange={() => toggleUserPermission(u._id, folder.id)}
+                              className="w-3 h-3 accent-cyan-500"
+                            />
+                            <span className="text-gray-300">{folder.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                      {hasPermissions && (
+                        <p className="text-xs text-cyan-400 mt-1">
+                          Selected: {userPerm.folderPermissions.length} folders
+                        </p>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
           )}
         </div>
 

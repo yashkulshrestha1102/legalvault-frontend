@@ -8,16 +8,13 @@ const ClientSchema = new mongoose.Schema({
   status: { type: String, enum: ['Active', 'Inactive'], default: 'Active' },
   contactPerson: { type: String, default: '' },
   onboardingDate: { type: String, default: '' },
-  // ✅ New fields for access control
-  assignedTo: {
-    type: [mongoose.Schema.Types.ObjectId],
-    ref: 'User',
-    default: []
-  },
-  folderPermissions: {
-    type: [String],
-    default: []
-  },
+  
+  // ✅ New: User-specific permissions
+  userPermissions: [{
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    folderPermissions: { type: [String], default: [] }
+  }],
+  
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   isDeleted: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now }
@@ -27,6 +24,6 @@ const ClientSchema = new mongoose.Schema({
 ClientSchema.index({ email: 1 }, { unique: true });
 ClientSchema.index({ status: 1 });
 ClientSchema.index({ isDeleted: 1 });
-ClientSchema.index({ assignedTo: 1 });
+ClientSchema.index({ 'userPermissions.userId': 1 });
 
 module.exports = mongoose.model('Client', ClientSchema);

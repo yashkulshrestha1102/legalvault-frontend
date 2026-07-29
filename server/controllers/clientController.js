@@ -4,23 +4,35 @@ const mongoose = require('mongoose');
 const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 const sanitizeString = (str) => str?.trim() || '';
 
+// ✅ Helper: Get folder permissions for a user
+const getUserFolderPermissions = (client, userId) => {
+  if (!client || !client.userPermissions) return [];
+  const userPerm = client.userPermissions.find(p => 
+    String(p.userId) === String(userId)
+  );
+  return userPerm?.folderPermissions || [];
+};
+
 // ✅ Get all clients (filtered by role)
 exports.getClients = async (req, res) => {
   try {
     const user = req.user;
     const query = { isDeleted: false };
     
-    // ✅ If not admin, filter by assignedTo
-    if (user.role !== 'admin') {
-      query.assignedTo = { $in: [user.id] };
-    }
-    
     const clients = await Client.find(query)
-      .select('name company email phone status _id contactPerson onboardingDate assignedTo folderPermissions')
-      .populate('assignedTo', 'name email role')
+      .select('name company email phone status _id contactPerson onboardingDate userPermissions')
+      .populate('userPermissions.userId', 'name email role')
       .sort({ createdAt: -1 });
     
-    res.json(clients);
+    // ✅ Filter clients for non-admin users
+    let filteredClients = clients;
+    if (user.role !== 'admin') {
+      filteredClients = clients.filter(client => 
+        client.userPermissions.some(p => String(p.userId._id || p.userId) === String(user.id))
+      );
+    }
+    
+    res.json(filteredClients);
   } catch (error) {
     console.error('❌ Get clients error:', error);
     res.status(500).json({ message: error.message });
@@ -39,18 +51,24 @@ exports.getClientById = async (req, res) => {
 
     const query = { _id: id, isDeleted: false };
     
-    // ✅ If not admin, check assignedTo
-    if (user.role !== 'admin') {
-      query.assignedTo = { $in: [user.id] };
-    }
-
     const client = await Client.findOne(query)
-      .select('name company email phone status contactPerson onboardingDate createdBy createdAt assignedTo folderPermissions')
-      .populate('assignedTo', 'name email role');
+      .select('name company email phone status contactPerson onboardingDate createdBy createdAt userPermissions')
+      .populate('userPermissions.userId', 'name email role');
     
     if (!client) {
-      return res.status(404).json({ message: 'Client not found or access denied' });
+      return res.status(404).json({ message: 'Client not found' });
     }
+    
+    // ✅ Check access for non-admin
+    if (user.role !== 'admin') {
+      const hasAccess = client.userPermissions.some(p => 
+        String(p.userId._id || p.userId) === String(user.id)
+      );
+      if (!hasAccess) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+    }
+    
     res.json(client);
   } catch (error) {
     console.error('❌ Get client by ID error:', error);
@@ -61,9 +79,8 @@ exports.getClientById = async (req, res) => {
 // ✅ Create client (Admin only)
 exports.createClient = async (req, res) => {
   try {
-    const { name, company, email, phone, status, contactPerson, onboardingDate, assignedTo, folderPermissions } = req.body;
+    const { name, company, email, phone, status, contactPerson, onboardingDate, userPermissions } = req.body;
 
-    // ✅ Only admin can create clients
     if (req.user.role !== 'admin') {
       return res.status(403).json({ message: 'Only admin can create clients' });
     }
@@ -76,8 +93,7 @@ exports.createClient = async (req, res) => {
       status: status || 'Active',
       contactPerson: sanitizeString(contactPerson || ''),
       onboardingDate: onboardingDate || '',
-      assignedTo: assignedTo || [],
-      folderPermissions: folderPermissions || [],
+      userPermissions: userPermissions || [],
       createdBy: req.user.id
     };
 
@@ -94,7 +110,7 @@ exports.createClient = async (req, res) => {
     await client.save();
     
     const populatedClient = await Client.findById(client._id)
-      .populate('assignedTo', 'name email role');
+      .populate('userPermissions.userId', 'name email role');
     
     res.status(201).json(populatedClient);
   } catch (error) {
@@ -116,7 +132,7 @@ exports.updateClient = async (req, res) => {
       return res.status(400).json({ message: 'Invalid client ID format' });
     }
 
-    const { name, company, email, phone, status, contactPerson, onboardingDate, assignedTo, folderPermissions } = req.body;
+    const { name, company, email, phone, status, contactPerson, onboardingDate, userPermissions } = req.body;
 
     const updateData = {};
     if (name !== undefined) updateData.name = sanitizeString(name);
@@ -132,14 +148,16 @@ exports.updateClient = async (req, res) => {
     if (status !== undefined) updateData.status = status;
     if (contactPerson !== undefined) updateData.contactPerson = sanitizeString(contactPerson);
     if (onboardingDate !== undefined) updateData.onboardingDate = onboardingDate;
-    if (assignedTo !== undefined) updateData.assignedTo = assignedTo;
-    if (folderPermissions !== undefined) updateData.folderPermissions = folderPermissions;
+    if (userPermissions !== undefined) {
+      // ✅ Validate userPermissions
+      updateData.userPermissions = userPermissions.filter(p => p.userId && Array.isArray(p.folderPermissions));
+    }
 
     const client = await Client.findOneAndUpdate(
       { _id: id, isDeleted: false },
       updateData,
       { new: true, runValidators: true }
-    ).populate('assignedTo', 'name email role');
+    ).populate('userPermissions.userId', 'name email role');
 
     if (!client) {
       return res.status(404).json({ message: 'Client not found' });
@@ -185,10 +203,6 @@ exports.getDashboardStats = async (req, res) => {
   try {
     const user = req.user;
     const query = { isDeleted: false };
-    
-    if (user.role !== 'admin') {
-      query.assignedTo = { $in: [user.id] };
-    }
     
     const totalClients = await Client.countDocuments(query);
     const activeClients = await Client.countDocuments({ 
