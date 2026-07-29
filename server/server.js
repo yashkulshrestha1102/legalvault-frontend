@@ -23,11 +23,37 @@ requiredEnv.forEach(key => {
 });
 console.log('✅ All environment variables are set');
 
+// ✅ Security - Helmet FIRST (Sab se pehle apply karo)
+app.use(helmet({
+  crossOriginEmbedderPolicy: true,
+  crossOriginOpenerPolicy: true,
+  crossOriginResourcePolicy: { policy: "same-origin" },
+  dnsPrefetchControl: true,
+  frameguard: { action: "deny" },
+  hidePoweredBy: true,
+  hsts: {
+    maxAge: 31536000, // 1 year
+    includeSubDomains: true,
+    preload: true
+  },
+  ieNoOpen: true,
+  noSniff: true,
+  referrerPolicy: { policy: "strict-origin-when-cross-origin" },
+  xssFilter: true,
+  permittedCrossDomainPolicies: { permittedPolicies: "none" },
+  originAgentCluster: true,
+  expectCt: {
+    maxAge: 86400,
+    enforce: true
+  }
+}));
+
+// ✅ Trust Proxy (Render ke liye)
+app.set('trust proxy', 1);
+
 // ✅ CORS - Updated with all Vercel URLs
 const allowedOrigins = (process.env.CORS_ORIGIN || 
   'http://localhost:5173,http://localhost:5174,https://legalvault-frontend-two.vercel.app,https://legalvault-ochre.vercel.app').split(',');
-
-app.set('trust proxy', 1);
 
 app.use(cors({
   origin: function (origin, callback) {
@@ -44,7 +70,7 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// ✅ Morgan - Request logging (production mein 'combined' use karo)
+// ✅ Morgan - Request logging
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
 // ✅ Compression - Faster responses
@@ -67,37 +93,10 @@ const limiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skip: (req) => {
-    // ✅ Skip rate limiting for admin? Optional
     return false;
   }
 });
 app.use('/api/', limiter);
-
-// ✅ Security - Helmet with enhanced configuration
-app.use(helmet({
-  crossOriginEmbedderPolicy: true,
-  crossOriginOpenerPolicy: true,
-  crossOriginResourcePolicy: { policy: "same-origin" },
-  dnsPrefetchControl: true,
-  frameguard: { action: "deny" },
-  hidePoweredBy: true,
-  hsts: {
-    maxAge: 31536000, // 1 year
-    includeSubDomains: true,
-    preload: true
-  },
-  ieNoOpen: true,
-  noSniff: true,
-  referrerPolicy: { policy: "strict-origin-when-cross-origin" },
-  xssFilter: true,
-  // ✅ Additional security
-  permittedCrossDomainPolicies: { permittedPolicies: "none" },
-  originAgentCluster: true,
-  expectCt: {
-    maxAge: 86400,
-    enforce: true
-  }
-}));
 
 // ✅ Body Parser with size limits
 app.use(express.json({ limit: '10mb' }));
