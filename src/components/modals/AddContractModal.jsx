@@ -16,19 +16,26 @@ function AddContractModal({
     startDate: "",
     endDate: "",
     status: "Active",
-    pdf: "",
-    pdfFile: null,
-    pdfUrl: "",
+    pdfs: [], // ✅ Array of PDF URLs
   });
-
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [uploading, setUploading] = useState(false);
   const [errors, setErrors] = useState({});
 
   useEffect(() => {
     if (editData) {
       setFormData({
-        ...editData,
-        pdfFile: null,
+        contractType: editData.contractType || "",
+        customContractType: editData.customContractType || "",
+        contractName: editData.contractName || "",
+        firstParty: editData.firstParty || "",
+        secondParty: editData.secondParty || "",
+        startDate: editData.startDate || "",
+        endDate: editData.endDate || "",
+        status: editData.status || "Active",
+        pdfs: editData.pdfs || (editData.pdf ? [editData.pdf] : []),
       });
+      setSelectedFiles([]);
     } else {
       setFormData({
         contractType: "",
@@ -39,10 +46,9 @@ function AddContractModal({
         startDate: "",
         endDate: "",
         status: "Active",
-        pdf: "",
-        pdfFile: null,
-        pdfUrl: "",
+        pdfs: [],
       });
+      setSelectedFiles([]);
     }
     setErrors({});
   }, [editData, open]);
@@ -75,20 +81,63 @@ function AddContractModal({
       newErrors.endDate = "End date must be after start date";
     }
     if (!formData.status) newErrors.status = "Please select a status";
-    if (formData.pdfFile && formData.pdfFile.type !== 'application/pdf') {
-      newErrors.pdf = "Please upload a valid PDF file";
-    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSave = () => {
+  const uploadDocuments = async (files) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Please login again');
+        return null;
+      }
+      const formData = new FormData();
+      for (const file of files) {
+        formData.append('pdf', file);
+      }
+      const response = await axios.post(`${API_URL}/api/pdfs/pdf`, formData, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      console.log('✅ PDFs uploaded:', response.data);
+      
+      if (response.data.urls) {
+        return response.data.urls;
+      }
+      if (response.data.url) {
+        return [response.data.url];
+      }
+      return response.data.files || [];
+    } catch (error) {
+      console.error('❌ Upload error:', error.response?.data || error.message);
+      alert('PDF upload failed. Please try again.');
+      return null;
+    }
+  };
+
+  const handleSave = async () => {
     if (!validateForm()) return;
+    
+    let pdfUrls = formData.pdfs || [];
+    
+    if (selectedFiles.length > 0) {
+      setUploading(true);
+      const result = await uploadDocuments(selectedFiles);
+      setUploading(false);
+      if (result && Array.isArray(result)) {
+        pdfUrls = [...pdfUrls, ...result];
+      }
+    }
+
     const finalData = {
       ...formData,
       contractType: formData.contractType === "Others" ? formData.customContractType : formData.contractType,
-      pdf: formData.pdfUrl || formData.pdf || ""
+      pdfs: pdfUrls,
     };
+
     onSave(finalData);
     setFormData({
       contractType: "",
@@ -99,10 +148,9 @@ function AddContractModal({
       startDate: "",
       endDate: "",
       status: "Active",
-      pdf: "",
-      pdfFile: null,
-      pdfUrl: "",
+      pdfs: [],
     });
+    setSelectedFiles([]);
     setErrors({});
     onClose();
   };
@@ -123,29 +171,19 @@ function AddContractModal({
   };
 
   const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    if (file.type !== 'application/pdf') {
-      setErrors(prev => ({ ...prev, pdf: "Please upload a valid PDF file" }));
-      return;
-    }
-    if (file.size > 10 * 1024 * 1024) {
-      setErrors(prev => ({ ...prev, pdf: "File size should be less than 10MB" }));
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = () => {
-      setFormData((prev) => ({
-        ...prev,
-        pdf: file.name,
-        pdfFile: file,
-        pdfUrl: reader.result,
-      }));
-      if (errors.pdf) {
-        setErrors(prev => ({ ...prev, pdf: "" }));
+    const files = Array.from(e.target.files);
+    const validFiles = files.filter(file => {
+      if (file.size > 10 * 1024 * 1024) {
+        alert(`❌ ${file.name} is too large (max 10MB)`);
+        return false;
       }
-    };
-    reader.readAsDataURL(file);
+      return true;
+    });
+    setSelectedFiles(prev => [...prev, ...validFiles]);
+  };
+
+  const removeFile = (index) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const contractOptions = [
@@ -163,7 +201,6 @@ function AddContractModal({
     { value: "Others", label: "Others" },
   ];
 
-  // ✅ Responsive Select Styles
   const customSelectStyles = {
     control: (provided) => ({
       ...provided,
@@ -222,7 +259,6 @@ function AddContractModal({
 
   return (
     <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-[9999] p-4">
-      {/* ✅ Responsive Modal */}
       <div className="glass p-4 sm:p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-white">
           {editData ? "Edit Contract" : "Add Contract"}
@@ -328,7 +364,7 @@ function AddContractModal({
             )}
           </div>
 
-          {/* Dates - Responsive Grid */}
+          {/* Dates */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-1">
@@ -389,36 +425,68 @@ function AddContractModal({
             )}
           </div>
 
-          {/* PDF Upload */}
+          {/* Multiple PDF Upload */}
           <div className="glass-card p-3 sm:p-4">
             <label className="block text-sm font-medium text-gray-300 mb-2">
-              Upload PDF <span className="text-gray-400 text-xs">(max 10MB)</span>
+              Upload Documents (PDF) <span className="text-xs text-gray-400">(Multiple files allowed, max 10MB each)</span>
             </label>
             <div className="relative">
               <input
                 type="file"
+                multiple
                 accept=".pdf"
                 onChange={handleFileChange}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
               />
-              <div className={`glass-card p-3 text-center text-gray-400 border border-dashed ${
-                errors.pdf ? 'border-red-500' : 'border-gray-600'
-              }`}>
-                <span>📎 {formData.pdf ? formData.pdf : 'Choose PDF file'}</span>
+              <div className="glass-card p-3 text-center text-gray-400 border border-dashed border-gray-600">
+                <span>📎 Choose PDFs</span>
+                {selectedFiles.length > 0 && (
+                  <span className="ml-2 text-green-400">
+                    ({selectedFiles.length} files selected)
+                  </span>
+                )}
               </div>
             </div>
-            {errors.pdf && (
-              <p className="text-red-400 text-sm mt-1">{errors.pdf}</p>
+            
+            {selectedFiles.length > 0 && (
+              <div className="mt-3 space-y-2 max-h-32 overflow-y-auto">
+                {selectedFiles.map((file, index) => (
+                  <div key={index} className="flex items-center justify-between glass-card p-2 text-sm">
+                    <span className="text-white truncate flex-1">
+                      {file.name} ({(file.size / 1024).toFixed(1)} KB)
+                    </span>
+                    <button
+                      onClick={() => removeFile(index)}
+                      className="text-red-400 hover:text-red-300 ml-2 flex-shrink-0"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
             )}
-            {formData.pdf && !errors.pdf && (
-              <div className="text-green-400 text-sm mt-2">
-                ✅ Selected: {formData.pdf}
+            
+            {uploading && (
+              <div className="mt-2 text-sm text-yellow-400">
+                ⏳ Uploading documents...
               </div>
             )}
           </div>
+
+          {/* Existing PDFs Display */}
+          {formData.pdfs && formData.pdfs.length > 0 && !editData && (
+            <div className="glass-card p-3">
+              <p className="text-sm text-gray-400 mb-2">📄 Already uploaded ({formData.pdfs.length} files)</p>
+              {formData.pdfs.map((url, index) => (
+                <div key={index} className="text-sm text-green-400">
+                  ✅ Document {index + 1}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Footer - Responsive Buttons */}
+        {/* Footer */}
         <div className="flex flex-col sm:flex-row justify-end gap-3 mt-6 sm:mt-8">
           <button
             onClick={onClose}
@@ -428,9 +496,12 @@ function AddContractModal({
           </button>
           <button
             onClick={handleSave}
-            className="glass-card px-4 sm:px-6 py-2 sm:py-3 text-white blue-glow w-full sm:w-auto order-1 sm:order-2"
+            disabled={uploading}
+            className={`glass-card px-4 sm:px-6 py-2 sm:py-3 text-white blue-glow w-full sm:w-auto order-1 sm:order-2 ${
+              uploading ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
           >
-            {editData ? "Update Contract" : "Save Contract"}
+            {uploading ? 'Uploading...' : editData ? 'Update Contract' : 'Save Contract'}
           </button>
         </div>
       </div>

@@ -2,7 +2,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import axios from 'axios';
 import MainLayout from "../layouts/MainLayout";
-import { FaFilePdf, FaEye, FaDownload } from "react-icons/fa";
+import { FaFilePdf, FaEye, FaDownload, FaFile } from "react-icons/fa";
 
 const API_URL = 'https://legalvault-jm2n.onrender.com';
 
@@ -13,7 +13,6 @@ function ContractDetails() {
   const [contract, setContract] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // ✅ Fetch contract from backend
   useEffect(() => {
     const fetchContract = async () => {
       try {
@@ -39,7 +38,6 @@ function ContractDetails() {
     }
   }, [contractId]);
 
-  // ✅ View PDF with token
   const viewPDF = (pdfUrl) => {
     if (!pdfUrl) return;
     const token = localStorage.getItem('token');
@@ -50,7 +48,6 @@ function ContractDetails() {
     window.open(`${pdfUrl}?token=${token}`, '_blank');
   };
 
-  // ✅ Download PDF with token
   const downloadPDF = async (pdfUrl) => {
     if (!pdfUrl) return;
     try {
@@ -80,7 +77,6 @@ function ContractDetails() {
     }
   };
 
-  // ✅ Get filename from URL
   const getFileName = (url) => {
     if (!url) return 'document.pdf';
     return url.split('/').pop() || 'document.pdf';
@@ -109,7 +105,6 @@ function ContractDetails() {
     );
   }
 
-  // ✅ Get PDFs array
   const pdfs = contract.pdfs || (contract.pdf ? [contract.pdf] : []);
 
   return (
@@ -122,7 +117,7 @@ function ContractDetails() {
           </button>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-4">
+        <div className="grid md:grid-cols-2 gap-4 mb-6">
           <div className="glass-card p-4">
             <p className="text-gray-400 text-sm">Contract Type</p>
             <h3 className="font-semibold mt-1">{contract.contractType || '-'}</h3>
@@ -167,42 +162,42 @@ function ContractDetails() {
               </span>
             </h3>
           </div>
+        </div>
 
-          {/* ✅ Multiple PDF Documents */}
-          <div className="glass-card p-4 md:col-span-2">
-            <p className="text-gray-400 text-sm mb-3">📄 Documents ({pdfs.length})</p>
-            {pdfs.length === 0 ? (
-              <h3 className="font-semibold mt-1 text-gray-400">No documents uploaded</h3>
-            ) : (
-              <div className="space-y-2">
-                {pdfs.map((pdfUrl, index) => (
-                  <div key={index} className="glass-card p-3 flex items-center justify-between hover:bg-white/5 transition">
-                    <div className="flex items-center gap-3">
-                      <FaFilePdf className="text-red-400 text-xl" />
-                      <div>
-                        <p className="font-medium text-sm">{getFileName(pdfUrl)}</p>
-                        <p className="text-xs text-gray-400">Document {index + 1}</p>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
+        {/* ✅ PDF Grid Preview */}
+        <div className="glass-card p-4">
+          <p className="text-gray-400 text-sm mb-4">📄 Documents ({pdfs.length})</p>
+          {pdfs.length === 0 ? (
+            <h3 className="font-semibold mt-1 text-gray-400">No documents uploaded</h3>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {pdfs.map((pdfUrl, index) => (
+                <div key={index} className="glass-card p-4 hover:scale-105 transition-all duration-300">
+                  <div className="flex flex-col items-center">
+                    <FaFilePdf className="text-red-400 text-5xl mb-3" />
+                    <p className="text-sm font-medium text-center truncate w-full">
+                      {getFileName(pdfUrl)}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-1">Document {index + 1}</p>
+                    <div className="flex gap-2 mt-3">
                       <button
                         onClick={() => viewPDF(pdfUrl)}
-                        className="glass-card px-3 py-1.5 text-cyan-400 hover:scale-105 transition text-sm flex items-center gap-1"
+                        className="glass-card px-3 py-1.5 text-cyan-400 hover:scale-105 transition text-xs flex items-center gap-1"
                       >
                         <FaEye className="text-xs" /> View
                       </button>
                       <button
                         onClick={() => downloadPDF(pdfUrl)}
-                        className="glass-card px-3 py-1.5 text-green-400 hover:scale-105 transition text-sm flex items-center gap-1"
+                        className="glass-card px-3 py-1.5 text-green-400 hover:scale-105 transition text-xs flex items-center gap-1"
                       >
                         <FaDownload className="text-xs" /> Download
                       </button>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </MainLayout>
