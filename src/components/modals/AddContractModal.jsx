@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import Select from "react-select";
 import axios from 'axios'; 
 
+const API_URL = 'https://legalvault-jm2n.onrender.com';
+
+
 function AddContractModal({
   open,
   onClose,
