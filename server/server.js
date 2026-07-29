@@ -23,29 +23,44 @@ requiredEnv.forEach(key => {
 });
 console.log('✅ All environment variables are set');
 
-// ✅ Security - Helmet FIRST (Sab se pehle apply karo)
+// ✅ ============================================
+// ✅ MANUAL SECURITY HEADERS (Render fix)
+// ✅ ============================================
+app.use((req, res, next) => {
+  // ✅ Strict Transport Security (HSTS)
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+  
+  // ✅ Prevent MIME type sniffing
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  
+  // ✅ Prevent clickjacking
+  res.setHeader('X-Frame-Options', 'DENY');
+  
+  // ✅ Referrer policy
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  
+  // ✅ XSS protection
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  
+  // ✅ Remove X-Powered-By
+  res.removeHeader('X-Powered-By');
+  
+  next();
+});
+
+// ✅ Security - Helmet (with minimal config)
 app.use(helmet({
-  crossOriginEmbedderPolicy: true,
-  crossOriginOpenerPolicy: true,
-  crossOriginResourcePolicy: { policy: "same-origin" },
+  crossOriginEmbedderPolicy: false,
+  crossOriginOpenerPolicy: false,
+  crossOriginResourcePolicy: { policy: "cross-origin" },
   dnsPrefetchControl: true,
-  frameguard: { action: "deny" },
+  frameguard: false, // manual header already set
   hidePoweredBy: true,
-  hsts: {
-    maxAge: 31536000, // 1 year
-    includeSubDomains: true,
-    preload: true
-  },
+  hsts: false, // manual header already set
   ieNoOpen: true,
-  noSniff: true,
-  referrerPolicy: { policy: "strict-origin-when-cross-origin" },
-  xssFilter: true,
-  permittedCrossDomainPolicies: { permittedPolicies: "none" },
-  originAgentCluster: true,
-  expectCt: {
-    maxAge: 86400,
-    enforce: true
-  }
+  noSniff: false, // manual header already set
+  referrerPolicy: false, // manual header already set
+  xssFilter: false // manual header already set
 }));
 
 // ✅ Trust Proxy (Render ke liye)
@@ -177,7 +192,7 @@ const PORT = process.env.PORT || 5000;
 const server = app.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
   console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🛡️  Security Headers: Enabled`);
+  console.log(`🛡️  Security Headers: Enabled (Manual)`);
   console.log(`🚦 Rate Limiting: 100 requests per 15 minutes`);
 });
 
