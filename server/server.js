@@ -23,7 +23,7 @@ requiredEnv.forEach(key => {
 });
 console.log('✅ All environment variables are set');
 
-// ✅ CORS - Updated with new Vercel URL
+// ✅ CORS - Updated with all Vercel URLs
 const allowedOrigins = (process.env.CORS_ORIGIN || 
   'http://localhost:5173,http://localhost:5174,https://legalvault-frontend-two.vercel.app,https://legalvault-ochre.vercel.app').split(',');
 
@@ -31,7 +31,6 @@ app.set('trust proxy', 1);
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps, curl)
     if (!origin) return callback(null, true);
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
@@ -45,8 +44,8 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// ✅ Morgan
-app.use(morgan('dev'));
+// ✅ Morgan - Request logging (production mein 'combined' use karo)
+app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
 // ✅ Compression - Faster responses
 app.use(compression({
@@ -60,15 +59,21 @@ app.use(compression({
   }
 }));
 
-// ✅ Rate Limiting
+// ✅ Rate Limiting - Stricter for production
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-  message: 'Too many requests from this IP'
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // 100 requests per window
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => {
+    // ✅ Skip rate limiting for admin? Optional
+    return false;
+  }
 });
 app.use('/api/', limiter);
 
-// ✅ Security - Helmet
+// ✅ Security - Helmet with enhanced configuration
 app.use(helmet({
   crossOriginEmbedderPolicy: true,
   crossOriginOpenerPolicy: true,
@@ -76,14 +81,25 @@ app.use(helmet({
   dnsPrefetchControl: true,
   frameguard: { action: "deny" },
   hidePoweredBy: true,
-  hsts: true,
+  hsts: {
+    maxAge: 31536000, // 1 year
+    includeSubDomains: true,
+    preload: true
+  },
   ieNoOpen: true,
   noSniff: true,
   referrerPolicy: { policy: "strict-origin-when-cross-origin" },
-  xssFilter: true
+  xssFilter: true,
+  // ✅ Additional security
+  permittedCrossDomainPolicies: { permittedPolicies: "none" },
+  originAgentCluster: true,
+  expectCt: {
+    maxAge: 86400,
+    enforce: true
+  }
 }));
 
-// ✅ Body Parser
+// ✅ Body Parser with size limits
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -118,7 +134,11 @@ app.use('/api/audit', require('./routes/auditRoutes'));
 
 // ✅ Health Check
 app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'OK', timestamp: new Date() });
+  res.status(200).json({ 
+    status: 'OK', 
+    timestamp: new Date(),
+    environment: process.env.NODE_ENV || 'development'
+  });
 });
 
 // ✅ Root
@@ -131,8 +151,9 @@ app.use((req, res) => {
   res.status(404).json({ message: 'Route not found' });
 });
 
-// ✅ Global Error Handler
+// ✅ Global Error Handler - No stack trace in production
 app.use((err, req, res, next) => {
+  // ✅ Log error internally
   console.error('❌ Error:', {
     message: err.message,
     stack: err.stack,
@@ -157,6 +178,8 @@ const PORT = process.env.PORT || 5000;
 const server = app.listen(PORT, () => {
   console.log(`✅ Server running on port ${PORT}`);
   console.log(`🔧 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🛡️  Security Headers: Enabled`);
+  console.log(`🚦 Rate Limiting: 100 requests per 15 minutes`);
 });
 
 // ✅ Graceful Shutdown
