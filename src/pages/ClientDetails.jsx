@@ -608,7 +608,7 @@ function ClientDetails() {
     { label: "GST", value: "gst", id: "gst" },
     { label: "Income Tax", value: "incomeTax", id: "income-tax" },
     { label: "Financials", value: "financials", id: "financials" },
-    { label: "📁 Documents / Files", value: "documents", id: "documents" }
+{ label: "📁 Client Repository", value: "documents", id: "documents" }
   ];
 
   const accessibleFolders = allFolders.filter(f => {
@@ -841,7 +841,7 @@ function ClientDetails() {
         {selectedFolder === "documents" && (
           <div className="glass p-6">
             <div className="flex justify-between items-center mb-6 flex-wrap gap-3">
-              <h3 className="text-xl font-semibold">📁 Documents / Files</h3>
+              <h3 className="text-xl font-semibold">📁 Client Repository</h3>
               <div className="flex items-center gap-3 flex-wrap">
                 <label className="glass-card px-4 py-2 cursor-pointer hover:scale-105 transition text-sm">
                   📎 Select Files
