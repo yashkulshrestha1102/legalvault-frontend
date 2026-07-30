@@ -1,13 +1,21 @@
 const nodemailer = require('nodemailer');
+const dns = require('dns');
 
-// ✅ Mailtrap API SMTP Configuration
-const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST || 'send.api.mailtrap.io',
-  port: 587, // or 2525, 465
+// ✅ CRITICAL FIX: Force IPv4 (Render IPv6 issue)
+dns.setDefaultResultOrder('ipv4first');
+
+// ✅ Mailtrap SMTP Configuration
+const transporter = nodemailer.createTransporter({
+  host: process.env.EMAIL_HOST || 'smtp.mailtrap.io',
+  port: parseInt(process.env.EMAIL_PORT) || 2525,
   auth: {
-    user: process.env.EMAIL_USER || 'api',
-    pass: process.env.EMAIL_PASS // YOUR_API_TOKEN
-  }
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
+  },
+  // ✅ Additional timeout settings
+  connectionTimeout: 30000,
+  greetingTimeout: 30000,
+  socketTimeout: 30000
 });
 
 const sendEmail = async (to, subject, html) => {
