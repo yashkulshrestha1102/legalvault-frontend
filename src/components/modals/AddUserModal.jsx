@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 
-// ✅ 8 Folders List
+// ✅ 9 Folders List (Including Client Repository)
 const ALL_FOLDERS = [
   { id: 'registrations', label: 'Registrations / Certifications' },
   { id: 'contracts', label: 'Contracts' },
@@ -9,7 +9,8 @@ const ALL_FOLDERS = [
   { id: 'hr', label: 'HR' },
   { id: 'gst', label: 'GST' },
   { id: 'income-tax', label: 'Income Tax' },
-  { id: 'financials', label: 'Financials' }
+  { id: 'financials', label: 'Financials' },
+  { id: 'documents', label: '📁 Client Repository' } // ✅ 9th Folder
 ];
 
 export default function AddUserModal({ open, onClose, onSave, editData }) {
@@ -156,8 +157,8 @@ export default function AddUserModal({ open, onClose, onSave, editData }) {
       ? formData.folderPermissions.filter(item => typeof item === 'string')
       : [];
 
-    // ✅ Ensure role is proper case
-    const role = formData.role || 'Consultant';
+    // ✅ Ensure role is LOWERCASE (backend expects: admin, lawyer, consultant, manager)
+    const role = (formData.role || 'Consultant').toLowerCase();
 
     // ✅ Debug log
     console.log('📤 AddUserModal - Sending:', {
@@ -477,7 +478,7 @@ export default function AddUserModal({ open, onClose, onSave, editData }) {
               )}
             </div>
 
-            {/* 8 Folders - Permission Selection with Error */}
+            {/* ✅ 9 Folders - Permission Selection with Error */}
             <div>
               <div className={`glass-card p-4 ${errors.folderPermissions ? "border-2 border-red-500" : ""}`}>
                 <div className="flex justify-between items-center mb-3">
