@@ -4,16 +4,21 @@ const dns = require('dns');
 // ✅ Force IPv4 (Render fix)
 dns.setDefaultResultOrder('ipv4first');
 
-// ✅ Gmail Transporter
+// ✅ Gmail Transporter with correct config
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS
-  }
+  },
+  tls: {
+    rejectUnauthorized: false
+  },
+  connectionTimeout: 30000,
+  greetingTimeout: 30000,
+  socketTimeout: 30000
 });
 
-// ✅ Send Email Function
 const sendEmail = async (to, subject, html) => {
   try {
     const mailOptions = {
@@ -22,19 +27,22 @@ const sendEmail = async (to, subject, html) => {
       subject,
       html
     };
+    
+    console.log('📧 Attempting to send email to:', to);
     const info = await transporter.sendMail(mailOptions);
-    console.log('✅ Email sent to:', to);
-    return { success: true };
+    console.log('✅ Email sent successfully!');
+    console.log('📧 Message ID:', info.messageId);
+    console.log('📧 Response:', info.response);
+    return { success: true, info };
   } catch (error) {
     console.error('❌ Email error:', error.message);
+    console.error('❌ Error details:', error);
     return { success: false, error: error.message };
   }
 };
 
-// ✅ ✅ ✅ WELCOME EMAIL FUNCTION (CRITICAL - YEH MISSING THA)
 const sendUserWelcomeEmail = async (email, name, password) => {
-  console.log('📧 sendUserWelcomeEmail called for:', email); // ✅ DEBUG LOG
-  
+  console.log('📧 Preparing welcome email for:', email);
   const frontendUrl = process.env.FRONTEND_URL || 'https://legalvault-frontend-two.vercel.app';
   const loginUrl = `${frontendUrl}/login`;
   
@@ -84,7 +92,4 @@ const sendUserWelcomeEmail = async (email, name, password) => {
   return sendEmail(email, '🎉 Welcome to LegalVault – Your Account Credentials', html);
 };
 
-module.exports = { 
-  sendEmail,
-  sendUserWelcomeEmail  // ✅ ✅ ✅ YEH EXPORT HONA CHAHIYE
-};
+module.exports = { sendUserWelcomeEmail };
