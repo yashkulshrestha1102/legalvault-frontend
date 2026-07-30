@@ -6,12 +6,15 @@ const admin = require('../middleware/admin');
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const { sendUserWelcomeEmail } = require('../utils/email');
+const mongoose = require('mongoose');
 
 console.log('✅ userRoutes.js loaded - Production Fix');
 
+// ✅ 9 Folders including Client Repository
 const ALLOWED_FOLDERS = [
   'registrations', 'contracts', 'policies', 'corporate-secretariat',
-  'hr', 'gst', 'income-tax', 'financials'
+  'hr', 'gst', 'income-tax', 'financials',
+  'documents' // ✅ Client Repository
 ];
 
 // ✅ Validation Rules - Role case-insensitive
@@ -178,10 +181,17 @@ router.put('/:id', auth, validateUser, handleValidation, async (req, res) => {
   }
 });
 
-// DELETE - Delete user (Admin only)
+// ✅ DELETE - Delete user with ObjectId validation
 router.delete('/:id', [auth, admin], async (req, res) => {
   try {
-    const user = await User.findById(req.params.id);
+    const { id } = req.params;
+    
+    // ✅ Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid user ID format' });
+    }
+    
+    const user = await User.findById(id);
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
@@ -191,7 +201,7 @@ router.delete('/:id', [auth, admin], async (req, res) => {
       return res.status(400).json({ message: 'Cannot delete the last admin user' });
     }
 
-    await User.findByIdAndDelete(req.params.id);
+    await User.findByIdAndDelete(id);
     res.json({ message: 'User deleted successfully' });
   } catch (error) {
     console.error('❌ DELETE error:', error);
