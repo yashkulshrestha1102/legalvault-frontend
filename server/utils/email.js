@@ -4,15 +4,14 @@ const dns = require('dns');
 // ✅ CRITICAL FIX: Force IPv4 (Render IPv6 issue)
 dns.setDefaultResultOrder('ipv4first');
 
-// ✅ Mailtrap SMTP Configuration
-const transporter = nodemailer.createTransporter({
+// ✅ Mailtrap SMTP Configuration - FIXED FUNCTION NAME
+const transporter = nodemailer.createTransport({  // ← createTransport, NOT createTransporter
   host: process.env.EMAIL_HOST || 'smtp.mailtrap.io',
   port: parseInt(process.env.EMAIL_PORT) || 2525,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS
   },
-  // ✅ Additional timeout settings
   connectionTimeout: 30000,
   greetingTimeout: 30000,
   socketTimeout: 30000
