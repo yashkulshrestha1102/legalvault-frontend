@@ -107,7 +107,7 @@ router.post('/', [auth, admin], validateUser, handleValidation, async (req, res)
     await user.save();
     console.log('✅ User saved:', user.email);
     
-    // ✅ SEND WELCOME EMAIL
+    // ✅ SEND WELCOME EMAIL (SINGLE CALL)
     try {
       await sendUserWelcomeEmail(email, name, password);
       console.log('✅ Welcome email sent to:', email);
@@ -127,19 +127,6 @@ router.post('/', [auth, admin], validateUser, handleValidation, async (req, res)
     res.status(500).json({ message: error.message });
   }
 });
-
-
-
-
-// ✅ SEND WELCOME EMAIL
-try {
-  console.log('📧 Attempting to send welcome email to:', email);
-  await sendUserWelcomeEmail(email, name, password);
-  console.log('✅ Welcome email sent to:', email);
-} catch (emailError) {
-  console.error('❌ Failed to send welcome email:', emailError);
-}
-
 
 // ✅ PUT - Update user
 router.put('/:id', auth, validateUser, handleValidation, async (req, res) => {
