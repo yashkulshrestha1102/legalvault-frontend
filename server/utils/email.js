@@ -1,16 +1,28 @@
 const nodemailer = require('nodemailer');
 const dns = require('dns');
 
-// ✅ CRITICAL FIX: Force IPv4 (Render IPv6 issue)
+// ✅ FORCE IPv4 - Render IPv6 issue fix
 dns.setDefaultResultOrder('ipv4first');
 
-// ✅ Mailtrap SMTP Configuration - FIXED FUNCTION NAME
-const transporter = nodemailer.createTransport({  // ← createTransport, NOT createTransporter
+// ✅ Custom DNS lookup to force IPv4
+const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST || 'smtp.mailtrap.io',
   port: parseInt(process.env.EMAIL_PORT) || 2525,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS
+  },
+  // ✅ CRITICAL: Force IPv4 in connection
+  lookup: (hostname, options, callback) => {
+    dns.lookup(hostname, { family: 4 }, (err, address, family) => {
+      if (err) {
+        console.error('DNS lookup error:', err);
+        callback(err);
+      } else {
+        console.log(`✅ Resolved ${hostname} to IPv4: ${address}`);
+        callback(null, address, family);
+      }
+    });
   },
   connectionTimeout: 30000,
   greetingTimeout: 30000,
