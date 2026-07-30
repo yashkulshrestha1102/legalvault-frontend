@@ -27,6 +27,7 @@ const sendEmail = async (to, subject, html) => {
 
 // ✅ User Welcome Email
 const sendUserWelcomeEmail = async (email, name, password) => {
+  console.log('📧 Sending welcome email to:', email);
   const frontendUrl = process.env.FRONTEND_URL || 'https://legalvault-frontend-two.vercel.app';
   const loginUrl = `${frontendUrl}/login`;
   

@@ -130,6 +130,17 @@ router.post('/', [auth, admin], validateUser, handleValidation, async (req, res)
 
 
 
+
+// ✅ SEND WELCOME EMAIL
+try {
+  console.log('📧 Attempting to send welcome email to:', email);
+  await sendUserWelcomeEmail(email, name, password);
+  console.log('✅ Welcome email sent to:', email);
+} catch (emailError) {
+  console.error('❌ Failed to send welcome email:', emailError);
+}
+
+
 // ✅ PUT - Update user
 router.put('/:id', auth, validateUser, handleValidation, async (req, res) => {
   try {
