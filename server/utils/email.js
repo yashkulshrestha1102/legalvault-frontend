@@ -1,38 +1,32 @@
 const nodemailer = require('nodemailer');
 
-// ✅ Direct Gmail SMTP configuration (without DNS lookup)
+// ✅ Brevo SMTP Transporter - Production Ready
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: 'smtp-relay.brevo.com',
+  port: 587,
+  secure: false,
   auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
+    user: 'b3d43b001@smtp.brevo.com',
+    pass: 'KTbBZY67GdQ3zgwJ'
   },
-  // ✅ These settings are critical for Render
   tls: {
-    rejectUnauthorized: false,
-    ciphers: 'SSLv3'
-  },
-  connectionTimeout: 60000,        // 60 seconds
-  greetingTimeout: 60000,
-  socketTimeout: 60000,
-  // ✅ Force IPv4 by disabling IPv6
-  family: 4
+    rejectUnauthorized: false
+  }
 });
 
 const sendEmail = async (to, subject, html) => {
   try {
     const mailOptions = {
-      from: `"LegalVault" <${process.env.EMAIL_USER}>`,
+      from: '"LegalVault" <yashkulshrestha1102@gmail.com>',
       to,
       subject,
       html
     };
     
-    console.log('📧 Attempting to send email to:', to);
+    console.log('📧 Sending email to:', to);
     const info = await transporter.sendMail(mailOptions);
-    console.log('✅ Email sent successfully!');
-    console.log('📧 Message ID:', info.messageId);
-    return { success: true, info };
+    console.log('✅ Email sent! Message ID:', info.messageId);
+    return { success: true };
   } catch (error) {
     console.error('❌ Email error:', error.message);
     return { success: false, error: error.message };
@@ -40,7 +34,6 @@ const sendEmail = async (to, subject, html) => {
 };
 
 const sendUserWelcomeEmail = async (email, name, password) => {
-  console.log('📧 Preparing welcome email for:', email);
   const frontendUrl = process.env.FRONTEND_URL || 'https://legalvault-frontend-two.vercel.app';
   const loginUrl = `${frontendUrl}/login`;
   
@@ -57,7 +50,7 @@ const sendUserWelcomeEmail = async (email, name, password) => {
         .credentials { background: #F3F4F6; padding: 16px 20px; border-radius: 8px; margin: 15px 0; }
         .credentials p { margin: 6px 0; }
         .credentials strong { color: #0D9488; }
-        .btn { display: inline-block; padding: 12px 30px; background: #0D9488; color: #fff; text-decoration: none; border-radius: 6px; font-weight: 600; }
+        .btn { display: inline-block; padding: 12px 30px; background: #0D9488; color: #fff; text-decoration: none; border-radius: 6px; font-weight: 600; text-decoration: none; }
         .footer { margin-top: 25px; font-size: 13px; color: #9CA3AF; text-align: center; border-top: 1px solid #E5E7EB; padding-top: 20px; }
       </style>
     </head>
