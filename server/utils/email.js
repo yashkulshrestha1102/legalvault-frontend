@@ -1,14 +1,14 @@
 const nodemailer = require('nodemailer');
-const dns = require('dns');
 
 // ✅ Force IPv4 (Render IPv6 issue fix)
+const dns = require('dns');
 dns.setDefaultResultOrder('ipv4first');
 
-// ✅ SMTP Transporter with explicit host and port
+// ✅ SMTP Transporter - Port 465 with SSL
 const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',
-  port: 587, // ✅ Use 587 instead of 465 (TLS)
-  secure: false, // ✅ false for port 587
+  port: 465,
+  secure: true, // SSL
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS
@@ -17,9 +17,9 @@ const transporter = nodemailer.createTransport({
     rejectUnauthorized: false,
     ciphers: 'SSLv3'
   },
-  connectionTimeout: 30000,
-  greetingTimeout: 30000,
-  socketTimeout: 30000
+  connectionTimeout: 60000,
+  greetingTimeout: 60000,
+  socketTimeout: 60000
 });
 
 const sendEmail = async (to, subject, html) => {
