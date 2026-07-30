@@ -5,6 +5,7 @@ const auth = require('../middleware/auth');
 const admin = require('../middleware/admin');
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
+const { sendUserWelcomeEmail } = require('../utils/email');
 
 console.log('✅ userRoutes.js loaded - Production Fix');
 
@@ -20,7 +21,6 @@ const validateUser = [
   body('password')
     .if((value, { req }) => req.method === 'POST')
     .isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
-  // ✅ Role validation - case insensitive
   body('role')
     .optional()
     .custom((value) => {
@@ -36,10 +36,6 @@ const validateUser = [
       if (!value) return [];
       if (!Array.isArray(value)) return [value];
       return value;
-    })
-    .custom((value) => {
-      if (!Array.isArray(value)) return true;
-      return true;
     })
 ];
 
@@ -63,7 +59,7 @@ router.get('/', [auth, admin], async (req, res) => {
   }
 });
 
-// POST - Create user (Admin only)
+// POST - Create user (Admin only) - WITH EMAIL
 router.post('/', [auth, admin], validateUser, handleValidation, async (req, res) => {
   try {
     console.log('📥 POST /api/users - Request body:', JSON.stringify(req.body, null, 2));
@@ -85,7 +81,6 @@ router.post('/', [auth, admin], validateUser, handleValidation, async (req, res)
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // ✅ Filter valid folder permissions (ensure array of strings)
     let validPermissions = [];
     if (folderPermissions && Array.isArray(folderPermissions)) {
       validPermissions = folderPermissions
@@ -93,7 +88,6 @@ router.post('/', [auth, admin], validateUser, handleValidation, async (req, res)
         .filter(f => ALLOWED_FOLDERS.includes(f));
     }
 
-    // ✅ Ensure role is stored in lowercase
     const normalizedRole = role ? role.toLowerCase() : 'user';
 
     const user = new User({
@@ -110,11 +104,20 @@ router.post('/', [auth, admin], validateUser, handleValidation, async (req, res)
     await user.save();
     console.log('✅ User saved:', user.email);
     
+    // ✅ SEND WELCOME EMAIL
+    try {
+      await sendUserWelcomeEmail(email, name, password);
+      console.log('✅ Welcome email sent to:', email);
+    } catch (emailError) {
+      console.error('❌ Failed to send welcome email:', emailError);
+      // Email fail hone par bhi user create ho jayega
+    }
+    
     const userResponse = user.toObject();
     delete userResponse.password;
     
     res.status(201).json({ 
-      message: 'User created successfully', 
+      message: 'User created successfully. Welcome email sent!', 
       user: userResponse 
     });
   } catch (error) {
@@ -196,4 +199,4 @@ router.delete('/:id', [auth, admin], async (req, res) => {
   }
 });
 
-module.exports = router;              
+module.exports = router;

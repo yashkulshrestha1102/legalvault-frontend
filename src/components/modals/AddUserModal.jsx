@@ -28,6 +28,10 @@ export default function AddUserModal({ open, onClose, onSave, editData }) {
   // ✅ Validation Errors State
   const [errors, setErrors] = useState({});
 
+  // ✅ Success Popup State
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [createdUser, setCreatedUser] = useState(null);
+
   // ✅ Edit Data Set Hone Par Form Fill Ho
   useEffect(() => {
     if (editData) {
@@ -57,6 +61,8 @@ export default function AddUserModal({ open, onClose, onSave, editData }) {
     }
     // ✅ Modal open/close par errors clear
     setErrors({});
+    setShowSuccess(false);
+    setCreatedUser(null);
   }, [editData, open]);
 
   if (!open) return null;
@@ -161,7 +167,7 @@ export default function AddUserModal({ open, onClose, onSave, editData }) {
       folderPermissions: folderPermissions
     });
 
-    onSave({
+    const userData = {
       name: formData.name,
       email: formData.email,
       phone: formData.phone,
@@ -173,7 +179,14 @@ export default function AddUserModal({ open, onClose, onSave, editData }) {
       avatar: formData.avatar,
       id: editData?.id || Date.now(),
       createdAt: editData?.createdAt || new Date().toLocaleDateString(),
-    });
+    };
+
+    // ✅ Save and show popup
+    onSave(userData);
+    
+    // ✅ Show success popup
+    setCreatedUser(userData);
+    setShowSuccess(true);
 
     // ✅ Form Reset After Successful Save
     setFormData({
@@ -188,7 +201,6 @@ export default function AddUserModal({ open, onClose, onSave, editData }) {
       avatar: "",
     });
     setErrors({});
-    onClose();
   };
 
   // ✅ Handle Input Change - Live Error Clear
@@ -268,220 +280,262 @@ export default function AddUserModal({ open, onClose, onSave, editData }) {
     reader.readAsDataURL(file);
   };
 
-  return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50">
-      <div className="glass w-[650px] p-8 max-h-[90vh] overflow-y-auto">
-        <h2 className="text-3xl font-bold mb-6">
-          {editData ? "Edit User" : "Add User"}
-        </h2>
-
-        <div className="space-y-4">
-          {/* ✅ Avatar Upload with Error */}
-          <div className="flex flex-col items-center gap-4">
-            {formData.avatar ? (
-              <img
-                src={formData.avatar}
-                alt="avatar"
-                className="w-24 h-24 rounded-full object-cover border border-white/20"
-              />
-            ) : (
-              <div className="w-24 h-24 rounded-full glass-card flex items-center justify-center text-3xl">
-                👤
-              </div>
-            )}
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleAvatarUpload}
-              className={`glass-card p-3 w-full ${errors.avatar ? "border-2 border-red-500" : ""}`}
-            />
-            {errors.avatar && (
-              <p className="text-red-400 text-sm -mt-2">{errors.avatar}</p>
-            )}
-          </div>
-
-          {/* ✅ Full Name with Error */}
-          <div>
-            <input
-              type="text"
-              name="name"
-              placeholder="Full Name *"
-              value={formData.name}
-              onChange={handleChange}
-              className={`glass-card w-full p-4 bg-transparent outline-none ${
-                errors.name ? "border-2 border-red-500" : ""
-              }`}
-            />
-            {errors.name && (
-              <p className="text-red-400 text-sm mt-1">{errors.name}</p>
-            )}
-          </div>
-
-          {/* ✅ Email with Error */}
-          <div>
-            <input
-              type="email"
-              name="email"
-              placeholder="Email Address *"
-              value={formData.email}
-              onChange={handleChange}
-              className={`glass-card w-full p-4 bg-transparent outline-none ${
-                errors.email ? "border-2 border-red-500" : ""
-              }`}
-            />
-            {errors.email && (
-              <p className="text-red-400 text-sm mt-1">{errors.email}</p>
-            )}
-          </div>
-
-          {/* ✅ Password with Error */}
-          <div>
-            <input
-              type="password"
-              name="password"
-              placeholder={editData ? "New Password (leave blank to keep current)" : "Password *"}
-              value={formData.password}
-              onChange={handleChange}
-              className={`glass-card w-full p-4 bg-transparent outline-none ${
-                errors.password ? "border-2 border-red-500" : ""
-              }`}
-            />
-            {errors.password && (
-              <p className="text-red-400 text-sm mt-1">{errors.password}</p>
-            )}
-            {!editData && !errors.password && (
-              <p className="text-gray-400 text-xs mt-1">Must contain uppercase, lowercase, and number</p>
-            )}
-          </div>
-
-          {/* ✅ Phone with Error */}
-          <div>
-            <input
-              type="text"
-              name="phone"
-              placeholder="Phone Number"
-              value={formData.phone}
-              onChange={handleChange}
-              className={`glass-card w-full p-4 bg-transparent outline-none ${
-                errors.phone ? "border-2 border-red-500" : ""
-              }`}
-            />
-            {errors.phone && (
-              <p className="text-red-400 text-sm mt-1">{errors.phone}</p>
-            )}
-          </div>
-
-          {/* ✅ Department with Error */}
-          <div>
-            <input
-              type="text"
-              name="department"
-              placeholder="Department"
-              value={formData.department}
-              onChange={handleChange}
-              className={`glass-card w-full p-4 bg-transparent outline-none ${
-                errors.department ? "border-2 border-red-500" : ""
-              }`}
-            />
-            {errors.department && (
-              <p className="text-red-400 text-sm mt-1">{errors.department}</p>
-            )}
-          </div>
-
-          {/* ✅ Role with Error */}
-          <div>
-            <select
-              name="role"
-              value={formData.role}
-              onChange={handleChange}
-              className={`glass-card w-full p-4 bg-slate-900 text-white outline-none ${
-                errors.role ? "border-2 border-red-500" : ""
-              }`}
-            >
-              <option value="">Select Role *</option>
-              <option value="Admin">Admin</option>
-              <option value="Lawyer">Lawyer</option>
-              <option value="Consultant">Consultant</option>
-              <option value="Manager">Manager</option>
-            </select>
-            {errors.role && (
-              <p className="text-red-400 text-sm mt-1">{errors.role}</p>
-            )}
-          </div>
-
-          {/* ✅ Status with Error */}
-          <div>
-            <select
-              name="status"
-              value={formData.status}
-              onChange={handleChange}
-              className={`glass-card w-full p-4 bg-slate-900 text-white outline-none ${
-                errors.status ? "border-2 border-red-500" : ""
-              }`}
-            >
-              <option value="Active">Active</option>
-              <option value="Inactive">Inactive</option>
-            </select>
-            {errors.status && (
-              <p className="text-red-400 text-sm mt-1">{errors.status}</p>
-            )}
-          </div>
-
-          {/* ✅ 8 Folders - Permission Selection with Error */}
-          <div>
-            <div className={`glass-card p-4 ${errors.folderPermissions ? "border-2 border-red-500" : ""}`}>
-              <div className="flex justify-between items-center mb-3">
-                <h3 className="text-lg font-semibold">Folder Access Permissions *</h3>
-                <div className="flex gap-2">
-                  <button 
-                    onClick={selectAllFolders}
-                    className="text-xs bg-cyan-500/20 px-3 py-1 rounded hover:bg-cyan-500/30 transition"
-                  >
-                    Select All
-                  </button>
-                  <button 
-                    onClick={deselectAllFolders}
-                    className="text-xs bg-red-500/20 px-3 py-1 rounded hover:bg-red-500/30 transition"
-                  >
-                    Deselect All
-                  </button>
-                </div>
-              </div>
-              <p className="text-sm text-gray-400 mb-4">Select folders this user can access</p>
-
-              <div className="grid grid-cols-2 gap-3">
-                {ALL_FOLDERS.map((folder) => (
-                  <label key={folder.id} className="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-white/5 transition">
-                    <input
-                      type="checkbox"
-                      checked={formData.folderPermissions?.includes(folder.id) || false}
-                      onChange={() => toggleFolder(folder.id)}
-                      className="w-4 h-4 accent-cyan-500"
-                    />
-                    <span className="text-sm">{folder.label}</span>
-                  </label>
-                ))}
-              </div>
-
-              <div className="mt-3 text-xs text-gray-400">
-                Selected: {formData.folderPermissions?.length || 0} / {ALL_FOLDERS.length} folders
-              </div>
+  // ✅ Success Popup Component
+  const SuccessPopup = () => {
+    if (!showSuccess || !createdUser) return null;
+    
+    return (
+      <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60 backdrop-blur-md">
+        <div className="glass w-full max-w-md p-6 rounded-2xl">
+          <div className="text-center">
+            <div className="text-5xl mb-4">✅</div>
+            <h3 className="text-2xl font-bold mb-2">User Created Successfully!</h3>
+            <p className="text-gray-400 text-sm mb-4">
+              Credentials have been sent to:
+            </p>
+            <div className="glass-card p-4 mb-4">
+              <p className="font-semibold">{createdUser.name}</p>
+              <p className="text-cyan-400 text-sm">{createdUser.email}</p>
+              <p className="text-gray-400 text-xs mt-2">
+                📧 Check your email for login credentials
+              </p>
             </div>
-            {errors.folderPermissions && (
-              <p className="text-red-400 text-sm mt-1">{errors.folderPermissions}</p>
-            )}
+            <button
+              onClick={() => {
+                setShowSuccess(false);
+                setCreatedUser(null);
+                onClose();
+              }}
+              className="glass-card px-6 py-2 blue-glow w-full"
+            >
+              Got it!
+            </button>
           </div>
-        </div>
-
-        <div className="flex justify-end gap-4 mt-8">
-          <button onClick={onClose} className="glass-card px-6 py-3">
-            Cancel
-          </button>
-          <button onClick={handleSave} className="glass-card px-6 py-3 blue-glow">
-            {editData ? "Update User" : "Save User"}
-          </button>
         </div>
       </div>
-    </div>
+    );
+  };
+
+  return (
+    <>
+      {/* Main Modal */}
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50">
+        <div className="glass w-[650px] p-8 max-h-[90vh] overflow-y-auto">
+          <h2 className="text-3xl font-bold mb-6">
+            {editData ? "Edit User" : "Add User"}
+          </h2>
+
+          <div className="space-y-4">
+            {/* Avatar Upload with Error */}
+            <div className="flex flex-col items-center gap-4">
+              {formData.avatar ? (
+                <img
+                  src={formData.avatar}
+                  alt="avatar"
+                  className="w-24 h-24 rounded-full object-cover border border-white/20"
+                />
+              ) : (
+                <div className="w-24 h-24 rounded-full glass-card flex items-center justify-center text-3xl">
+                  👤
+                </div>
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarUpload}
+                className={`glass-card p-3 w-full ${errors.avatar ? "border-2 border-red-500" : ""}`}
+              />
+              {errors.avatar && (
+                <p className="text-red-400 text-sm -mt-2">{errors.avatar}</p>
+              )}
+            </div>
+
+            {/* Full Name with Error */}
+            <div>
+              <input
+                type="text"
+                name="name"
+                placeholder="Full Name *"
+                value={formData.name}
+                onChange={handleChange}
+                className={`glass-card w-full p-4 bg-transparent outline-none ${
+                  errors.name ? "border-2 border-red-500" : ""
+                }`}
+              />
+              {errors.name && (
+                <p className="text-red-400 text-sm mt-1">{errors.name}</p>
+              )}
+            </div>
+
+            {/* Email with Error */}
+            <div>
+              <input
+                type="email"
+                name="email"
+                placeholder="Email Address *"
+                value={formData.email}
+                onChange={handleChange}
+                className={`glass-card w-full p-4 bg-transparent outline-none ${
+                  errors.email ? "border-2 border-red-500" : ""
+                }`}
+              />
+              {errors.email && (
+                <p className="text-red-400 text-sm mt-1">{errors.email}</p>
+              )}
+            </div>
+
+            {/* Password with Error */}
+            <div>
+              <input
+                type="password"
+                name="password"
+                placeholder={editData ? "New Password (leave blank to keep current)" : "Password *"}
+                value={formData.password}
+                onChange={handleChange}
+                className={`glass-card w-full p-4 bg-transparent outline-none ${
+                  errors.password ? "border-2 border-red-500" : ""
+                }`}
+              />
+              {errors.password && (
+                <p className="text-red-400 text-sm mt-1">{errors.password}</p>
+              )}
+              {!editData && !errors.password && (
+                <p className="text-gray-400 text-xs mt-1">Must contain uppercase, lowercase, and number</p>
+              )}
+            </div>
+
+            {/* Phone with Error */}
+            <div>
+              <input
+                type="text"
+                name="phone"
+                placeholder="Phone Number"
+                value={formData.phone}
+                onChange={handleChange}
+                className={`glass-card w-full p-4 bg-transparent outline-none ${
+                  errors.phone ? "border-2 border-red-500" : ""
+                }`}
+              />
+              {errors.phone && (
+                <p className="text-red-400 text-sm mt-1">{errors.phone}</p>
+              )}
+            </div>
+
+            {/* Department with Error */}
+            <div>
+              <input
+                type="text"
+                name="department"
+                placeholder="Department"
+                value={formData.department}
+                onChange={handleChange}
+                className={`glass-card w-full p-4 bg-transparent outline-none ${
+                  errors.department ? "border-2 border-red-500" : ""
+                }`}
+              />
+              {errors.department && (
+                <p className="text-red-400 text-sm mt-1">{errors.department}</p>
+              )}
+            </div>
+
+            {/* Role with Error */}
+            <div>
+              <select
+                name="role"
+                value={formData.role}
+                onChange={handleChange}
+                className={`glass-card w-full p-4 bg-slate-900 text-white outline-none ${
+                  errors.role ? "border-2 border-red-500" : ""
+                }`}
+              >
+                <option value="">Select Role *</option>
+                <option value="Admin">Admin</option>
+                <option value="Lawyer">Lawyer</option>
+                <option value="Consultant">Consultant</option>
+                <option value="Manager">Manager</option>
+              </select>
+              {errors.role && (
+                <p className="text-red-400 text-sm mt-1">{errors.role}</p>
+              )}
+            </div>
+
+            {/* Status with Error */}
+            <div>
+              <select
+                name="status"
+                value={formData.status}
+                onChange={handleChange}
+                className={`glass-card w-full p-4 bg-slate-900 text-white outline-none ${
+                  errors.status ? "border-2 border-red-500" : ""
+                }`}
+              >
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+              </select>
+              {errors.status && (
+                <p className="text-red-400 text-sm mt-1">{errors.status}</p>
+              )}
+            </div>
+
+            {/* 8 Folders - Permission Selection with Error */}
+            <div>
+              <div className={`glass-card p-4 ${errors.folderPermissions ? "border-2 border-red-500" : ""}`}>
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="text-lg font-semibold">Folder Access Permissions *</h3>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={selectAllFolders}
+                      className="text-xs bg-cyan-500/20 px-3 py-1 rounded hover:bg-cyan-500/30 transition"
+                    >
+                      Select All
+                    </button>
+                    <button 
+                      onClick={deselectAllFolders}
+                      className="text-xs bg-red-500/20 px-3 py-1 rounded hover:bg-red-500/30 transition"
+                    >
+                      Deselect All
+                    </button>
+                  </div>
+                </div>
+                <p className="text-sm text-gray-400 mb-4">Select folders this user can access</p>
+
+                <div className="grid grid-cols-2 gap-3">
+                  {ALL_FOLDERS.map((folder) => (
+                    <label key={folder.id} className="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-white/5 transition">
+                      <input
+                        type="checkbox"
+                        checked={formData.folderPermissions?.includes(folder.id) || false}
+                        onChange={() => toggleFolder(folder.id)}
+                        className="w-4 h-4 accent-cyan-500"
+                      />
+                      <span className="text-sm">{folder.label}</span>
+                    </label>
+                  ))}
+                </div>
+
+                <div className="mt-3 text-xs text-gray-400">
+                  Selected: {formData.folderPermissions?.length || 0} / {ALL_FOLDERS.length} folders
+                </div>
+              </div>
+              {errors.folderPermissions && (
+                <p className="text-red-400 text-sm mt-1">{errors.folderPermissions}</p>
+              )}
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-4 mt-8">
+            <button onClick={onClose} className="glass-card px-6 py-3">
+              Cancel
+            </button>
+            <button onClick={handleSave} className="glass-card px-6 py-3 blue-glow">
+              {editData ? "Update User" : "Save User"}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ✅ Success Popup */}
+      <SuccessPopup />
+    </>
   );
 }
