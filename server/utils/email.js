@@ -100,4 +100,9 @@ const sendPasswordResetEmail = async (email, resetToken) => {
   return sendEmail(email, '🔐 LegalVault - Password Reset Request', html);
 };
 
-module.exports = { sendEmail, sendPasswordResetEmail, sendUserWelcomeEmail };
+// ✅ EXPORT ALL FUNCTIONS
+module.exports = { 
+  sendEmail, 
+  sendPasswordResetEmail, 
+  sendUserWelcomeEmail 
+};
