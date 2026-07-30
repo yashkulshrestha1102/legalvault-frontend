@@ -7,7 +7,6 @@ const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const { sendUserWelcomeEmail } = require('../utils/email');
 const mongoose = require('mongoose');
-const { sendUserWelcomeEmail } = require('../utils/email');
 
 
 console.log('✅ userRoutes.js loaded - Production Fix');
