@@ -1,6 +1,6 @@
 const nodemailer = require('nodemailer');
 
-// ✅ Brevo SMTP Transporter - Production Ready
+// ✅ Brevo SMTP Transporter
 const transporter = nodemailer.createTransport({
   host: 'smtp-relay.brevo.com',
   port: 587,
@@ -15,6 +15,7 @@ const transporter = nodemailer.createTransport({
 });
 
 const sendEmail = async (to, subject, html) => {
+  console.log('📧 sendEmail function started for:', to);
   try {
     const mailOptions = {
       from: '"LegalVault" <yashkulshrestha1102@gmail.com>',
@@ -23,17 +24,21 @@ const sendEmail = async (to, subject, html) => {
       html
     };
     
-    console.log('📧 Sending email to:', to);
+    console.log('📧 Attempting to send...');
     const info = await transporter.sendMail(mailOptions);
-    console.log('✅ Email sent! Message ID:', info.messageId);
-    return { success: true };
+    console.log('✅ Email sent successfully!');
+    console.log('📧 Message ID:', info.messageId);
+    console.log('📧 Response:', info.response);
+    return { success: true, info };
   } catch (error) {
     console.error('❌ Email error:', error.message);
+    console.error('❌ Full error:', error);
     return { success: false, error: error.message };
   }
 };
 
 const sendUserWelcomeEmail = async (email, name, password) => {
+  console.log('📧 sendUserWelcomeEmail called for:', email);
   const frontendUrl = process.env.FRONTEND_URL || 'https://legalvault-frontend-two.vercel.app';
   const loginUrl = `${frontendUrl}/login`;
   
