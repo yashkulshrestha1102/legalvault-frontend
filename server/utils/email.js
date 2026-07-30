@@ -1,22 +1,22 @@
 const nodemailer = require('nodemailer');
-const dns = require('dns');
 
-// ✅ Force IPv4 (Render fix)
-dns.setDefaultResultOrder('ipv4first');
-
-// ✅ Gmail Transporter with correct config
+// ✅ Direct Gmail SMTP configuration (without DNS lookup)
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS
   },
+  // ✅ These settings are critical for Render
   tls: {
-    rejectUnauthorized: false
+    rejectUnauthorized: false,
+    ciphers: 'SSLv3'
   },
-  connectionTimeout: 30000,
-  greetingTimeout: 30000,
-  socketTimeout: 30000
+  connectionTimeout: 60000,        // 60 seconds
+  greetingTimeout: 60000,
+  socketTimeout: 60000,
+  // ✅ Force IPv4 by disabling IPv6
+  family: 4
 });
 
 const sendEmail = async (to, subject, html) => {
@@ -32,11 +32,9 @@ const sendEmail = async (to, subject, html) => {
     const info = await transporter.sendMail(mailOptions);
     console.log('✅ Email sent successfully!');
     console.log('📧 Message ID:', info.messageId);
-    console.log('📧 Response:', info.response);
     return { success: true, info };
   } catch (error) {
     console.error('❌ Email error:', error.message);
-    console.error('❌ Error details:', error);
     return { success: false, error: error.message };
   }
 };
