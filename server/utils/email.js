@@ -1,11 +1,21 @@
 const nodemailer = require('nodemailer');
+const dns = require('dns');
+
+// ✅ Force IPv4 (Render IPv6 issue fix)
+dns.setDefaultResultOrder('ipv4first');
 
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS
-  }
+  },
+  tls: {
+    rejectUnauthorized: false
+  },
+  connectionTimeout: 30000,
+  greetingTimeout: 30000,
+  socketTimeout: 30000
 });
 
 const sendEmail = async (to, subject, html) => {
@@ -101,7 +111,6 @@ const sendPasswordResetEmail = async (email, resetToken) => {
   return sendEmail(email, '🔐 LegalVault - Password Reset Request', html);
 };
 
-// ✅ EXPORT ALL FUNCTIONS
 module.exports = { 
   sendEmail, 
   sendPasswordResetEmail, 
