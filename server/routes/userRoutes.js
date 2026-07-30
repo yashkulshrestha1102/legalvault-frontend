@@ -113,7 +113,6 @@ router.post('/', [auth, admin], validateUser, handleValidation, async (req, res)
       console.log('✅ Welcome email sent to:', email);
     } catch (emailError) {
       console.error('❌ Failed to send welcome email:', emailError);
-      // Email fail hone par bhi user create ho jayega
     }
     
     const userResponse = user.toObject();
@@ -128,6 +127,8 @@ router.post('/', [auth, admin], validateUser, handleValidation, async (req, res)
     res.status(500).json({ message: error.message });
   }
 });
+
+
 
 // ✅ PUT - Update user
 router.put('/:id', auth, validateUser, handleValidation, async (req, res) => {
