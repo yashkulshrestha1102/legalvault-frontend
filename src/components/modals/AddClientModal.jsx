@@ -22,13 +22,13 @@ export default function AddClientModal({
     phone: "",
     onboardingDate: "",
     status: "Active",
-    // ✅ New: userPermissions array
     userPermissions: [],
   });
 
   const [users, setUsers] = useState([]);
   const [errors, setErrors] = useState({});
 
+  // ✅ 9 Folders including Client Repository
   const ALL_FOLDERS = [
     { id: 'registrations', label: 'Registrations / Certifications' },
     { id: 'contracts', label: 'Contracts' },
@@ -37,7 +37,8 @@ export default function AddClientModal({
     { id: 'hr', label: 'HR' },
     { id: 'gst', label: 'GST' },
     { id: 'income-tax', label: 'Income Tax' },
-    { id: 'financials', label: 'Financials' }
+    { id: 'financials', label: 'Financials' },
+    { id: 'documents', label: '📁 Client Repository' } // ✅ 9th Folder
   ];
 
   // ✅ Fetch users for assignment
@@ -136,7 +137,6 @@ export default function AddClientModal({
     }
   };
 
-  // ✅ Toggle user permission
   const toggleUserPermission = (userId, folderId) => {
     setFormData(prev => {
       const userPermissions = [...(prev.userPermissions || [])];
@@ -154,7 +154,6 @@ export default function AddClientModal({
         userPerm.folderPermissions.push(folderId);
       }
       
-      // ✅ Remove user if no folders selected
       if (userPerm.folderPermissions.length === 0) {
         return {
           ...prev,
@@ -166,7 +165,6 @@ export default function AddClientModal({
     });
   };
 
-  // ✅ Toggle all folders for a user
   const toggleAllFoldersForUser = (userId) => {
     setFormData(prev => {
       const userPermissions = [...(prev.userPermissions || [])];
@@ -187,7 +185,6 @@ export default function AddClientModal({
     });
   };
 
-  // ✅ Check if user has a folder permission
   const hasUserFolderPermission = (userId, folderId) => {
     const userPerm = formData.userPermissions?.find(p => p.userId === userId);
     return userPerm?.folderPermissions.includes(folderId) || false;

@@ -28,8 +28,6 @@ function ClientDetails() {
   const [documents, setDocuments] = useState([]);
   const [uploadingDocs, setUploadingDocs] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState([]);
-
-  // ✅ Rename state
   const [renamingId, setRenamingId] = useState(null);
   const [newFileName, setNewFileName] = useState('');
 
@@ -103,7 +101,7 @@ function ClientDetails() {
     fetchClient();
   }, [fetchClient]);
 
-  // ✅ Refresh data when page becomes visible (tab switch)
+  // ✅ Refresh data when page becomes visible
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (!document.hidden && id) {
@@ -132,7 +130,7 @@ function ClientDetails() {
     return () => window.removeEventListener('popstate', handleRouteChange);
   }, [id, fetchClient]);
 
-  // ✅ Fetch registrations from backend
+  // ✅ Fetch registrations
   const fetchRegistrations = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -160,7 +158,7 @@ function ClientDetails() {
     }
   };
 
-  // ✅ Fetch contracts from backend
+  // ✅ Fetch contracts
   const fetchContracts = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -184,7 +182,7 @@ function ClientDetails() {
     }
   };
 
-  // ✅ Fetch documents from backend
+  // ✅ Fetch documents
   const fetchDocuments = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -212,7 +210,7 @@ function ClientDetails() {
     }
   };
 
-  // ✅ Load registrations, contracts, and documents on mount
+  // ✅ Load data on mount
   useEffect(() => {
     if (id) {
       console.log('🔄 Loading data for client ID:', id);
@@ -253,19 +251,16 @@ function ClientDetails() {
     }
   };
 
-  // ✅ Start rename
   const startRename = (doc) => {
     setRenamingId(doc._id);
     setNewFileName(doc.filename);
   };
 
-  // ✅ Cancel rename
   const cancelRename = () => {
     setRenamingId(null);
     setNewFileName('');
   };
 
-  // ✅ Handle rename key press
   const handleRenameKeyDown = (e, docId) => {
     if (e.key === 'Enter') {
       renameDocument(docId, newFileName);
@@ -308,14 +303,12 @@ function ClientDetails() {
     }
   };
 
-  // ✅ View document
   const viewDocument = (docUrl) => {
     if (!docUrl) return;
     const token = localStorage.getItem('token');
     window.open(`${docUrl}?token=${token}`, '_blank');
   };
 
-  // ✅ Download document
   const downloadDocument = async (docUrl, filename) => {
     try {
       const token = localStorage.getItem('token');
@@ -338,7 +331,6 @@ function ClientDetails() {
     }
   };
 
-  // ✅ Delete document
   const deleteDocument = async (docId) => {
     if (!window.confirm('Delete this document?')) return;
     try {
@@ -381,7 +373,6 @@ function ClientDetails() {
     }
   };
 
-  // ✅ View PDF
   const viewPDF = (pdfUrl) => {
     if (!pdfUrl) return;
     const token = localStorage.getItem('token');
@@ -392,7 +383,6 @@ function ClientDetails() {
     window.open(`${pdfUrl}?token=${token}`, '_blank');
   };
 
-  // ✅ Download PDF
   const downloadPDF = (pdfUrl) => {
     if (!pdfUrl) return;
     const token = localStorage.getItem('token');
@@ -498,7 +488,6 @@ function ClientDetails() {
     }
   };
 
-  // ✅ Delete registration
   const deleteRegistration = async (registrationId) => {
     if (!window.confirm("Delete Registration?")) return;
     try {
@@ -605,7 +594,6 @@ function ClientDetails() {
     }
   };
 
-  // ✅ Delete contract
   const deleteContract = async (contractId) => {
     if (!window.confirm("Delete Contract?")) return;
     try {
@@ -649,6 +637,7 @@ function ClientDetails() {
   const userFolderPermissions = getUserFolderPermissions();
   const role = user?.role || 'user';
   
+  // ✅ 9 Folders including Client Repository
   const allFolders = [
     { label: "Registrations / Certifications", value: "registrations", id: "registrations" },
     { label: "Contracts", value: "contracts", id: "contracts" },
@@ -954,7 +943,7 @@ function ClientDetails() {
                         </div>
                       )}
 
-                      {/* ✅ Editable File Name */}
+                      {/* Editable File Name */}
                       {renamingId === doc._id ? (
                         <div className="w-full flex items-center gap-2 mb-1">
                           <input

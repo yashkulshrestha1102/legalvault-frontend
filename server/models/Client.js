@@ -9,7 +9,7 @@ const ClientSchema = new mongoose.Schema({
   contactPerson: { type: String, default: '' },
   onboardingDate: { type: String, default: '' },
   
-  // ✅ New: User-specific permissions
+  // ✅ User-specific permissions
   userPermissions: [{
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     folderPermissions: { type: [String], default: [] }
