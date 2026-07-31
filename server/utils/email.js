@@ -4,7 +4,7 @@ const axios = require('axios');
 const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email';
 
 const sendUserWelcomeEmail = async (email, name, password) => {
-  console.log('📧 Sending email to:', email);
+  console.log('📧 Sending welcome email to:', email);
 
   const frontendUrl = process.env.FRONTEND_URL || 'https://legalvault-frontend-two.vercel.app';
   const loginUrl = `${frontendUrl}/login`;

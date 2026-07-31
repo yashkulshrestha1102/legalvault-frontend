@@ -8,17 +8,16 @@ const bcrypt = require('bcryptjs');
 const { sendUserWelcomeEmail } = require('../utils/email');
 const mongoose = require('mongoose');
 
-
 console.log('✅ userRoutes.js loaded - Production Fix');
 
 // ✅ 9 Folders including Client Repository
 const ALLOWED_FOLDERS = [
   'registrations', 'contracts', 'policies', 'corporate-secretariat',
   'hr', 'gst', 'income-tax', 'financials',
-  'documents' // ✅ Client Repository
+  'documents'
 ];
 
-// ✅ Validation Rules - Role case-insensitive
+// ✅ Validation Rules - RELAXED (allow 'user' role too)
 const validateUser = [
   body('name').notEmpty().withMessage('Name is required'),
   body('email').isEmail().withMessage('Valid email is required'),
@@ -29,7 +28,7 @@ const validateUser = [
     .optional()
     .custom((value) => {
       if (!value) return true;
-      const allowedRoles = ['admin', 'lawyer', 'consultant', 'manager'];
+      const allowedRoles = ['admin', 'lawyer', 'consultant', 'manager', 'user'];
       return allowedRoles.includes(value.toLowerCase());
     })
     .withMessage('Invalid role'),
@@ -70,6 +69,7 @@ router.post('/', [auth, admin], validateUser, handleValidation, async (req, res)
 
     const { name, email, password, department, role, status, phone, folderPermissions } = req.body;
     
+    // ✅ Password validation
     if (!password) {
       return res.status(400).json({ message: 'Password is required' });
     }
@@ -77,14 +77,17 @@ router.post('/', [auth, admin], validateUser, handleValidation, async (req, res)
       return res.status(400).json({ message: 'Password must be at least 6 characters' });
     }
 
-    const existingUser = await User.findOne({ email });
+    // ✅ Check existing user (case insensitive)
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
     if (existingUser) {
       return res.status(400).json({ message: 'User already exists' });
     }
 
+    // ✅ Hash password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
+    // ✅ Validate folder permissions
     let validPermissions = [];
     if (folderPermissions && Array.isArray(folderPermissions)) {
       validPermissions = folderPermissions
@@ -94,9 +97,10 @@ router.post('/', [auth, admin], validateUser, handleValidation, async (req, res)
 
     const normalizedRole = role ? role.toLowerCase() : 'user';
 
+    // ✅ Create user
     const user = new User({
       name,
-      email,
+      email: email.toLowerCase(),
       password: hashedPassword,
       department: department || 'General',
       role: normalizedRole,
@@ -108,19 +112,21 @@ router.post('/', [auth, admin], validateUser, handleValidation, async (req, res)
     await user.save();
     console.log('✅ User saved:', user.email);
     
-    // ✅ SEND WELCOME EMAIL (SINGLE CALL)
+    // ✅ SEND WELCOME EMAIL (Don't block user creation)
     try {
+      console.log('📧 Attempting to send welcome email to:', email);
       await sendUserWelcomeEmail(email, name, password);
       console.log('✅ Welcome email sent to:', email);
     } catch (emailError) {
-      console.error('❌ Failed to send welcome email:', emailError);
+      console.error('❌ Failed to send welcome email:', emailError.message);
+      // ✅ User creation continues even if email fails
     }
     
     const userResponse = user.toObject();
     delete userResponse.password;
     
     res.status(201).json({ 
-      message: 'User created successfully. Welcome email sent!', 
+      message: 'User created successfully', 
       user: userResponse 
     });
   } catch (error) {
@@ -152,7 +158,7 @@ router.put('/:id', auth, validateUser, handleValidation, async (req, res) => {
 
     if (req.user.role === 'admin') {
       if (role) updateData.role = role.toLowerCase();
-      if (email) updateData.email = email;
+      if (email) updateData.email = email.toLowerCase();
       if (folderPermissions) {
         updateData.folderPermissions = folderPermissions
           .filter(f => typeof f === 'string')
@@ -186,7 +192,6 @@ router.delete('/:id', [auth, admin], async (req, res) => {
   try {
     const { id } = req.params;
     
-    // ✅ Validate ObjectId
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ message: 'Invalid user ID format' });
     }
