@@ -1,10 +1,9 @@
 const axios = require('axios');
 
-// ✅ Brevo API - Using SMTP credentials as Basic Auth
-const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email';
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
 
 const sendUserWelcomeEmail = async (email, name, password) => {
-  console.log('📧 Sending welcome email to:', email);
+  console.log('📧 Sending email to:', email);
 
   const frontendUrl = process.env.FRONTEND_URL || 'https://legalvault-frontend-two.vercel.app';
   const loginUrl = `${frontendUrl}/login`;
@@ -53,32 +52,29 @@ const sendUserWelcomeEmail = async (email, name, password) => {
   `;
 
   try {
-    // ✅ Using SMTP credentials as Basic Auth (Base64 encoded)
-    const authString = Buffer.from('b3d43b001@smtp-brevo.com:KTbBZY67GdQ3zgwJ').toString('base64');
-
     const response = await axios.post(
-      BREVO_API_URL,
+      'https://api.resend.com/emails',
       {
-        sender: { name: 'LegalVault', email: 'yashkulshrestha1102@gmail.com' },
-        to: [{ email: email, name: name }],
+        from: 'LegalVault <onboarding@resend.dev>',
+        to: [email],
         subject: '🎉 Welcome to LegalVault – Your Account Credentials',
-        htmlContent: html
+        html: html
       },
       {
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Basic ${authString}`
+          'Authorization': `Bearer ${RESEND_API_KEY}`,
+          'Content-Type': 'application/json'
         },
         timeout: 30000
       }
     );
 
-    console.log('✅ Email sent! Message ID:', response.data.messageId);
+    console.log('✅ Email sent! ID:', response.data.id);
     return { success: true };
   } catch (error) {
     console.error('❌ Email error:', error.message);
     if (error.response) {
-      console.error('❌ Brevo Response:', error.response.data);
+      console.error('❌ Resend Response:', error.response.data);
     }
     return { success: false, error: error.message };
   }
