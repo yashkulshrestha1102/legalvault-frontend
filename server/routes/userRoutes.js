@@ -7,6 +7,7 @@ const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const { sendUserWelcomeEmail } = require('../utils/email');
 const mongoose = require('mongoose');
+const Notification = require('../models/Notification'); // ✅ Import at top
 
 console.log('✅ userRoutes.js loaded - Production Fix');
 
@@ -17,7 +18,7 @@ const ALLOWED_FOLDERS = [
   'documents'
 ];
 
-// ✅ Validation Rules - RELAXED (allow 'user' role too)
+// ✅ Validation Rules
 const validateUser = [
   body('name').notEmpty().withMessage('Name is required'),
   body('email').isEmail().withMessage('Valid email is required'),
@@ -62,7 +63,7 @@ router.get('/', [auth, admin], async (req, res) => {
   }
 });
 
-// POST - Create user (Admin only) - WITH EMAIL
+// POST - Create user (Admin only) - WITH EMAIL & NOTIFICATION
 router.post('/', [auth, admin], validateUser, handleValidation, async (req, res) => {
   try {
     console.log('📥 POST /api/users - Request body:', JSON.stringify(req.body, null, 2));
@@ -109,6 +110,7 @@ router.post('/', [auth, admin], validateUser, handleValidation, async (req, res)
       folderPermissions: validPermissions
     });
 
+    // ✅ ONLY ONE save
     await user.save();
     console.log('✅ User saved:', user.email);
     
@@ -119,7 +121,24 @@ router.post('/', [auth, admin], validateUser, handleValidation, async (req, res)
       console.log('✅ Welcome email sent to:', email);
     } catch (emailError) {
       console.error('❌ Failed to send welcome email:', emailError.message);
-      // ✅ User creation continues even if email fails
+    }
+
+    // ✅ ✅ ✅ ADD NOTIFICATION (inside try block, after user save)
+    try {
+      await Notification.create({
+        type: 'user_created',
+        message: `🎉 New user created: ${name} (${email})`,
+        data: {
+          userId: user._id,
+          email: email,
+          name: name,
+          role: normalizedRole
+        }
+      });
+      console.log('✅ Notification saved for:', email);
+    } catch (notifError) {
+      console.error('❌ Notification error:', notifError.message);
+      // ✅ User creation continues
     }
     
     const userResponse = user.toObject();
@@ -134,32 +153,6 @@ router.post('/', [auth, admin], validateUser, handleValidation, async (req, res)
     res.status(500).json({ message: error.message });
   }
 });
-
-
-
-const Notification = require('../models/Notification');
-
-// User save karne ke baad:
-await user.save();
-
-// ✅ ✅ ✅ ADD NOTIFICATION
-try {
-  await Notification.create({
-    type: 'user_created',
-    message: `🎉 New user created: ${name} (${email})`,
-    data: {
-      userId: user._id,
-      email: email,
-      name: name,
-      role: role || 'user'
-    }
-  });
-  console.log('✅ Notification saved for:', email);
-} catch (notifError) {
-  console.error('❌ Notification error:', notifError.message);
-  // ✅ User creation fail mat karo
-}
-
 
 // ✅ PUT - Update user
 router.put('/:id', auth, validateUser, handleValidation, async (req, res) => {
