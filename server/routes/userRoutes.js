@@ -135,6 +135,32 @@ router.post('/', [auth, admin], validateUser, handleValidation, async (req, res)
   }
 });
 
+
+
+const Notification = require('../models/Notification');
+
+// User save karne ke baad:
+await user.save();
+
+// ✅ ✅ ✅ ADD NOTIFICATION
+try {
+  await Notification.create({
+    type: 'user_created',
+    message: `🎉 New user created: ${name} (${email})`,
+    data: {
+      userId: user._id,
+      email: email,
+      name: name,
+      role: role || 'user'
+    }
+  });
+  console.log('✅ Notification saved for:', email);
+} catch (notifError) {
+  console.error('❌ Notification error:', notifError.message);
+  // ✅ User creation fail mat karo
+}
+
+
 // ✅ PUT - Update user
 router.put('/:id', auth, validateUser, handleValidation, async (req, res) => {
   try {
