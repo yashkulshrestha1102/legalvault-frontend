@@ -3,6 +3,10 @@ import { Routes, Route } from 'react-router-dom';
 import ProtectedRoute from "../components/ProtectedRoute";
 import ProtectedFolder from "../components/ProtectedFolder";
 import Automation from "../pages/Automation";
+import StageCollection from "../pages/automation/StageCollection";
+import StageSorting from "../pages/automation/StageSorting";
+import StageDataEntry from "../pages/automation/StageDataEntry";
+import StageCompliance from "../pages/automation/StageCompliance";
 
 
 // ✅ Lazy load pages
@@ -118,6 +122,12 @@ const AppRoutes = () => {
         } />
 
         <Route path="/automation" element={<Automation />} />
+
+
+        <Route path="/automation/:automationId/collection" element={<StageCollection />} />
+<Route path="/automation/:automationId/sorting" element={<StageSorting />} />
+<Route path="/automation/:automationId/dataentry" element={<StageDataEntry />} />
+<Route path="/automation/:automationId/compliance" element={<StageCompliance />} />
 
       </Routes>
     </Suspense>
