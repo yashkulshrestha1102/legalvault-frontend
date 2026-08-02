@@ -2,6 +2,8 @@ import MainLayout from "../layouts/MainLayout";
 import { useState, useEffect } from "react";
 import axios from 'axios';
 import { FaCloudUploadAlt, FaSort, FaDatabase, FaCheckCircle, FaPlay, FaSpinner } from "react-icons/fa";
+import { useNavigate } from 'react-router-dom';
+
 
 const API_URL = 'https://legalvault-jm2n.onrender.com';
 
@@ -17,6 +19,8 @@ function Automation() {
   const [clients, setClients] = useState([]);
   const [selectedClient, setSelectedClient] = useState('');
   const [starting, setStarting] = useState(false);
+  const navigate = useNavigate();
+
 
   // ✅ Fetch dashboard data
   useEffect(() => {
@@ -179,7 +183,7 @@ function Automation() {
               </thead>
               <tbody>
                 {recent.map(item => (
-                  <tr key={item._id} className="border-b border-white/5 hover:bg-white/5">
+                  <tr key={item._id} onClick={() => navigate(`/automation/${item._id}/collection`)} className="border-b border-white/5 hover:bg-white/5">
                     <td className="py-2">{item.clientId?.name || 'N/A'}</td>
                     <td className="py-2 capitalize">{item.stage}</td>
                     <td className="py-2">
