@@ -9,29 +9,29 @@ const AuditLogSchema = new mongoose.Schema({
   },
   action: {
     type: String,
-    enum: ['CREATE', 'UPDATE', 'DELETE', 'LOGIN', 'LOGOUT', 'VIEW', 'ROLLBACK'],
+    enum: ['CREATE', 'UPDATE', 'DELETE', 'LOGIN', 'LOGOUT', 'VIEW', 'ROLLBACK', 'UPLOAD'], // ✅ Added UPLOAD
     required: true
   },
   entity: {
     type: String,
-    enum: ['CLIENT', 'REGISTRATION', 'CONTRACT', 'USER', 'DOCUMENT', 'FOLDER'],
+    enum: ['CLIENT', 'REGISTRATION', 'CONTRACT', 'USER', 'DOCUMENT', 'FOLDER', 'AUTOMATION', 'OTHER'], // ✅ Added AUTOMATION, OTHER
     required: true
   },
   entityId: { type: mongoose.Schema.Types.ObjectId },
   entityName: { type: String },
   
-  // ✅ New: Client reference
+  // ✅ Client reference
   clientId: { type: mongoose.Schema.Types.ObjectId, ref: 'Client' },
   clientName: { type: String },
   
-  // ✅ New: Changes detail
+  // ✅ Changes detail
   changes: {
     before: { type: mongoose.Schema.Types.Mixed, default: {} },
     after: { type: mongoose.Schema.Types.Mixed, default: {} },
     fields: { type: [String], default: [] }
   },
   
-  // ✅ New: Document info
+  // ✅ Document info
   documentInfo: {
     filename: { type: String },
     fileType: { type: String },
@@ -39,7 +39,7 @@ const AuditLogSchema = new mongoose.Schema({
     fileId: { type: String }
   },
   
-  // ✅ New: Rollback info
+  // ✅ Rollback info
   rollbacked: { type: Boolean, default: false },
   rollbackedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   rollbackedAt: { type: Date },
