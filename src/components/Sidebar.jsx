@@ -5,6 +5,7 @@ import {
   FaBars,
   FaUserCircle,
   FaHistory,
+  FaRobot, // ✅ Automation ke liye icon
 } from "react-icons/fa";
 
 import {
@@ -56,13 +57,14 @@ function Sidebar() {
 
   const role = user?.role || 'user';
 
-  // ✅ Unique menu items with unique IDs (Folders section hata diya)
+  // ✅ Menu items — Automation added for admin
   const menuItems = [
     { id: 'dashboard', path: "/", label: "Dashboard", icon: <FaTachometerAlt /> },
     { id: 'clients', path: "/clients", label: "Clients", icon: <FaUsers /> },
   ];
 
   if (role === 'admin') {
+    menuItems.push({ id: 'automation', path: "/automation", label: "Automation", icon: <FaRobot /> }); // ✅ Naya option
     menuItems.push({ id: 'users', path: "/users", label: "Users", icon: <FaUsers /> });
     menuItems.push({ id: 'audit', path: "/audit", label: "Audit Log", icon: <FaHistory /> });
   }

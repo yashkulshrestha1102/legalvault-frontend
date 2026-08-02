@@ -2,6 +2,8 @@ import { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import ProtectedRoute from "../components/ProtectedRoute";
 import ProtectedFolder from "../components/ProtectedFolder";
+import Automation from "../pages/Automation";
+
 
 // ✅ Lazy load pages
 const Dashboard = lazy(() => import("../pages/Dashboard"));
@@ -114,6 +116,9 @@ const AppRoutes = () => {
         <Route path="/settings" element={
           <ProtectedRoute><Settings /></ProtectedRoute>
         } />
+
+        <Route path="/automation" element={<Automation />} />
+
       </Routes>
     </Suspense>
   );
