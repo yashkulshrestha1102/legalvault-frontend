@@ -21,16 +21,6 @@ const ContractDetails = lazy(() => import("../pages/ContractDetails"));
 const AuditLog = lazy(() => import("../pages/AuditLog"));
 const Settings = lazy(() => import("../pages/Settings"));
 
-// ✅ Lazy load folder pages
-const RegistrationsPage = lazy(() => import("../pages/folders/RegistrationsPage"));
-const ContractsPage = lazy(() => import("../pages/folders/ContractsPage"));
-const PoliciesPage = lazy(() => import("../pages/folders/PoliciesPage"));
-const CorporateSecretariatPage = lazy(() => import("../pages/folders/CorporateSecretariatPage"));
-const HRPage = lazy(() => import("../pages/folders/HRPage"));
-const GSTPage = lazy(() => import("../pages/folders/GSTPage"));
-const IncomeTaxPage = lazy(() => import("../pages/folders/IncomeTaxPage"));
-const FinancialsPage = lazy(() => import("../pages/folders/FinancialsPage"));
-
 // ✅ Loading component
 const PageLoader = () => (
   <div className="flex justify-center items-center h-screen">
@@ -84,43 +74,11 @@ const AppRoutes = () => {
           <ProtectedRoute><ContractDetails /></ProtectedRoute>
         } />
 
-        <Route path="/registrations" element={
-          <ProtectedRoute><ProtectedFolder folderId="registrations"><RegistrationsPage /></ProtectedFolder></ProtectedRoute>
-        } />
-
-        <Route path="/contracts" element={
-          <ProtectedRoute><ProtectedFolder folderId="contracts"><ContractsPage /></ProtectedFolder></ProtectedRoute>
-        } />
-
-        <Route path="/policies" element={
-          <ProtectedRoute><ProtectedFolder folderId="policies"><PoliciesPage /></ProtectedFolder></ProtectedRoute>
-        } />
-
-        <Route path="/corporate-secretariat" element={
-          <ProtectedRoute><ProtectedFolder folderId="corporate-secretariat"><CorporateSecretariatPage /></ProtectedFolder></ProtectedRoute>
-        } />
-
-        <Route path="/hr" element={
-          <ProtectedRoute><ProtectedFolder folderId="hr"><HRPage /></ProtectedFolder></ProtectedRoute>
-        } />
-
-        <Route path="/gst-folder" element={
-          <ProtectedRoute><ProtectedFolder folderId="gst"><GSTPage /></ProtectedFolder></ProtectedRoute>
-        } />
-
-        <Route path="/income-tax" element={
-          <ProtectedRoute><ProtectedFolder folderId="income-tax"><IncomeTaxPage /></ProtectedFolder></ProtectedRoute>
-        } />
-
-        <Route path="/financials" element={
-          <ProtectedRoute><ProtectedFolder folderId="financials"><FinancialsPage /></ProtectedFolder></ProtectedRoute>
-        } />
-
         <Route path="/settings" element={
           <ProtectedRoute><Settings /></ProtectedRoute>
         } />
 
-        {/* ✅ GST Automation Routes — ProtectedRoute ke saath */}
+        {/* ✅ GST Automation Routes */}
         <Route path="/gst" element={
           <ProtectedRoute><GSTDashboard /></ProtectedRoute>
         } />
