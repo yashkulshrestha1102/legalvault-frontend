@@ -22,6 +22,14 @@ router.post('/upload', auth, upload.single('document'), async (req, res) => {
     }
 
     const { automationId } = req.body;
+    console.log('📎 automationId:', automationId);
+
+    // ✅ Check if automation exists
+    const automationExists = await Automation.findById(automationId);
+    console.log('🔍 Automation exists:', automationExists ? '✅ Yes' : '❌ No');
+    if (!automationExists) {
+      return res.status(404).json({ message: 'Automation not found' });
+    }
 
     const uploadStream = bucket.openUploadStream(req.file.originalname, {
       contentType: req.file.mimetype,
@@ -45,6 +53,7 @@ router.post('/upload', auth, upload.single('document'), async (req, res) => {
       });
     });
 
+    // ✅ Save PDF document
     const pdfDoc = new PDF({
       filename: req.file.originalname,
       contentType: req.file.mimetype,
@@ -57,11 +66,15 @@ router.post('/upload', auth, upload.single('document'), async (req, res) => {
     await pdfDoc.save();
     console.log('✅ Document saved to DB:', pdfDoc._id);
 
+    // ✅ ✅ ✅ CRITICAL FIX: Add document to automation
     if (automationId) {
-      await Automation.findByIdAndUpdate(automationId, {
-        $push: { documents: pdfDoc._id }
-      });
-      console.log('✅ Document linked to automation:', automationId);
+      console.log('🔗 Linking document to automation:', automationId);
+      const updated = await Automation.findByIdAndUpdate(
+        automationId,
+        { $push: { documents: pdfDoc._id } },
+        { new: true }
+      );
+      console.log('✅ Automation updated. New documents count:', updated.documents?.length || 0);
     }
 
     res.status(201).json({
