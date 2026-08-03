@@ -4,7 +4,7 @@ const auth = require('../middleware/auth');
 const upload = require('../middleware/uploadGridFS');
 const { getGridFS } = require('../config/gridfs');
 const PDF = require('../models/PDF');
-const Automation = require('../models/Automation');
+// const Automation = require('../models/Automation'); // ✅ REMOVED - Automation model deleted
 const { ObjectId } = require('mongodb');
 const jwt = require('jsonwebtoken');
 
@@ -49,11 +49,12 @@ router.post('/pdf', auth, upload.array('pdf', 10), async (req, res) => {
           });
           await pdfDoc.save();
 
-          if (automationId) {
-            await Automation.findByIdAndUpdate(automationId, {
-              $push: { documents: pdfDoc._id }
-            });
-          }
+          // ✅ Automation linking disabled - model removed
+          // if (automationId) {
+          //   await Automation.findByIdAndUpdate(automationId, {
+          //     $push: { documents: pdfDoc._id }
+          //   });
+          // }
 
           const host = req.get('host');
           const protocol = 'https';
@@ -135,7 +136,7 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// ✅ Upload for Automation (single file)
+// ✅ Upload for Automation (single file) - Automation linking disabled
 router.post('/upload', auth, upload.single('document'), async (req, res) => {
   try {
     console.log('📤 Upload request received - File:', req.file?.originalname);
@@ -188,13 +189,13 @@ router.post('/upload', auth, upload.single('document'), async (req, res) => {
     await pdfDoc.save();
     console.log('✅ Document saved to DB:', pdfDoc._id);
 
-    // ✅ Link to automation
-    if (automationId) {
-      await Automation.findByIdAndUpdate(automationId, {
-        $push: { documents: pdfDoc._id }
-      });
-      console.log('✅ Document linked to automation:', automationId);
-    }
+    // ✅ Automation linking disabled - model removed
+    // if (automationId) {
+    //   await Automation.findByIdAndUpdate(automationId, {
+    //     $push: { documents: pdfDoc._id }
+    //   });
+    //   console.log('✅ Document linked to automation:', automationId);
+    // }
 
     res.status(201).json({
       message: 'Document uploaded successfully',
@@ -216,7 +217,7 @@ router.post('/upload', auth, upload.single('document'), async (req, res) => {
   }
 });
 
-// ✅ Delete document
+// ✅ Delete document - Automation linking disabled
 router.delete('/:id', auth, async (req, res) => {
   try {
     const fileId = new ObjectId(req.params.id);
@@ -229,12 +230,12 @@ router.delete('/:id', auth, async (req, res) => {
     await bucket.delete(fileId);
     await pdfDoc.deleteOne();
 
-    // Remove from automation
-    if (pdfDoc.automationId) {
-      await Automation.findByIdAndUpdate(pdfDoc.automationId, {
-        $pull: { documents: pdfDoc._id }
-      });
-    }
+    // ✅ Automation removal disabled - model removed
+    // if (pdfDoc.automationId) {
+    //   await Automation.findByIdAndUpdate(pdfDoc.automationId, {
+    //     $pull: { documents: pdfDoc._id }
+    //   });
+    // }
 
     res.json({ message: 'Document deleted successfully' });
   } catch (error) {
