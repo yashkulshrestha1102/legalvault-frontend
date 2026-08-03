@@ -62,9 +62,10 @@ function StageDataEntry() {
 
     try {
       const token = localStorage.getItem('token');
+      // ✅ Send request with body
       const response = await axios.post(
         `${API_URL}/api/automation/${automationId}/extract`,
-        {},
+        { action: 'extract' },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
@@ -74,7 +75,7 @@ function StageDataEntry() {
       alert('✅ Data extraction completed!');
     } catch (error) {
       console.error('❌ Extract error:', error);
-      setError('Failed to extract data');
+      setError('Failed to extract data: ' + (error.response?.data?.message || error.message));
     } finally {
       setExtracting(false);
     }

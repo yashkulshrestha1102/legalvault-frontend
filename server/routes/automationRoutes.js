@@ -264,7 +264,7 @@ router.post('/:id/sort', [auth, admin], async (req, res) => {
   }
 });
 
-// ✅ ✅ ✅ STAGE 3: EXTRACT DATA FROM DOCUMENTS (AI Simulation)
+// ✅ STAGE 3: EXTRACT DATA FROM DOCUMENTS
 router.post('/:id/extract', [auth, admin], async (req, res) => {
   try {
     console.log('🤖 Extract data request for:', req.params.id);
