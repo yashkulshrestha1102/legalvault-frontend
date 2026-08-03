@@ -62,7 +62,7 @@ function StageCollection() {
       console.log('📤 Uploading file:', selectedFile.name);
       console.log('📦 automationId:', automationId);
       
-      const response = await axios.post(`${API_URL}/api/documents/upload`, formData, {
+const response = await axios.post(`${API_URL}/api/automation-upload/upload`, formData, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'multipart/form-data'
