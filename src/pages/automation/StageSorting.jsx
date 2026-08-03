@@ -23,10 +23,7 @@ function StageSorting() {
   const [sorting, setSorting] = useState(false);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    fetchAutomationDetails();
-  }, [automationId]);
-
+  // ✅ Fetch automation details
   const fetchAutomationDetails = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -34,7 +31,7 @@ function StageSorting() {
         headers: { Authorization: `Bearer ${token}` }
       });
       setAutomation(response.data);
-      
+
       // ✅ Check if already sorted
       if (response.data.extractedData?.sortedDocuments) {
         setSortedDocs(response.data.extractedData.sortedDocuments);
@@ -47,6 +44,21 @@ function StageSorting() {
     }
   };
 
+  // ✅ Initial load
+  useEffect(() => {
+    fetchAutomationDetails();
+  }, [automationId]);
+
+  // ✅ Auto-refresh every 5 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchAutomationDetails();
+    }, 5000);
+    
+    return () => clearInterval(interval);
+  }, [automationId]);
+
+  // ✅ Auto-Sort handler
   const handleSort = async () => {
     setSorting(true);
     setError('');
@@ -69,6 +81,7 @@ function StageSorting() {
     }
   };
 
+  // ✅ Next Stage handler
   const handleNextStage = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -85,8 +98,10 @@ function StageSorting() {
     }
   };
 
+  // ✅ Calculate total documents
   const totalDocs = Object.values(sortedDocs).reduce((acc, arr) => acc + arr.length, 0);
 
+  // ✅ Categories configuration
   const categories = [
     { key: 'contracts', label: 'Contracts', icon: <FaFileContract className="text-cyan-400" />, color: 'from-cyan-500 to-blue-400' },
     { key: 'petitions', label: 'Petitions', icon: <FaGavel className="text-purple-400" />, color: 'from-purple-500 to-pink-400' },
@@ -94,6 +109,7 @@ function StageSorting() {
     { key: 'others', label: 'Others', icon: <FaFileAlt className="text-amber-400" />, color: 'from-amber-500 to-orange-400' }
   ];
 
+  // ✅ Loading state
   if (loading) {
     return (
       <MainLayout>
@@ -109,6 +125,7 @@ function StageSorting() {
 
   return (
     <MainLayout>
+      {/* Header */}
       <div className="glass-card p-6 mb-8">
         <h1 className="text-2xl font-bold">📂 Stage 2: Auto-Sort & Organise</h1>
         <p className="text-white/60 mt-1">
@@ -117,8 +134,12 @@ function StageSorting() {
         <p className="text-white/40 text-sm">
           Status: <span className="capitalize">{automation?.status || 'pending'}</span>
         </p>
+        <p className="text-white/40 text-sm">
+          Documents: <span className="text-white">{totalDocs}</span>
+        </p>
       </div>
 
+      {/* Error */}
       {error && (
         <div className="bg-red-500/20 border border-red-400/50 rounded-xl p-4 mb-6 text-red-300">
           ❌ {error}
@@ -169,7 +190,7 @@ function StageSorting() {
               ) : (
                 <div className="space-y-2 max-h-40 overflow-y-auto">
                   {docs.map((doc, index) => (
-                    <div key={doc._id} className="bg-slate-800/30 border border-white/5 rounded-lg px-3 py-2 text-sm flex justify-between items-center">
+                    <div key={doc._id || index} className="bg-slate-800/30 border border-white/5 rounded-lg px-3 py-2 text-sm flex justify-between items-center">
                       <span className="truncate">{doc.name || `Document ${index + 1}`}</span>
                       <span className="text-white/30 text-xs">{(doc.size / 1024).toFixed(1)} KB</span>
                     </div>
