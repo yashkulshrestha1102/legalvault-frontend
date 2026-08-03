@@ -136,6 +136,7 @@ app.use('/api/audit', require('./routes/auditRoutes'));
 app.use('/api/documents', require('./routes/documentRoutes'));
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/automation', require('./routes/automationRoutes'));
+app.use('/api/documents', require('./routes/uploadGridFSRoutes'));
 
 
 
