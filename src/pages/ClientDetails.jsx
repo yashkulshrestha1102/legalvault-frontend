@@ -711,8 +711,8 @@ function ClientDetails() {
             <div className="mt-4 glass-card p-3">
               <p className="text-gray-400 text-sm">Assigned Users:</p>
               <div className="flex flex-wrap gap-3 mt-1">
-                {client.userPermissions.map((p) => (
-                  <div key={String(p.userId?._id || p.userId)} className="px-3 py-1 bg-cyan-500/20 text-cyan-400 rounded-full text-sm flex items-center gap-2">
+                {client.userPermissions.map((p, index) => (
+  <div key={`perm-${p.userId?._id || p.userId || 'unknown'}-${index}`} className="px-3 py-1 bg-cyan-500/20 text-cyan-400 rounded-full text-sm flex items-center gap-2">
                     <span>{p.userId?.name || 'Unknown'}</span>
                     <span className="text-xs bg-cyan-500/30 px-1.5 py-0.5 rounded">
                       {p.folderPermissions?.length || 0} folders
@@ -775,8 +775,8 @@ function ClientDetails() {
                       </td>
                     </tr>
                   ) : (
-                    registrations.map((item) => (
-                      <tr key={item._id || item.id}>
+                    registrations.map((item, index) => (
+                      <tr key={`reg-${item._id || item.id || index}`}>
                         <td className="p-4">{item.category}</td>
                         <td className="p-4">{item.registrationName}</td>
                         <td className="p-4">{item.startDate}</td>
@@ -844,8 +844,8 @@ function ClientDetails() {
                       </td>
                     </tr>
                   ) : (
-                    contracts.map((item) => (
-                      <tr key={item._id || item.id}>
+                    contracts.map((item, index) => (
+                      <tr key={`contract-${item._id || item.id || index}`}>
                         <td className="p-4">{item.contractType}</td>
                         <td className="p-4">{item.contractName}</td>
                         <td className="p-4">{item.firstParty}</td>
@@ -911,7 +911,7 @@ function ClientDetails() {
                 <p className="text-sm text-gray-400">Selected files:</p>
                 <div className="flex flex-wrap gap-2 mt-2 max-h-32 overflow-y-auto">
                   {selectedFiles.map((file, idx) => (
-                    <span key={idx} className="glass-card px-3 py-1 text-sm">
+                    <span key={`file-${idx}`} className="glass-card px-3 py-1 text-sm">
                       {file.name} ({(file.size / 1024).toFixed(1)} KB)
                     </span>
                   ))}
@@ -926,7 +926,7 @@ function ClientDetails() {
                 </div>
               ) : (
                 documents.map((doc) => (
-                  <div key={doc._id} className="glass-card p-4 hover:scale-105 transition-all duration-300">
+                  <div key={`doc-${doc._id}`} className="glass-card p-4 hover:scale-105 transition-all duration-300">
                     <div className="flex flex-col items-center">
                       {doc.mimeType?.startsWith('image/') ? (
                         <img 
