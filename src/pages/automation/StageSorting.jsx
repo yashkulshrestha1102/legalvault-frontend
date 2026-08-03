@@ -30,6 +30,10 @@ function StageSorting() {
       const response = await axios.get(`${API_URL}/api/automation/${automationId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
+      
+      console.log('✅ Automation data:', response.data);
+      console.log('✅ Documents:', response.data.documents);
+      
       setAutomation(response.data);
 
       // ✅ Check if already sorted
@@ -73,6 +77,7 @@ function StageSorting() {
       
       setSortedDocs(response.data.sorted);
       alert('✅ Documents sorted successfully!');
+      fetchAutomationDetails();
     } catch (error) {
       console.error('❌ Sort error:', error);
       setError('Failed to sort documents');
@@ -99,7 +104,7 @@ function StageSorting() {
   };
 
   // ✅ Calculate total documents
-  const totalDocs = Object.values(sortedDocs).reduce((acc, arr) => acc + arr.length, 0);
+  const totalDocs = automation?.documents?.length || 0;
 
   // ✅ Categories configuration
   const categories = [
@@ -135,7 +140,7 @@ function StageSorting() {
           Status: <span className="capitalize">{automation?.status || 'pending'}</span>
         </p>
         <p className="text-white/40 text-sm">
-          Documents: <span className="text-white">{totalDocs}</span>
+          Documents: <span className="text-white font-bold">{totalDocs}</span>
         </p>
       </div>
 

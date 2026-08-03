@@ -11,17 +11,14 @@ const Notification = require('../models/Notification');
 // ✅ GET - Automation Dashboard Stats
 router.get('/', [auth, admin], async (req, res) => {
   try {
-    // Count per stage
     const stageStats = await Automation.aggregate([
       { $group: { _id: '$stage', count: { $sum: 1 } } }
     ]);
 
-    // Count per status
     const statusStats = await Automation.aggregate([
       { $group: { _id: '$status', count: { $sum: 1 } } }
     ]);
 
-    // Recent automations
     const recent = await Automation.find()
       .populate('clientId', 'name email')
       .populate('assignedTo', 'name')
@@ -43,15 +40,18 @@ router.get('/', [auth, admin], async (req, res) => {
 // ✅ POST - Start Automation for a Client
 router.post('/start', [auth, admin], async (req, res) => {
   try {
+    console.log('🚀 Start automation request:', req.body);
     const { clientId } = req.body;
 
-    // Check if client exists
+    if (!clientId) {
+      return res.status(400).json({ message: 'clientId is required' });
+    }
+
     const client = await Client.findById(clientId);
     if (!client) {
       return res.status(404).json({ message: 'Client not found' });
     }
 
-    // Check if already running
     const existing = await Automation.findOne({ 
       clientId, 
       status: { $in: ['pending', 'processing'] } 
@@ -62,7 +62,6 @@ router.post('/start', [auth, admin], async (req, res) => {
       });
     }
 
-    // Create new automation
     const automation = new Automation({
       clientId,
       createdBy: req.user.id,
@@ -72,8 +71,8 @@ router.post('/start', [auth, admin], async (req, res) => {
     });
 
     await automation.save();
+    console.log('✅ Automation created:', automation._id);
 
-    // ✅ Create notification
     await Notification.create({
       type: 'system_alert',
       message: `🤖 Automation started for client: ${client.name}`,
@@ -90,7 +89,7 @@ router.post('/start', [auth, admin], async (req, res) => {
   }
 });
 
-// ✅ GET - Single Automation Status
+// ✅ GET - Single Automation Status (WITH POPULATED DOCUMENTS)
 router.get('/:id', [auth, admin], async (req, res) => {
   try {
     const automation = await Automation.findById(req.params.id)
@@ -127,7 +126,6 @@ router.put('/:id/stage', [auth, admin], [
       return res.status(404).json({ message: 'Automation not found' });
     }
 
-    // ✅ Update fields
     if (stage) automation.stage = stage;
     if (status) automation.status = status;
     if (validationResults) automation.validationResults = validationResults;
@@ -140,7 +138,6 @@ router.put('/:id/stage', [auth, admin], [
     automation.updatedAt = new Date();
     await automation.save();
 
-    // ✅ Create notification for stage completion
     await Notification.create({
       type: 'system_alert',
       message: `✅ Automation stage "${stage}" completed for client`,
@@ -171,7 +168,6 @@ router.post('/:id/documents', [auth, admin], async (req, res) => {
       return res.status(404).json({ message: 'Automation not found' });
     }
 
-    // ✅ Add documents (avoid duplicates)
     const uniqueDocs = documentIds.filter(id => !automation.documents.includes(id));
     automation.documents.push(...uniqueDocs);
     automation.updatedAt = new Date();
@@ -187,7 +183,7 @@ router.post('/:id/documents', [auth, admin], async (req, res) => {
   }
 });
 
-// ✅ ✅ ✅ STAGE 2: AUTO-SORT DOCUMENTS
+// ✅ POST - Auto-Sort Documents
 router.post('/:id/sort', [auth, admin], async (req, res) => {
   try {
     const automation = await Automation.findById(req.params.id)
@@ -201,7 +197,6 @@ router.post('/:id/sort', [auth, admin], async (req, res) => {
       return res.status(400).json({ message: 'No documents to sort' });
     }
 
-    // ✅ Auto-sort logic
     const sorted = {
       contracts: [],
       petitions: [],
@@ -223,7 +218,6 @@ router.post('/:id/sort', [auth, admin], async (req, res) => {
       }
     }
 
-    // ✅ Update automation with sorted data
     automation.extractedData = {
       sortedDocuments: sorted,
       totalCount: automation.documents.length,
@@ -233,7 +227,6 @@ router.post('/:id/sort', [auth, admin], async (req, res) => {
     automation.status = 'processing';
     await automation.save();
 
-    // ✅ Create notification
     await Notification.create({
       type: 'system_alert',
       message: `📂 Documents sorted for client`,
@@ -247,35 +240,6 @@ router.post('/:id/sort', [auth, admin], async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Sort error:', error);
-    res.status(500).json({ message: error.message });
-  }
-});
-
-// ✅ GET - Get sorted documents
-router.get('/:id/sorted', [auth, admin], async (req, res) => {
-  try {
-    const automation = await Automation.findById(req.params.id)
-      .populate('documents');
-    
-    if (!automation) {
-      return res.status(404).json({ message: 'Automation not found' });
-    }
-
-    const sorted = automation.extractedData?.sortedDocuments || {
-      contracts: [],
-      petitions: [],
-      affidavits: [],
-      others: []
-    };
-
-    res.json({
-      sorted: sorted,
-      total: automation.documents.length,
-      stage: automation.stage,
-      status: automation.status
-    });
-  } catch (error) {
-    console.error('❌ Get sorted error:', error);
     res.status(500).json({ message: error.message });
   }
 });
