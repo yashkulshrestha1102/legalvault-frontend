@@ -1,26 +1,24 @@
 const multer = require('multer');
-const path = require('path');
 
-// ✅ Storage
+// ✅ Simple memory storage
 const storage = multer.memoryStorage();
 
 // ✅ File filter
 const fileFilter = (req, file, cb) => {
-  console.log('🔍 Multer - File received:', file.fieldname, file.originalname);
-  const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
-  if (allowedTypes.includes(file.mimetype)) {
+  console.log('🔍 Multer - File:', file.fieldname, file.originalname);
+  
+  if (file.fieldname === 'document') {
     cb(null, true);
   } else {
-    cb(new Error('Invalid file type'), false);
+    cb(new Error(`Unexpected field: ${file.fieldname}`), false);
   }
 };
 
-// ✅ Upload middleware — field name 'document'
+// ✅ Single upload middleware
 const upload = multer({
   storage: storage,
   limits: { fileSize: 50 * 1024 * 1024 },
   fileFilter: fileFilter
 });
 
-// ✅ Export with field name 'document'
 module.exports = upload;

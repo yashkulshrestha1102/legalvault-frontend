@@ -128,6 +128,15 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+
+
+// ✅ Debug middleware - Check request before multer
+router.use('/upload', (req, res, next) => {
+  console.log('🔍 Request headers:', req.headers['content-type']);
+  console.log('🔍 Request body (pre-multer):', req.body);
+  next();
+});
+
 // ✅ ✅ ✅ UPLOAD FOR AUTOMATION — DEBUG VERSION
 router.post('/upload', auth, upload.single('document'), async (req, res) => {
   try {
