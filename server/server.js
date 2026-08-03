@@ -10,7 +10,6 @@ const morgan = require('morgan');
 const connectDB = require('./config/db');
 const { initGridFS } = require('./config/gridfs');
 const auditLog = require('./middleware/audit');
-const notificationRoutes = require('./routes/notificationRoutes');
 const gstAutomationRoutes = require('./routes/gstAutomationRoutes');
 
 
@@ -136,8 +135,6 @@ app.use('/api/contracts', require('./routes/contractRoutes'));
 app.use('/api/pdfs', require('./routes/uploadGridFSRoutes'));
 app.use('/api/audit', require('./routes/auditRoutes'));
 app.use('/api/documents', require('./routes/documentRoutes'));
-app.use('/api/notifications', notificationRoutes);
-app.use('/api/automation', require('./routes/automationRoutes'));
 app.use('/api/documents', require('./routes/uploadGridFSRoutes'));
 app.use('/api/gst-automation', gstAutomationRoutes);
 
