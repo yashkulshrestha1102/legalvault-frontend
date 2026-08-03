@@ -90,15 +90,24 @@ router.post('/start', [auth, admin], async (req, res) => {
   }
 });
 
-// ✅ GET - Single Automation Status (DEBUG VERSION)
+// ✅ GET - Single Automation Status (FIXED POPULATE)
 router.get('/:id', [auth, admin], async (req, res) => {
   try {
     console.log('🔍 ===== GET AUTOMATION DEBUG =====');
     console.log('🔍 automationId:', req.params.id);
 
+    // ✅ First, get automation without populate to check raw data
+    const rawAutomation = await Automation.findById(req.params.id);
+    console.log('🔍 Raw documents array (ObjectIds):', rawAutomation.documents);
+
+    // ✅ Then, populate documents with explicit model
     const automation = await Automation.findById(req.params.id)
       .populate('clientId', 'name email phone')
-      .populate('documents', 'name type size uploadedAt')
+      .populate({
+        path: 'documents',
+        model: 'PDF',
+        select: 'name type size uploadedAt'
+      })
       .populate('createdBy', 'name')
       .populate('assignedTo', 'name');
 
@@ -111,8 +120,8 @@ router.get('/:id', [auth, admin], async (req, res) => {
     console.log('🔍 Client:', automation.clientId?.name || 'N/A');
     console.log('🔍 Stage:', automation.stage);
     console.log('🔍 Status:', automation.status);
-    console.log('🔍 Documents count:', automation.documents?.length || 0);
-    console.log('🔍 Documents:', JSON.stringify(automation.documents, null, 2));
+    console.log('🔍 Populated Documents count:', automation.documents?.length || 0);
+    console.log('🔍 Populated Documents:', JSON.stringify(automation.documents, null, 2));
     console.log('🔍 ===== END DEBUG =====');
 
     res.json(automation);

@@ -110,7 +110,7 @@ function StageSorting() {
     }
   };
 
-  // ✅ Calculate total documents
+  // ✅ Calculate total documents from populated automation
   const totalDocs = automation?.documents?.length || 0;
   console.log('📊 Total documents:', totalDocs);
 
