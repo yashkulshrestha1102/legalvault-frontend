@@ -128,16 +128,7 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-
-
-// ✅ Debug middleware - Check request before multer
-router.use('/upload', (req, res, next) => {
-  console.log('🔍 Request headers:', req.headers['content-type']);
-  console.log('🔍 Request body (pre-multer):', req.body);
-  next();
-});
-
-// ✅ ✅ ✅ UPLOAD FOR AUTOMATION — DEBUG VERSION
+// ✅ ✅ ✅ UPLOAD FOR AUTOMATION — FIXED VERSION
 router.post('/upload', auth, upload.single('document'), async (req, res) => {
   try {
     console.log('🚀 ===== UPLOAD STARTED =====');
@@ -145,27 +136,21 @@ router.post('/upload', auth, upload.single('document'), async (req, res) => {
     console.log('📦 req.body:', req.body);
     console.log('👤 req.user:', req.user?.id);
 
-    // ✅ Check 1: File exists
     if (!req.file) {
       console.log('❌ No file in request');
       return res.status(400).json({ message: 'No file uploaded' });
     }
 
-    // ✅ Check 2: GridFS initialized
-    let bucket;
-    try {
-      bucket = getGridFS();
-      console.log('✅ GridFS bucket obtained');
-    } catch (gridFSError) {
-      console.error('❌ GridFS not initialized:', gridFSError.message);
-      return res.status(500).json({ message: 'GridFS not initialized', error: gridFSError.message });
+    const bucket = getGridFS();
+    if (!bucket) {
+      console.log('❌ GridFS not initialized');
+      return res.status(500).json({ message: 'GridFS not initialized' });
     }
 
     const { automationId } = req.body;
     console.log('📎 automationId:', automationId);
 
-    // ✅ Check 3: Upload to GridFS
-    console.log('📤 Starting GridFS upload...');
+    // ✅ Upload to GridFS
     const uploadStream = bucket.openUploadStream(req.file.originalname, {
       contentType: req.file.mimetype,
       metadata: {
@@ -176,24 +161,19 @@ router.post('/upload', auth, upload.single('document'), async (req, res) => {
     });
 
     uploadStream.end(req.file.buffer);
-    console.log('✅ Buffer written to stream');
 
-    // ✅ Check 4: Wait for upload completion
     const fileId = await new Promise((resolve, reject) => {
       uploadStream.on('finish', () => {
         console.log('✅ GridFS upload complete, ID:', uploadStream.id);
         resolve(uploadStream.id);
       });
       uploadStream.on('error', (error) => {
-        console.error('❌ GridFS stream error:', error);
+        console.error('❌ GridFS upload error:', error);
         reject(error);
       });
     });
 
-    console.log('📝 fileId:', fileId);
-
-    // ✅ Check 5: Save to DB
-    console.log('💾 Saving to database...');
+    // ✅ Save to DB
     const pdfDoc = new PDF({
       filename: req.file.originalname,
       contentType: req.file.mimetype,
@@ -204,9 +184,8 @@ router.post('/upload', auth, upload.single('document'), async (req, res) => {
     });
 
     await pdfDoc.save();
-    console.log('✅ Document saved to DB, _id:', pdfDoc._id);
+    console.log('✅ Document saved to DB:', pdfDoc._id);
 
-    // ✅ Success response
     res.status(201).json({
       message: 'Document uploaded successfully',
       _id: pdfDoc._id,
@@ -232,7 +211,7 @@ router.post('/upload', auth, upload.single('document'), async (req, res) => {
   }
 });
 
-// ✅ Delete document from automation
+// ✅ Delete document
 router.delete('/:id', auth, async (req, res) => {
   try {
     console.log('🗑️ Delete request for:', req.params.id);

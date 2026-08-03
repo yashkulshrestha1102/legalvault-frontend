@@ -9,48 +9,38 @@ const AuditLogSchema = new mongoose.Schema({
   },
   action: {
     type: String,
-    enum: ['CREATE', 'UPDATE', 'DELETE', 'LOGIN', 'LOGOUT', 'VIEW', 'ROLLBACK', 'UPLOAD'], // ✅ Added UPLOAD
+    enum: ['CREATE', 'UPDATE', 'DELETE', 'LOGIN', 'LOGOUT', 'VIEW', 'ROLLBACK', 'UPLOAD'],
     required: true
   },
   entity: {
     type: String,
-    enum: ['CLIENT', 'REGISTRATION', 'CONTRACT', 'USER', 'DOCUMENT', 'FOLDER', 'AUTOMATION', 'OTHER'], // ✅ Added AUTOMATION, OTHER
+    enum: ['CLIENT', 'REGISTRATION', 'CONTRACT', 'USER', 'DOCUMENT', 'FOLDER', 'AUTOMATION', 'OTHER'],
     required: true
   },
   entityId: { type: mongoose.Schema.Types.ObjectId },
   entityName: { type: String },
-  
-  // ✅ Client reference
   clientId: { type: mongoose.Schema.Types.ObjectId, ref: 'Client' },
   clientName: { type: String },
-  
-  // ✅ Changes detail
   changes: {
     before: { type: mongoose.Schema.Types.Mixed, default: {} },
     after: { type: mongoose.Schema.Types.Mixed, default: {} },
     fields: { type: [String], default: [] }
   },
-  
-  // ✅ Document info
   documentInfo: {
     filename: { type: String },
     fileType: { type: String },
     fileSize: { type: Number },
     fileId: { type: String }
   },
-  
-  // ✅ Rollback info
   rollbacked: { type: Boolean, default: false },
   rollbackedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   rollbackedAt: { type: Date },
   rollbackReason: { type: String },
-  
   ipAddress: { type: String },
   userAgent: { type: String },
   timestamp: { type: Date, default: Date.now }
 });
 
-// ✅ Indexes
 AuditLogSchema.index({ timestamp: -1 });
 AuditLogSchema.index({ clientId: 1 });
 AuditLogSchema.index({ action: 1 });

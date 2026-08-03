@@ -56,17 +56,24 @@ function StageCollection() {
     try {
       const token = localStorage.getItem('token');
       const formData = new FormData();
+      
+      // ✅ CRITICAL: Field name MUST be 'document'
       formData.append('document', selectedFile);
       formData.append('automationId', automationId);
 
+      // ✅ DEBUG: Log FormData
       console.log('📤 Uploading file:', selectedFile.name);
+      console.log('📦 FormData entries:');
+      for (let pair of formData.entries()) {
+        console.log(pair[0], pair[1]);
+      }
       
       const response = await axios.post(`${API_URL}/api/documents/upload`, formData, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'multipart/form-data'
         },
-        timeout: 60000 // 60 seconds timeout
+        timeout: 60000
       });
 
       console.log('✅ Upload response:', response.data);
@@ -78,11 +85,9 @@ function StageCollection() {
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      // ✅ Update local state
       setDocuments([...documents, response.data]);
       setSelectedFile(null);
       
-      // ✅ Reset file input
       const fileInput = document.getElementById('fileInput');
       if (fileInput) fileInput.value = '';
 
@@ -90,7 +95,6 @@ function StageCollection() {
     } catch (error) {
       console.error('❌ Upload error:', error);
       
-      // ✅ Better error message
       if (error.response) {
         setError(`Upload failed: ${error.response.data?.message || error.response.statusText}`);
       } else if (error.request) {
@@ -164,14 +168,12 @@ function StageCollection() {
         </p>
       </div>
 
-      {/* Error Message */}
       {error && (
         <div className="bg-red-500/20 border border-red-400/50 rounded-xl p-4 mb-6 text-red-300">
           ❌ {error}
         </div>
       )}
 
-      {/* Upload Section */}
       <div className="glass-card p-6 mb-8">
         <h2 className="text-xl font-bold mb-4">Upload Documents</h2>
         <div className="flex flex-col md:flex-row gap-4">
@@ -197,7 +199,6 @@ function StageCollection() {
         )}
       </div>
 
-      {/* Document List */}
       <div className="glass-card p-6 mb-8">
         <h2 className="text-xl font-bold mb-4">
           Uploaded Documents 
@@ -242,7 +243,6 @@ function StageCollection() {
         )}
       </div>
 
-      {/* Next Stage Button */}
       <div className="flex justify-end">
         <button
           onClick={handleNextStage}
