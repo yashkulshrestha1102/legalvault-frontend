@@ -13,9 +13,6 @@ const auditLog = require('./middleware/audit');
 const gstAutomationRoutes = require('./routes/gstAutomationRoutes');
 const invoiceExtractRoutes = require('./routes/invoiceExtract');
 
-
-
-
 const app = express();
 
 // ✅ Environment Variable Validation
@@ -39,25 +36,25 @@ app.use((req, res, next) => {
   next();
 });
 
-// ✅ Security - Helmet (with minimal config)
+// ✅ Security - Helmet
 app.use(helmet({
   crossOriginEmbedderPolicy: false,
   crossOriginOpenerPolicy: false,
   crossOriginResourcePolicy: { policy: "cross-origin" },
   dnsPrefetchControl: true,
-  frameguard: false, // manual header already set
+  frameguard: false,
   hidePoweredBy: true,
-  hsts: false, // manual header already set
+  hsts: false,
   ieNoOpen: true,
-  noSniff: false, // manual header already set
-  referrerPolicy: false, // manual header already set
-  xssFilter: false // manual header already set
+  noSniff: false,
+  referrerPolicy: false,
+  xssFilter: false
 }));
 
-// ✅ Trust Proxy (Render ke liye)
+// ✅ Trust Proxy
 app.set('trust proxy', 1);
 
-// ✅ CORS - Updated with all Vercel URLs
+// ✅ CORS
 const allowedOrigins = (process.env.CORS_ORIGIN || 
   'http://localhost:5173,http://localhost:5174,https://legalvault-frontend-two.vercel.app,https://legalvault-ochre.vercel.app').split(',');
 
@@ -76,10 +73,10 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// ✅ Morgan - Request logging
+// ✅ Morgan
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
-// ✅ Compression - Faster responses
+// ✅ Compression
 app.use(compression({
   level: 6,
   threshold: 1024,
@@ -91,10 +88,10 @@ app.use(compression({
   }
 }));
 
-// ✅ Rate Limiting - Stricter for production
+// ✅ Rate Limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // 100 requests per window
+  windowMs: 15 * 60 * 1000,
+  max: 100,
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
@@ -104,11 +101,11 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-// ✅ Body Parser with size limits
+// ✅ Body Parser
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// ✅ Cache Headers for static routes
+// ✅ Cache Headers
 app.use('/api/clients', (req, res, next) => {
   if (req.method === 'GET') {
     res.set('Cache-Control', 'public, max-age=60');
@@ -127,7 +124,7 @@ initGridFS().catch(err => {
   console.error('GridFS initialization failed:', err);
 });
 
-// ✅ Routes
+// ✅ Routes - FIXED (removed duplicate)
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/clients', require('./routes/clientRoutes'));
 app.use('/api/dashboard', require('./routes/dashboardRoutes'));
@@ -136,14 +133,9 @@ app.use('/api/registrations', require('./routes/registrationRoutes'));
 app.use('/api/contracts', require('./routes/contractRoutes'));
 app.use('/api/pdfs', require('./routes/uploadGridFSRoutes'));
 app.use('/api/audit', require('./routes/auditRoutes'));
-app.use('/api/documents', require('./routes/documentRoutes'));
-app.use('/api/documents', require('./routes/uploadGridFSRoutes'));
+app.use('/api/documents', require('./routes/uploadGridFSRoutes')); // ✅ Only ONCE
 app.use('/api/gst-automation', gstAutomationRoutes);
 app.use('/api/extract', invoiceExtractRoutes);
-
-
-
-
 
 // ✅ Health Check
 app.get('/health', (req, res) => {
@@ -164,9 +156,8 @@ app.use((req, res) => {
   res.status(404).json({ message: 'Route not found' });
 });
 
-// ✅ Global Error Handler - No stack trace in production
+// ✅ Global Error Handler
 app.use((err, req, res, next) => {
-  // ✅ Log error internally
   console.error('❌ Error:', {
     message: err.message,
     stack: err.stack,
