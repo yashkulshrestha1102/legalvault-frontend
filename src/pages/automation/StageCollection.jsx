@@ -68,7 +68,7 @@ function StageCollection() {
         console.log(pair[0], pair[1]);
       }
       
-      const response = await axios.post(`${API_URL}/api/documents/upload`, formData, {
+const response = await axios.post(`${API_URL}/api/documents/automation/upload`, formData, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'multipart/form-data'

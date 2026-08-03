@@ -129,7 +129,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // ✅ ✅ ✅ UPLOAD FOR AUTOMATION — FIXED VERSION
-router.post('/upload', auth, upload.single('document'), async (req, res) => {
+router.post('/automation/upload', auth, upload.single('document'), async (req, res) => {
   try {
     console.log('🚀 ===== UPLOAD STARTED =====');
     console.log('📤 req.file:', req.file);
