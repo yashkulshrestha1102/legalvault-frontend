@@ -2,11 +2,11 @@ import { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import ProtectedRoute from "../components/ProtectedRoute";
 import ProtectedFolder from "../components/ProtectedFolder";
-import Automation from "../pages/Automation";
-import StageCollection from "../pages/automation/StageCollection";
-import StageSorting from "../pages/automation/StageSorting";
-import StageDataEntry from "../pages/automation/StageDataEntry";
-import StageCompliance from "../pages/automation/StageCompliance";
+import GSTDashboard from "../pages/gst/Dashboard";
+import GSTCollection from "../pages/gst/StageCollection";
+import GSTSorting from "../pages/gst/StageSorting";
+import GSTDataEntry from "../pages/gst/StageDataEntry";
+import GSTFiling from "../pages/gst/StageFiling";
 
 
 
@@ -122,13 +122,11 @@ const AppRoutes = () => {
           <ProtectedRoute><Settings /></ProtectedRoute>
         } />
 
-        <Route path="/automation" element={<Automation />} />
-
-
-        <Route path="/automation/:automationId/collection" element={<StageCollection />} />
-<Route path="/automation/:automationId/sorting" element={<StageSorting />} />
-<Route path="/automation/:automationId/dataentry" element={<StageDataEntry />} />
-<Route path="/automation/:automationId/compliance" element={<StageCompliance />} />
+        <Route path="/gst" element={<GSTDashboard />} />
+<Route path="/gst/collection/:id" element={<GSTCollection />} />
+<Route path="/gst/sorting/:id" element={<GSTSorting />} />
+<Route path="/gst/dataentry/:id" element={<GSTDataEntry />} />
+<Route path="/gst/filing/:id" element={<GSTFiling />} />
 
       </Routes>
     </Suspense>
