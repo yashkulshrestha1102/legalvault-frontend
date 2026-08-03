@@ -264,21 +264,30 @@ router.post('/:id/sort', [auth, admin], async (req, res) => {
   }
 });
 
-// ✅ STAGE 3: EXTRACT DATA FROM DOCUMENTS
+// ✅ STAGE 3: EXTRACT DATA FROM DOCUMENTS (FIXED)
 router.post('/:id/extract', [auth, admin], async (req, res) => {
   try {
     console.log('🤖 Extract data request for:', req.params.id);
-    
-    const automation = await Automation.findById(req.params.id)
-      .populate('documents');
-    
+    console.log('📦 Request body:', req.body);
+
+    // ✅ Check if automation exists
+    const automation = await Automation.findById(req.params.id);
     if (!automation) {
+      console.log('❌ Automation not found');
       return res.status(404).json({ message: 'Automation not found' });
     }
 
-    if (automation.documents.length === 0) {
+    console.log('✅ Automation found');
+    console.log('🔍 Documents in automation:', automation.documents?.length || 0);
+
+    // ✅ Check if documents exist
+    if (!automation.documents || automation.documents.length === 0) {
+      console.log('❌ No documents found');
       return res.status(400).json({ message: 'No documents to extract data from' });
     }
+
+    // ✅ Populate documents
+    await automation.populate('documents');
 
     // ✅ Simulated AI extraction
     const extractedData = {
@@ -292,7 +301,7 @@ router.post('/:id/extract', [auth, admin], async (req, res) => {
       extractedAt: new Date().toISOString()
     };
 
-    // ✅ Run 10+ validations
+    // ✅ Validation results
     const validationResults = {
       caseNumberFormat: true,
       courtNameVerified: true,
@@ -306,9 +315,8 @@ router.post('/:id/extract', [auth, admin], async (req, res) => {
       failed: 0
     };
 
-    // ✅ Save extracted data and validation results
+    // ✅ Save extracted data
     automation.extractedData = {
-      ...automation.extractedData,
       extractedData: extractedData,
       validationResults: validationResults,
       extractedAt: new Date()
@@ -317,11 +325,7 @@ router.post('/:id/extract', [auth, admin], async (req, res) => {
     automation.status = 'processing';
     await automation.save();
 
-    await Notification.create({
-      type: 'system_alert',
-      message: `📊 Data extraction completed for client`,
-      data: { automationId: automation._id }
-    });
+    console.log('✅ Data extraction saved successfully');
 
     res.json({
       message: 'Data extraction completed',
