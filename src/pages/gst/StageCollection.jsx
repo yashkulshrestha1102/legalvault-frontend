@@ -23,9 +23,12 @@ function GSTCollection() {
   const fetchAutomation = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/api/gst-automation/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await axios.post(`${API_URL}/api/documents/automation-upload`, formData, {
+  headers: {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'multipart/form-data'
+  }
+});
       setAutomation(response.data);
       setDocuments(response.data.documents || []);
     } catch (error) {
