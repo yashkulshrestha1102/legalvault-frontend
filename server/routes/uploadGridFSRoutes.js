@@ -4,7 +4,7 @@ const auth = require('../middleware/auth');
 const upload = require('../middleware/uploadGridFS');
 const { getGridFS } = require('../config/gridfs');
 const PDF = require('../models/PDF');
-const GSTAutomation = require('../models/GSTAutomation'); // ✅ ADDED
+const GSTAutomation = require('../models/GSTAutomation');
 const { ObjectId } = require('mongodb');
 const jwt = require('jsonwebtoken');
 
@@ -135,7 +135,7 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// ✅ Upload for GST Automation
+// ✅ Upload for GST Automation (Complete)
 router.post('/automation-upload', auth, upload.single('document'), async (req, res) => {
   try {
     console.log('🚀 ===== AUTOMATION UPLOAD STARTED =====');
@@ -164,6 +164,7 @@ router.post('/automation-upload', auth, upload.single('document'), async (req, r
     console.log('📎 automationId:', automationId);
 
     // ✅ Upload to GridFS
+    console.log('📤 Starting GridFS upload...');
     const uploadStream = bucket.openUploadStream(req.file.originalname, {
       contentType: req.file.mimetype,
       metadata: {
@@ -174,6 +175,7 @@ router.post('/automation-upload', auth, upload.single('document'), async (req, r
     });
 
     uploadStream.end(req.file.buffer);
+    console.log('✅ Buffer written to stream');
 
     const fileId = await new Promise((resolve, reject) => {
       uploadStream.on('finish', () => {
@@ -188,7 +190,17 @@ router.post('/automation-upload', auth, upload.single('document'), async (req, r
 
     console.log('📝 fileId:', fileId);
 
+    // ✅ Verify file exists in GridFS
+    const files = await bucket.find({ _id: fileId }).toArray();
+    console.log('🔍 GridFS files found:', files.length);
+    if (files.length === 0) {
+      console.error('❌ File not saved in GridFS!');
+      return res.status(500).json({ message: 'File upload failed - not saved in storage' });
+    }
+    console.log('✅ File verified in GridFS:', files[0].filename);
+
     // ✅ Save to DB
+    console.log('💾 Saving to database...');
     const pdfDoc = new PDF({
       filename: req.file.originalname,
       contentType: req.file.mimetype,
@@ -201,7 +213,7 @@ router.post('/automation-upload', auth, upload.single('document'), async (req, r
     await pdfDoc.save();
     console.log('✅ Document saved to DB, _id:', pdfDoc._id);
 
-    // ✅ ✅ ✅ CRITICAL: Link to automation
+    // ✅ Link to automation
     if (automationId) {
       await GSTAutomation.findByIdAndUpdate(automationId, {
         $push: { documents: { fileId: pdfDoc._id, fileName: req.file.originalname, fileType: req.file.mimetype } }
