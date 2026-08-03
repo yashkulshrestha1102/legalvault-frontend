@@ -7,7 +7,6 @@ const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const { sendUserWelcomeEmail } = require('../utils/email');
 const mongoose = require('mongoose');
-const Notification = require('../models/Notification'); // ✅ Import at top
 
 console.log('✅ userRoutes.js loaded - Production Fix');
 
@@ -123,23 +122,7 @@ router.post('/', [auth, admin], validateUser, handleValidation, async (req, res)
       console.error('❌ Failed to send welcome email:', emailError.message);
     }
 
-    // ✅ ✅ ✅ ADD NOTIFICATION (inside try block, after user save)
-    try {
-      await Notification.create({
-        type: 'user_created',
-        message: `🎉 New user created: ${name} (${email})`,
-        data: {
-          userId: user._id,
-          email: email,
-          name: name,
-          role: normalizedRole
-        }
-      });
-      console.log('✅ Notification saved for:', email);
-    } catch (notifError) {
-      console.error('❌ Notification error:', notifError.message);
-      // ✅ User creation continues
-    }
+    
     
     const userResponse = user.toObject();
     delete userResponse.password;
