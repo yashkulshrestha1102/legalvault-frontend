@@ -1,7 +1,7 @@
 const multer = require('multer');
 const path = require('path');
 
-// ✅ Multer storage
+// ✅ Storage
 const storage = multer.memoryStorage();
 
 // ✅ File filter
@@ -10,14 +10,14 @@ const fileFilter = (req, file, cb) => {
   if (allowedTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error('Invalid file type. Only PDF, JPEG, PNG allowed.'), false);
+    cb(new Error('Invalid file type'), false);
   }
 };
 
 // ✅ Upload middleware
 const upload = multer({
   storage: storage,
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
+  limits: { fileSize: 50 * 1024 * 1024 },
   fileFilter: fileFilter
 });
 
