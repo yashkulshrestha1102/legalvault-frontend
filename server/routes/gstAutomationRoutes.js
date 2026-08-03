@@ -8,12 +8,9 @@ const GSTClient = require('../models/GSTClient');
 const Client = require('../models/Client');
 const PDF = require('../models/PDF');
 
-// ============================================
 // ✅ DASHBOARD STATS
-// ============================================
 router.get('/', [auth, admin], async (req, res) => {
   try {
-    console.log('📊 Fetching GST stats...');
     const stageStats = await GSTAutomation.aggregate([
       { $group: { _id: '$stage', count: { $sum: 1 } } }
     ]);
@@ -39,12 +36,9 @@ router.get('/', [auth, admin], async (req, res) => {
   }
 });
 
-// ============================================
 // ✅ START GST AUTOMATION
-// ============================================
 router.post('/start', [auth, admin], async (req, res) => {
   try {
-    console.log('🚀 Start GST automation request:', req.body);
     const { clientId, month } = req.body;
 
     if (!clientId) {
@@ -56,7 +50,6 @@ router.post('/start', [auth, admin], async (req, res) => {
       return res.status(404).json({ message: 'Client not found' });
     }
 
-    // ✅ Check if already running
     const existing = await GSTAutomation.findOne({ 
       clientId, 
       month: month || new Date().toISOString().slice(0, 7),
@@ -66,7 +59,6 @@ router.post('/start', [auth, admin], async (req, res) => {
       return res.status(400).json({ message: 'GST automation already in progress for this month' });
     }
 
-    // ✅ Get or create GST Client
     let gstClient = await GSTClient.findOne({ clientId });
     if (!gstClient) {
       gstClient = new GSTClient({
@@ -77,10 +69,8 @@ router.post('/start', [auth, admin], async (req, res) => {
         filingFrequency: 'monthly'
       });
       await gstClient.save();
-      console.log('✅ GST Client created:', gstClient.gstin);
     }
 
-    // ✅ Create automation
     const automation = new GSTAutomation({
       clientId,
       gstin: gstClient.gstin,
@@ -104,13 +94,9 @@ router.post('/start', [auth, admin], async (req, res) => {
   }
 });
 
-// ============================================
 // ✅ GET SINGLE AUTOMATION
-// ============================================
 router.get('/:id', [auth, admin], async (req, res) => {
   try {
-    console.log('🔍 GET automation:', req.params.id);
-    
     const automation = await GSTAutomation.findById(req.params.id)
       .populate('clientId', 'name email phone')
       .populate('documents.fileId', 'name type size')
@@ -121,7 +107,6 @@ router.get('/:id', [auth, admin], async (req, res) => {
       return res.status(404).json({ message: 'Automation not found' });
     }
 
-    console.log('✅ Automation found, documents:', automation.documents?.length || 0);
     res.json(automation);
   } catch (error) {
     console.error('❌ Get error:', error);
@@ -129,12 +114,38 @@ router.get('/:id', [auth, admin], async (req, res) => {
   }
 });
 
-// ============================================
+// ✅ ✅ ✅ UPDATE STAGE (NEW)
+router.put('/:id/stage', [auth, admin], async (req, res) => {
+  try {
+    console.log('📝 Update stage request for:', req.params.id);
+    const { stage, status, extractedData } = req.body;
+
+    const automation = await GSTAutomation.findById(req.params.id);
+    if (!automation) {
+      return res.status(404).json({ message: 'Automation not found' });
+    }
+
+    if (stage) automation.stage = stage;
+    if (status) automation.status = status;
+    if (extractedData) automation.extractedData = extractedData;
+
+    automation.updatedAt = new Date();
+    await automation.save();
+
+    console.log('✅ Stage updated:', automation.stage);
+    res.json({
+      message: 'Stage updated successfully',
+      automation
+    });
+  } catch (error) {
+    console.error('❌ Update stage error:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // ✅ STAGE 1: ADD DOCUMENTS
-// ============================================
 router.post('/:id/documents', [auth, admin], async (req, res) => {
   try {
-    console.log('📎 Add document request:', req.body);
     const { fileId, fileName, fileType } = req.body;
 
     if (!fileId) {
@@ -154,7 +165,6 @@ router.post('/:id/documents', [auth, admin], async (req, res) => {
     automation.updatedAt = new Date();
     await automation.save();
 
-    console.log('✅ Document added, total:', automation.documents.length);
     res.json({
       message: 'Document added successfully',
       documentCount: automation.documents.length
@@ -165,13 +175,9 @@ router.post('/:id/documents', [auth, admin], async (req, res) => {
   }
 });
 
-// ============================================
 // ✅ STAGE 2: AUTO-SORT DOCUMENTS
-// ============================================
 router.post('/:id/sort', [auth, admin], async (req, res) => {
   try {
-    console.log('📂 Sort request for:', req.params.id);
-    
     const automation = await GSTAutomation.findById(req.params.id)
       .populate('documents.fileId');
 
@@ -183,14 +189,12 @@ router.post('/:id/sort', [auth, admin], async (req, res) => {
       return res.status(400).json({ message: 'No documents to sort' });
     }
 
-    console.log('📄 Documents to sort:', automation.documents.length);
-
-    // ✅ Sort logic
     const sorted = {
       saleInvoices: [],
       purchaseInvoices: [],
       bankStatements: [],
-      ledgers: []
+      ledgers: [],
+      others: [] // ✅ Added Others category
     };
 
     for (const doc of automation.documents) {
@@ -202,8 +206,10 @@ router.post('/:id/sort', [auth, admin], async (req, res) => {
         sorted.purchaseInvoices.push(doc.fileId._id);
       } else if (fileName.includes('bank') || fileName.includes('statement')) {
         sorted.bankStatements.push(doc.fileId._id);
-      } else {
+      } else if (fileName.includes('ledger') || fileName.includes('book')) {
         sorted.ledgers.push(doc.fileId._id);
+      } else {
+        sorted.others.push(doc.fileId._id);
       }
     }
 
@@ -213,7 +219,6 @@ router.post('/:id/sort', [auth, admin], async (req, res) => {
     automation.updatedAt = new Date();
     await automation.save();
 
-    console.log('✅ Sort complete:', sorted);
     res.json({
       message: 'Documents sorted successfully',
       sorted,
@@ -225,13 +230,9 @@ router.post('/:id/sort', [auth, admin], async (req, res) => {
   }
 });
 
-// ============================================
 // ✅ STAGE 3: EXTRACT DATA
-// ============================================
 router.post('/:id/extract', [auth, admin], async (req, res) => {
   try {
-    console.log('🤖 Extract data request for:', req.params.id);
-    
     const automation = await GSTAutomation.findById(req.params.id)
       .populate('documents.fileId');
 
@@ -243,9 +244,6 @@ router.post('/:id/extract', [auth, admin], async (req, res) => {
       return res.status(400).json({ message: 'No documents to extract data from' });
     }
 
-    console.log('📄 Documents for extraction:', automation.documents.length);
-
-    // ✅ Simulate AI extraction
     const totalSales = Math.floor(Math.random() * 500000) + 10000;
     const totalPurchases = Math.floor(Math.random() * 300000) + 5000;
     const totalGstCollected = Math.floor(totalSales * 0.18);
@@ -276,7 +274,6 @@ router.post('/:id/extract', [auth, admin], async (req, res) => {
     automation.updatedAt = new Date();
     await automation.save();
 
-    console.log('✅ Extraction complete:', extractedData);
     res.json({
       message: 'Data extraction completed',
       extractedData
@@ -287,13 +284,9 @@ router.post('/:id/extract', [auth, admin], async (req, res) => {
   }
 });
 
-// ============================================
-// ✅ STAGE 4: GST FILING (30+ Validations)
-// ============================================
+// ✅ STAGE 4: GST FILING
 router.post('/:id/file', [auth, admin], async (req, res) => {
   try {
-    console.log('⚖️ Filing request for:', req.params.id);
-    
     const automation = await GSTAutomation.findById(req.params.id);
 
     if (!automation) {
@@ -304,9 +297,6 @@ router.post('/:id/file', [auth, admin], async (req, res) => {
       return res.status(400).json({ message: 'Data extraction not completed yet' });
     }
 
-    console.log('📊 Extracted data found, filing...');
-
-    // ✅ 30+ Validations
     const checks = [
       { name: 'gstin_valid', passed: true },
       { name: 'invoice_count_valid', passed: automation.documents.length > 0 },
@@ -357,7 +347,6 @@ router.post('/:id/file', [auth, admin], async (req, res) => {
       results
     };
 
-    // ✅ Filing decision
     const canFile = failed === 0;
     const filingStatus = canFile ? 'filed' : 'failed';
 
@@ -379,7 +368,6 @@ router.post('/:id/file', [auth, admin], async (req, res) => {
       }
     };
 
-    // ✅ Save everything
     automation.gstFiling = filingResult;
     automation.validations = validationResults;
     automation.stage = 'filing';
@@ -387,8 +375,6 @@ router.post('/:id/file', [auth, admin], async (req, res) => {
     automation.updatedAt = new Date();
     await automation.save();
 
-    console.log('✅ Filing complete:', canFile ? 'Success' : 'Failed');
-    
     res.json({
       message: canFile ? '✅ GST filed successfully' : '❌ Filing failed',
       filingStatus,
@@ -401,13 +387,9 @@ router.post('/:id/file', [auth, admin], async (req, res) => {
   }
 });
 
-// ============================================
 // ✅ GET FILING STATUS
-// ============================================
 router.get('/:id/filing', [auth, admin], async (req, res) => {
   try {
-    console.log('📋 Get filing status:', req.params.id);
-    
     const automation = await GSTAutomation.findById(req.params.id);
 
     if (!automation) {
