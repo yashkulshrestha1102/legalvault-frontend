@@ -4,7 +4,6 @@ const auth = require('../middleware/auth');
 const upload = require('../middleware/uploadGridFS');
 const { getGridFS } = require('../config/gridfs');
 const PDF = require('../models/PDF');
-// const Automation = require('../models/Automation'); // ✅ REMOVED - Automation model deleted
 const { ObjectId } = require('mongodb');
 const jwt = require('jsonwebtoken');
 
@@ -48,13 +47,6 @@ router.post('/pdf', auth, upload.array('pdf', 10), async (req, res) => {
             fileId: uploadStream.id
           });
           await pdfDoc.save();
-
-          // ✅ Automation linking disabled - model removed
-          // if (automationId) {
-          //   await Automation.findByIdAndUpdate(automationId, {
-          //     $push: { documents: pdfDoc._id }
-          //   });
-          // }
 
           const host = req.get('host');
           const protocol = 'https';
@@ -136,24 +128,38 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// ✅ Upload for Automation (single file) - Automation linking disabled
+// ✅ Upload for Automation (single file) - WITH FULL DEBUG
 router.post('/upload', auth, upload.single('document'), async (req, res) => {
   try {
-    console.log('📤 Upload request received - File:', req.file?.originalname);
+    console.log('🚀 ===== UPLOAD STARTED =====');
+    console.log('📤 req.file:', req.file);
     console.log('📦 req.body:', req.body);
+    console.log('👤 req.user:', req.user?.id);
 
+    // ✅ Check 1: File exists
     if (!req.file) {
+      console.log('❌ No file in request');
       return res.status(400).json({ message: 'No file uploaded' });
     }
 
-    const bucket = getGridFS();
-    if (!bucket) {
-      return res.status(500).json({ message: 'GridFS not initialized' });
+    // ✅ Check 2: GridFS initialized
+    let bucket;
+    try {
+      bucket = getGridFS();
+      console.log('✅ GridFS bucket obtained');
+    } catch (gridFSError) {
+      console.error('❌ GridFS error:', gridFSError);
+      return res.status(500).json({ 
+        message: 'GridFS not initialized', 
+        error: gridFSError.message 
+      });
     }
 
     const { automationId } = req.body;
+    console.log('📎 automationId:', automationId);
 
-    // ✅ Upload to GridFS
+    // ✅ Check 3: Upload to GridFS
+    console.log('📤 Starting GridFS upload...');
     const uploadStream = bucket.openUploadStream(req.file.originalname, {
       contentType: req.file.mimetype,
       metadata: {
@@ -164,19 +170,24 @@ router.post('/upload', auth, upload.single('document'), async (req, res) => {
     });
 
     uploadStream.end(req.file.buffer);
+    console.log('✅ Buffer written to stream');
 
+    // ✅ Check 4: Wait for completion
     const fileId = await new Promise((resolve, reject) => {
       uploadStream.on('finish', () => {
         console.log('✅ GridFS upload complete, ID:', uploadStream.id);
         resolve(uploadStream.id);
       });
       uploadStream.on('error', (error) => {
-        console.error('❌ GridFS upload error:', error);
+        console.error('❌ GridFS stream error:', error);
         reject(error);
       });
     });
 
-    // ✅ Save PDF document
+    console.log('📝 fileId:', fileId);
+
+    // ✅ Check 5: Save to DB
+    console.log('💾 Saving to database...');
     const pdfDoc = new PDF({
       filename: req.file.originalname,
       contentType: req.file.mimetype,
@@ -187,16 +198,9 @@ router.post('/upload', auth, upload.single('document'), async (req, res) => {
     });
 
     await pdfDoc.save();
-    console.log('✅ Document saved to DB:', pdfDoc._id);
+    console.log('✅ Document saved to DB, _id:', pdfDoc._id);
 
-    // ✅ Automation linking disabled - model removed
-    // if (automationId) {
-    //   await Automation.findByIdAndUpdate(automationId, {
-    //     $push: { documents: pdfDoc._id }
-    //   });
-    //   console.log('✅ Document linked to automation:', automationId);
-    // }
-
+    // ✅ Success response
     res.status(201).json({
       message: 'Document uploaded successfully',
       _id: pdfDoc._id,
@@ -208,16 +212,21 @@ router.post('/upload', auth, upload.single('document'), async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Upload error:', error);
+    console.error('❌ ===== UPLOAD FAILED =====');
+    console.error('❌ Error name:', error.name);
+    console.error('❌ Error message:', error.message);
+    console.error('❌ Error stack:', error.stack);
+    
     res.status(500).json({ 
       message: 'Upload failed', 
       error: error.message,
+      name: error.name,
       stack: error.stack
     });
   }
 });
 
-// ✅ Delete document - Automation linking disabled
+// ✅ Delete document
 router.delete('/:id', auth, async (req, res) => {
   try {
     const fileId = new ObjectId(req.params.id);
@@ -229,13 +238,6 @@ router.delete('/:id', auth, async (req, res) => {
     const bucket = getGridFS();
     await bucket.delete(fileId);
     await pdfDoc.deleteOne();
-
-    // ✅ Automation removal disabled - model removed
-    // if (pdfDoc.automationId) {
-    //   await Automation.findByIdAndUpdate(pdfDoc.automationId, {
-    //     $pull: { documents: pdfDoc._id }
-    //   });
-    // }
 
     res.json({ message: 'Document deleted successfully' });
   } catch (error) {
