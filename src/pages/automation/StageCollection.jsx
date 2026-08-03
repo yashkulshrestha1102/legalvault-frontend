@@ -56,19 +56,13 @@ function StageCollection() {
     try {
       const token = localStorage.getItem('token');
       const formData = new FormData();
-      
-      // ✅ CRITICAL: Field name MUST be 'document'
       formData.append('document', selectedFile);
       formData.append('automationId', automationId);
 
-      // ✅ DEBUG: Log FormData
       console.log('📤 Uploading file:', selectedFile.name);
-      console.log('📦 FormData entries:');
-      for (let pair of formData.entries()) {
-        console.log(pair[0], pair[1]);
-      }
+      console.log('📦 automationId:', automationId);
       
-const response = await axios.post(`${API_URL}/api/documents/automation/upload`, formData, {
+      const response = await axios.post(`${API_URL}/api/documents/upload`, formData, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'multipart/form-data'
@@ -78,14 +72,15 @@ const response = await axios.post(`${API_URL}/api/documents/automation/upload`, 
 
       console.log('✅ Upload response:', response.data);
 
-      // ✅ Add document to automation
-      await axios.post(`${API_URL}/api/automation/${automationId}/documents`, {
-        documentIds: [response.data._id]
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      setDocuments([...documents, response.data]);
+      // ✅ Update local state
+      const newDoc = {
+        _id: response.data._id,
+        name: response.data.name,
+        size: response.data.size,
+        type: response.data.type,
+        createdAt: response.data.createdAt
+      };
+      setDocuments([...documents, newDoc]);
       setSelectedFile(null);
       
       const fileInput = document.getElementById('fileInput');
@@ -166,6 +161,9 @@ const response = await axios.post(`${API_URL}/api/documents/automation/upload`, 
         <p className="text-white/40 text-sm">
           Status: <span className="capitalize">{automation?.status || 'pending'}</span>
         </p>
+        <p className="text-white/40 text-sm">
+          Documents: <span className="text-white">{documents.length}</span>
+        </p>
       </div>
 
       {error && (
@@ -227,7 +225,7 @@ const response = await axios.post(`${API_URL}/api/documents/automation/upload`, 
                       {doc.name}
                     </p>
                     <p className="text-xs text-white/40">
-                      {(doc.size / 1024).toFixed(1)} KB • {new Date(doc.createdAt).toLocaleDateString()}
+                      {(doc.size / 1024).toFixed(1)} KB
                     </p>
                   </div>
                 </div>

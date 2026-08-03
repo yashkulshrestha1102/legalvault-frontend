@@ -4,6 +4,7 @@ const auth = require('../middleware/auth');
 const upload = require('../middleware/uploadGridFS');
 const { getGridFS } = require('../config/gridfs');
 const PDF = require('../models/PDF');
+const Automation = require('../models/Automation');
 const { ObjectId } = require('mongodb');
 const jwt = require('jsonwebtoken');
 
@@ -47,6 +48,12 @@ router.post('/pdf', auth, upload.array('pdf', 10), async (req, res) => {
             fileId: uploadStream.id
           });
           await pdfDoc.save();
+
+          if (automationId) {
+            await Automation.findByIdAndUpdate(automationId, {
+              $push: { documents: pdfDoc._id }
+            });
+          }
 
           const host = req.get('host');
           const protocol = 'https';
@@ -128,27 +135,22 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// ✅ ✅ ✅ UPLOAD FOR AUTOMATION — FIXED VERSION
-router.post('/automation/upload', auth, upload.single('document'), async (req, res) => {
+// ✅ Upload for Automation (single file)
+router.post('/upload', auth, upload.single('document'), async (req, res) => {
   try {
-    console.log('🚀 ===== UPLOAD STARTED =====');
-    console.log('📤 req.file:', req.file);
+    console.log('📤 Upload request received - File:', req.file?.originalname);
     console.log('📦 req.body:', req.body);
-    console.log('👤 req.user:', req.user?.id);
 
     if (!req.file) {
-      console.log('❌ No file in request');
       return res.status(400).json({ message: 'No file uploaded' });
     }
 
     const bucket = getGridFS();
     if (!bucket) {
-      console.log('❌ GridFS not initialized');
       return res.status(500).json({ message: 'GridFS not initialized' });
     }
 
     const { automationId } = req.body;
-    console.log('📎 automationId:', automationId);
 
     // ✅ Upload to GridFS
     const uploadStream = bucket.openUploadStream(req.file.originalname, {
@@ -173,7 +175,7 @@ router.post('/automation/upload', auth, upload.single('document'), async (req, r
       });
     });
 
-    // ✅ Save to DB
+    // ✅ Save PDF document
     const pdfDoc = new PDF({
       filename: req.file.originalname,
       contentType: req.file.mimetype,
@@ -186,6 +188,14 @@ router.post('/automation/upload', auth, upload.single('document'), async (req, r
     await pdfDoc.save();
     console.log('✅ Document saved to DB:', pdfDoc._id);
 
+    // ✅ Link to automation
+    if (automationId) {
+      await Automation.findByIdAndUpdate(automationId, {
+        $push: { documents: pdfDoc._id }
+      });
+      console.log('✅ Document linked to automation:', automationId);
+    }
+
     res.status(201).json({
       message: 'Document uploaded successfully',
       _id: pdfDoc._id,
@@ -197,15 +207,10 @@ router.post('/automation/upload', auth, upload.single('document'), async (req, r
     });
 
   } catch (error) {
-    console.error('❌ ===== UPLOAD FAILED =====');
-    console.error('❌ Error name:', error.name);
-    console.error('❌ Error message:', error.message);
-    console.error('❌ Error stack:', error.stack);
-    
+    console.error('❌ Upload error:', error);
     res.status(500).json({ 
       message: 'Upload failed', 
       error: error.message,
-      name: error.name,
       stack: error.stack
     });
   }
@@ -214,9 +219,7 @@ router.post('/automation/upload', auth, upload.single('document'), async (req, r
 // ✅ Delete document
 router.delete('/:id', auth, async (req, res) => {
   try {
-    console.log('🗑️ Delete request for:', req.params.id);
     const fileId = new ObjectId(req.params.id);
-    
     const pdfDoc = await PDF.findOne({ fileId });
     if (!pdfDoc) {
       return res.status(404).json({ message: 'Document not found' });
@@ -226,7 +229,13 @@ router.delete('/:id', auth, async (req, res) => {
     await bucket.delete(fileId);
     await pdfDoc.deleteOne();
 
-    console.log('✅ Document deleted:', fileId);
+    // Remove from automation
+    if (pdfDoc.automationId) {
+      await Automation.findByIdAndUpdate(pdfDoc.automationId, {
+        $pull: { documents: pdfDoc._id }
+      });
+    }
+
     res.json({ message: 'Document deleted successfully' });
   } catch (error) {
     console.error('❌ Delete error:', error);
