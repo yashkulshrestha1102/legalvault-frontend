@@ -7,7 +7,7 @@ const PDF = require('../models/PDF');
 const { ObjectId } = require('mongodb');
 const jwt = require('jsonwebtoken');
 
-// ✅ Upload Multiple PDFs
+// ✅ Upload Multiple PDFs (Existing)
 router.post('/pdf', auth, upload.array('pdf', 10), async (req, res) => {
   try {
     console.log('📥 Upload request received - Files:', req.files?.length || 0);
@@ -128,10 +128,10 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// ✅ Upload for Automation (single file) - WITH FULL DEBUG
-router.post('/upload', auth, upload.single('document'), async (req, res) => {
+// ✅ ✅ ✅ NEW: Upload for GST Automation (RENAMED to avoid conflict)
+router.post('/automation-upload', auth, upload.single('document'), async (req, res) => {
   try {
-    console.log('🚀 ===== UPLOAD STARTED =====');
+    console.log('🚀 ===== AUTOMATION UPLOAD STARTED =====');
     console.log('📤 req.file:', req.file);
     console.log('📦 req.body:', req.body);
     console.log('👤 req.user:', req.user?.id);
