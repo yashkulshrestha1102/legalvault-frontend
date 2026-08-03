@@ -11,6 +11,7 @@ const Notification = require('../models/Notification');
 // ✅ GET - Automation Dashboard Stats
 router.get('/', [auth, admin], async (req, res) => {
   try {
+    console.log('📊 Fetching automation stats...');
     const stageStats = await Automation.aggregate([
       { $group: { _id: '$stage', count: { $sum: 1 } } }
     ]);
@@ -89,9 +90,12 @@ router.post('/start', [auth, admin], async (req, res) => {
   }
 });
 
-// ✅ GET - Single Automation Status (WITH POPULATED DOCUMENTS)
+// ✅ GET - Single Automation Status (DEBUG VERSION)
 router.get('/:id', [auth, admin], async (req, res) => {
   try {
+    console.log('🔍 ===== GET AUTOMATION DEBUG =====');
+    console.log('🔍 automationId:', req.params.id);
+
     const automation = await Automation.findById(req.params.id)
       .populate('clientId', 'name email phone')
       .populate('documents', 'name type size uploadedAt')
@@ -99,8 +103,17 @@ router.get('/:id', [auth, admin], async (req, res) => {
       .populate('assignedTo', 'name');
 
     if (!automation) {
+      console.log('❌ Automation not found');
       return res.status(404).json({ message: 'Automation not found' });
     }
+
+    console.log('✅ Automation found:', automation._id);
+    console.log('🔍 Client:', automation.clientId?.name || 'N/A');
+    console.log('🔍 Stage:', automation.stage);
+    console.log('🔍 Status:', automation.status);
+    console.log('🔍 Documents count:', automation.documents?.length || 0);
+    console.log('🔍 Documents:', JSON.stringify(automation.documents, null, 2));
+    console.log('🔍 ===== END DEBUG =====');
 
     res.json(automation);
   } catch (error) {
@@ -186,6 +199,7 @@ router.post('/:id/documents', [auth, admin], async (req, res) => {
 // ✅ POST - Auto-Sort Documents
 router.post('/:id/sort', [auth, admin], async (req, res) => {
   try {
+    console.log('📂 Sort request for:', req.params.id);
     const automation = await Automation.findById(req.params.id)
       .populate('documents');
     

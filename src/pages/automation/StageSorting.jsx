@@ -26,18 +26,23 @@ function StageSorting() {
   // ✅ Fetch automation details
   const fetchAutomationDetails = async () => {
     try {
+      console.log('🔍 ===== FETCHING AUTOMATION =====');
+      console.log('🔍 automationId:', automationId);
+      
       const token = localStorage.getItem('token');
       const response = await axios.get(`${API_URL}/api/automation/${automationId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      console.log('✅ Automation data:', response.data);
-      console.log('✅ Documents:', response.data.documents);
+      console.log('✅ Automation data received');
+      console.log('🔍 Documents array:', response.data.documents);
+      console.log('🔍 Documents count:', response.data.documents?.length || 0);
       
       setAutomation(response.data);
 
       // ✅ Check if already sorted
       if (response.data.extractedData?.sortedDocuments) {
+        console.log('✅ Sorted data found in extractedData');
         setSortedDocs(response.data.extractedData.sortedDocuments);
       }
     } catch (error) {
@@ -56,6 +61,7 @@ function StageSorting() {
   // ✅ Auto-refresh every 5 seconds
   useEffect(() => {
     const interval = setInterval(() => {
+      console.log('🔄 Auto-refresh...');
       fetchAutomationDetails();
     }, 5000);
     
@@ -75,6 +81,7 @@ function StageSorting() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
+      console.log('✅ Sort response:', response.data);
       setSortedDocs(response.data.sorted);
       alert('✅ Documents sorted successfully!');
       fetchAutomationDetails();
@@ -105,6 +112,7 @@ function StageSorting() {
 
   // ✅ Calculate total documents
   const totalDocs = automation?.documents?.length || 0;
+  console.log('📊 Total documents:', totalDocs);
 
   // ✅ Categories configuration
   const categories = [
