@@ -4,10 +4,11 @@ const auth = require('../middleware/auth');
 const upload = require('../middleware/uploadGridFS');
 const { getGridFS } = require('../config/gridfs');
 const PDF = require('../models/PDF');
+const GSTAutomation = require('../models/GSTAutomation'); // ✅ ADDED
 const { ObjectId } = require('mongodb');
 const jwt = require('jsonwebtoken');
 
-// ✅ Upload Multiple PDFs (Existing)
+// ✅ Upload Multiple PDFs
 router.post('/pdf', auth, upload.array('pdf', 10), async (req, res) => {
   try {
     console.log('📥 Upload request received - Files:', req.files?.length || 0);
@@ -47,6 +48,12 @@ router.post('/pdf', auth, upload.array('pdf', 10), async (req, res) => {
             fileId: uploadStream.id
           });
           await pdfDoc.save();
+
+          if (automationId) {
+            await GSTAutomation.findByIdAndUpdate(automationId, {
+              $push: { documents: { fileId: pdfDoc._id, fileName: file.originalname, fileType: file.mimetype } }
+            });
+          }
 
           const host = req.get('host');
           const protocol = 'https';
@@ -128,7 +135,7 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// ✅ ✅ ✅ NEW: Upload for GST Automation (RENAMED to avoid conflict)
+// ✅ Upload for GST Automation
 router.post('/automation-upload', auth, upload.single('document'), async (req, res) => {
   try {
     console.log('🚀 ===== AUTOMATION UPLOAD STARTED =====');
@@ -136,13 +143,11 @@ router.post('/automation-upload', auth, upload.single('document'), async (req, r
     console.log('📦 req.body:', req.body);
     console.log('👤 req.user:', req.user?.id);
 
-    // ✅ Check 1: File exists
     if (!req.file) {
       console.log('❌ No file in request');
       return res.status(400).json({ message: 'No file uploaded' });
     }
 
-    // ✅ Check 2: GridFS initialized
     let bucket;
     try {
       bucket = getGridFS();
@@ -158,8 +163,7 @@ router.post('/automation-upload', auth, upload.single('document'), async (req, r
     const { automationId } = req.body;
     console.log('📎 automationId:', automationId);
 
-    // ✅ Check 3: Upload to GridFS
-    console.log('📤 Starting GridFS upload...');
+    // ✅ Upload to GridFS
     const uploadStream = bucket.openUploadStream(req.file.originalname, {
       contentType: req.file.mimetype,
       metadata: {
@@ -170,9 +174,7 @@ router.post('/automation-upload', auth, upload.single('document'), async (req, r
     });
 
     uploadStream.end(req.file.buffer);
-    console.log('✅ Buffer written to stream');
 
-    // ✅ Check 4: Wait for completion
     const fileId = await new Promise((resolve, reject) => {
       uploadStream.on('finish', () => {
         console.log('✅ GridFS upload complete, ID:', uploadStream.id);
@@ -186,8 +188,7 @@ router.post('/automation-upload', auth, upload.single('document'), async (req, r
 
     console.log('📝 fileId:', fileId);
 
-    // ✅ Check 5: Save to DB
-    console.log('💾 Saving to database...');
+    // ✅ Save to DB
     const pdfDoc = new PDF({
       filename: req.file.originalname,
       contentType: req.file.mimetype,
@@ -200,7 +201,14 @@ router.post('/automation-upload', auth, upload.single('document'), async (req, r
     await pdfDoc.save();
     console.log('✅ Document saved to DB, _id:', pdfDoc._id);
 
-    // ✅ Success response
+    // ✅ ✅ ✅ CRITICAL: Link to automation
+    if (automationId) {
+      await GSTAutomation.findByIdAndUpdate(automationId, {
+        $push: { documents: { fileId: pdfDoc._id, fileName: req.file.originalname, fileType: req.file.mimetype } }
+      });
+      console.log('✅ Document linked to automation:', automationId);
+    }
+
     res.status(201).json({
       message: 'Document uploaded successfully',
       _id: pdfDoc._id,

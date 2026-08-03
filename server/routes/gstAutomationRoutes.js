@@ -10,9 +10,7 @@ const PDF = require('../models/PDF');
 const { getGridFS } = require('../config/gridfs');
 const axios = require('axios');
 
-// ============================================
 // ✅ DASHBOARD STATS
-// ============================================
 router.get('/', [auth, admin], async (req, res) => {
   try {
     console.log('📊 Fetching GST stats...');
@@ -41,9 +39,7 @@ router.get('/', [auth, admin], async (req, res) => {
   }
 });
 
-// ============================================
 // ✅ START GST AUTOMATION
-// ============================================
 router.post('/start', [auth, admin], async (req, res) => {
   try {
     console.log('🚀 Start GST automation request:', req.body);
@@ -103,16 +99,18 @@ router.post('/start', [auth, admin], async (req, res) => {
   }
 });
 
-// ============================================
 // ✅ GET SINGLE AUTOMATION
-// ============================================
 router.get('/:id', [auth, admin], async (req, res) => {
   try {
     console.log('🔍 GET automation:', req.params.id);
     
     const automation = await GSTAutomation.findById(req.params.id)
       .populate('clientId', 'name email phone')
-      .populate('documents.fileId', 'name type size')
+      .populate({
+        path: 'documents.fileId',
+        model: 'PDF',
+        select: 'filename contentType size fileId'
+      })
       .populate('createdBy', 'name')
       .populate('assignedTo', 'name');
 
@@ -128,9 +126,7 @@ router.get('/:id', [auth, admin], async (req, res) => {
   }
 });
 
-// ============================================
 // ✅ UPDATE STAGE
-// ============================================
 router.put('/:id/stage', [auth, admin], async (req, res) => {
   try {
     console.log('📝 Update stage request for:', req.params.id);
@@ -161,9 +157,7 @@ router.put('/:id/stage', [auth, admin], async (req, res) => {
   }
 });
 
-// ============================================
 // ✅ STAGE 1: ADD DOCUMENTS
-// ============================================
 router.post('/:id/documents', [auth, admin], async (req, res) => {
   try {
     console.log('📎 Add document request:', req.body);
@@ -197,9 +191,7 @@ router.post('/:id/documents', [auth, admin], async (req, res) => {
   }
 });
 
-// ============================================
 // ✅ STAGE 2: AUTO-SORT DOCUMENTS
-// ============================================
 router.post('/:id/sort', [auth, admin], async (req, res) => {
   try {
     console.log('📂 Sort request for:', req.params.id);
@@ -259,15 +251,16 @@ router.post('/:id/sort', [auth, admin], async (req, res) => {
   }
 });
 
-// ============================================
 // ✅ STAGE 3: EXTRACT DATA — Gemini AI Integration
-// ============================================
 router.post('/:id/extract', [auth, admin], async (req, res) => {
   try {
     console.log('🤖 Extract data request for:', req.params.id);
     
     const automation = await GSTAutomation.findById(req.params.id)
-      .populate('documents.fileId');
+      .populate({
+        path: 'documents.fileId',
+        model: 'PDF'
+      });
 
     if (!automation) {
       return res.status(404).json({ message: 'Automation not found' });
@@ -279,23 +272,34 @@ router.post('/:id/extract', [auth, admin], async (req, res) => {
 
     console.log('📄 Documents for extraction:', automation.documents.length);
 
-    // ✅ Get first document from GridFS
-    const firstDoc = automation.documents[0];
-    if (!firstDoc || !firstDoc.fileId) {
+    // ✅ Get first document
+    const doc = automation.documents[0];
+    if (!doc || !doc.fileId) {
       return res.status(400).json({ message: 'No valid document found' });
     }
 
+    console.log('📄 Document fileId:', doc.fileId._id);
+    console.log('📄 Document filename:', doc.fileId.filename);
+
+    // ✅ Check if file exists in GridFS
     const bucket = getGridFS();
-    const downloadStream = bucket.openDownloadStream(firstDoc.fileId._id);
+    const files = await bucket.find({ _id: doc.fileId._id }).toArray();
+    if (files.length === 0) {
+      console.error('❌ File not found in GridFS');
+      return res.status(404).json({ message: 'File not found in storage' });
+    }
+    console.log('✅ File found in GridFS:', files[0].filename);
+
+    // ✅ Download file from GridFS
+    const downloadStream = bucket.openDownloadStream(doc.fileId._id);
     
-    // ✅ Convert to base64
     const chunks = [];
     for await (const chunk of downloadStream) {
       chunks.push(chunk);
     }
     const imageBuffer = Buffer.concat(chunks);
     const imageData = imageBuffer.toString('base64');
-    const mimeType = firstDoc.fileId.type || 'image/png';
+    const mimeType = doc.fileId.contentType || 'image/png';
 
     console.log('📤 Sending to Gemini AI...');
 
@@ -313,11 +317,10 @@ router.post('/:id/extract', [auth, admin], async (req, res) => {
         }
       );
       geminiData = geminiResponse.data.data;
-      console.log('✅ Gemini extraction successful:', geminiData);
+      console.log('✅ Gemini extraction successful');
     } catch (geminiError) {
       console.error('❌ Gemini API error:', geminiError.message);
-      // ✅ Fallback to static data if Gemini fails
-      console.log('⚠️ Using fallback static data');
+      // Fallback
       geminiData = {
         totalAmount: 106004,
         totalGst: 5047,
@@ -326,7 +329,7 @@ router.post('/:id/extract', [auth, admin], async (req, res) => {
       };
     }
 
-    // ✅ Map Gemini data to GST format
+    // ✅ Map to GST format
     const extractedData = {
       totalSales: geminiData.totalAmount || 0,
       totalGstCollected: geminiData.totalGst || 0,
@@ -356,7 +359,7 @@ router.post('/:id/extract', [auth, admin], async (req, res) => {
     automation.updatedAt = new Date();
     await automation.save();
 
-    console.log('✅ Extraction complete:', extractedData);
+    console.log('✅ Extraction complete');
     res.json({
       message: 'Data extraction completed',
       extractedData
@@ -367,9 +370,7 @@ router.post('/:id/extract', [auth, admin], async (req, res) => {
   }
 });
 
-// ============================================
-// ✅ STAGE 4: GST FILING (30+ Validations)
-// ============================================
+// ✅ STAGE 4: GST FILING
 router.post('/:id/file', [auth, admin], async (req, res) => {
   try {
     console.log('⚖️ Filing request for:', req.params.id);
@@ -479,9 +480,7 @@ router.post('/:id/file', [auth, admin], async (req, res) => {
   }
 });
 
-// ============================================
 // ✅ GET FILING STATUS
-// ============================================
 router.get('/:id/filing', [auth, admin], async (req, res) => {
   try {
     console.log('📋 Get filing status:', req.params.id);
