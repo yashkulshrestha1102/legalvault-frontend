@@ -8,8 +8,6 @@ import GSTSorting from "../pages/gst/StageSorting";
 import GSTDataEntry from "../pages/gst/StageDataEntry";
 import GSTFiling from "../pages/gst/StageFiling";
 
-
-
 // ✅ Lazy load pages
 const Dashboard = lazy(() => import("../pages/Dashboard"));
 const Clients = lazy(() => import("../pages/Clients"));
@@ -106,7 +104,7 @@ const AppRoutes = () => {
           <ProtectedRoute><ProtectedFolder folderId="hr"><HRPage /></ProtectedFolder></ProtectedRoute>
         } />
 
-        <Route path="/gst" element={
+        <Route path="/gst-folder" element={
           <ProtectedRoute><ProtectedFolder folderId="gst"><GSTPage /></ProtectedFolder></ProtectedRoute>
         } />
 
@@ -122,11 +120,22 @@ const AppRoutes = () => {
           <ProtectedRoute><Settings /></ProtectedRoute>
         } />
 
-        <Route path="/gst" element={<GSTDashboard />} />
-<Route path="/gst/collection/:id" element={<GSTCollection />} />
-<Route path="/gst/sorting/:id" element={<GSTSorting />} />
-<Route path="/gst/dataentry/:id" element={<GSTDataEntry />} />
-<Route path="/gst/filing/:id" element={<GSTFiling />} />
+        {/* ✅ GST Automation Routes — ProtectedRoute ke saath */}
+        <Route path="/gst" element={
+          <ProtectedRoute><GSTDashboard /></ProtectedRoute>
+        } />
+        <Route path="/gst/collection/:id" element={
+          <ProtectedRoute><GSTCollection /></ProtectedRoute>
+        } />
+        <Route path="/gst/sorting/:id" element={
+          <ProtectedRoute><GSTSorting /></ProtectedRoute>
+        } />
+        <Route path="/gst/dataentry/:id" element={
+          <ProtectedRoute><GSTDataEntry /></ProtectedRoute>
+        } />
+        <Route path="/gst/filing/:id" element={
+          <ProtectedRoute><GSTFiling /></ProtectedRoute>
+        } />
 
       </Routes>
     </Suspense>
