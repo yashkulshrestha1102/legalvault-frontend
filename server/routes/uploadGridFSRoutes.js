@@ -190,7 +190,7 @@ router.post('/automation-upload', auth, upload.single('document'), async (req, r
 
     console.log('📝 fileId:', fileId);
 
-    // ✅ Verify file exists in GridFS
+    // ✅ ✅ ✅ CRITICAL: Verify file exists in GridFS
     const files = await bucket.find({ _id: fileId }).toArray();
     console.log('🔍 GridFS files found:', files.length);
     if (files.length === 0) {
