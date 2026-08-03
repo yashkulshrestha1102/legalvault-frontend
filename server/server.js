@@ -11,6 +11,8 @@ const connectDB = require('./config/db');
 const { initGridFS } = require('./config/gridfs');
 const auditLog = require('./middleware/audit');
 const gstAutomationRoutes = require('./routes/gstAutomationRoutes');
+const invoiceExtractRoutes = require('./routes/invoiceExtract');
+
 
 
 
@@ -137,6 +139,8 @@ app.use('/api/audit', require('./routes/auditRoutes'));
 app.use('/api/documents', require('./routes/documentRoutes'));
 app.use('/api/documents', require('./routes/uploadGridFSRoutes'));
 app.use('/api/gst-automation', gstAutomationRoutes);
+app.use('/api/extract', invoiceExtractRoutes);
+
 
 
 
