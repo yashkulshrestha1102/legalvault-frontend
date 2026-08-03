@@ -66,7 +66,9 @@ router.post('/start', [auth, admin], async (req, res) => {
     const automation = new Automation({
       clientId,
       createdBy: req.user.id,
-      assignedTo: req.user.id
+      assignedTo: req.user.id,
+      stage: 'collection',
+      status: 'pending'
     });
 
     await automation.save();
@@ -181,6 +183,99 @@ router.post('/:id/documents', [auth, admin], async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Add documents error:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ✅ ✅ ✅ STAGE 2: AUTO-SORT DOCUMENTS
+router.post('/:id/sort', [auth, admin], async (req, res) => {
+  try {
+    const automation = await Automation.findById(req.params.id)
+      .populate('documents');
+    
+    if (!automation) {
+      return res.status(404).json({ message: 'Automation not found' });
+    }
+
+    if (automation.documents.length === 0) {
+      return res.status(400).json({ message: 'No documents to sort' });
+    }
+
+    // ✅ Auto-sort logic
+    const sorted = {
+      contracts: [],
+      petitions: [],
+      affidavits: [],
+      others: []
+    };
+
+    for (const doc of automation.documents) {
+      const fileName = doc.name ? doc.name.toLowerCase() : '';
+      
+      if (fileName.includes('contract') || fileName.includes('agreement')) {
+        sorted.contracts.push(doc);
+      } else if (fileName.includes('petition') || fileName.includes('application')) {
+        sorted.petitions.push(doc);
+      } else if (fileName.includes('affidavit') || fileName.includes('declaration')) {
+        sorted.affidavits.push(doc);
+      } else {
+        sorted.others.push(doc);
+      }
+    }
+
+    // ✅ Update automation with sorted data
+    automation.extractedData = {
+      sortedDocuments: sorted,
+      totalCount: automation.documents.length,
+      sortedAt: new Date()
+    };
+    automation.stage = 'sorting';
+    automation.status = 'processing';
+    await automation.save();
+
+    // ✅ Create notification
+    await Notification.create({
+      type: 'system_alert',
+      message: `📂 Documents sorted for client`,
+      data: { automationId: automation._id, total: automation.documents.length }
+    });
+
+    res.json({
+      message: 'Documents sorted successfully',
+      sorted: sorted,
+      total: automation.documents.length
+    });
+  } catch (error) {
+    console.error('❌ Sort error:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ✅ GET - Get sorted documents
+router.get('/:id/sorted', [auth, admin], async (req, res) => {
+  try {
+    const automation = await Automation.findById(req.params.id)
+      .populate('documents');
+    
+    if (!automation) {
+      return res.status(404).json({ message: 'Automation not found' });
+    }
+
+    const sorted = automation.extractedData?.sortedDocuments || {
+      contracts: [],
+      petitions: [],
+      affidavits: [],
+      others: []
+    };
+
+    res.json({
+      sorted: sorted,
+      total: automation.documents.length,
+      stage: automation.stage,
+      status: automation.status
+    });
+  } catch (error) {
+    console.error('❌ Get sorted error:', error);
     res.status(500).json({ message: error.message });
   }
 });

@@ -9,6 +9,7 @@ import StageDataEntry from "../pages/automation/StageDataEntry";
 import StageCompliance from "../pages/automation/StageCompliance";
 
 
+
 // ✅ Lazy load pages
 const Dashboard = lazy(() => import("../pages/Dashboard"));
 const Clients = lazy(() => import("../pages/Clients"));
