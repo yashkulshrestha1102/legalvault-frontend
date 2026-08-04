@@ -20,6 +20,7 @@ const GSTDetails = lazy(() => import("../pages/folders/GSTDetails"));
 const IncomeTaxDetails = lazy(() => import("../pages/folders/IncomeTaxDetails"));
 const HRDetails = lazy(() => import("../pages/folders/HRDetails"));
 const CorporateSecretariatDetails = lazy(() => import("../pages/folders/CorporateSecretariatDetails"));
+const FinancialsDetails = lazy(() => import("../pages/folders/FinancialsDetails"));
 
 
 
@@ -103,6 +104,9 @@ const AppRoutes = () => {
   <ProtectedRoute><CorporateSecretariatDetails /></ProtectedRoute>
 } />
 
+<Route path="/client/:clientId/financials/:id" element={
+  <ProtectedRoute><FinancialsDetails /></ProtectedRoute>
+} />
 
       </Routes>
     </Suspense>
