@@ -10,7 +10,6 @@ const morgan = require('morgan');
 const connectDB = require('./config/db');
 const { initGridFS } = require('./config/gridfs');
 const auditLog = require('./middleware/audit');
-const invoiceExtractRoutes = require('./routes/invoiceExtract');
 
 const app = express();
 
