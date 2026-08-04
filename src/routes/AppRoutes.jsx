@@ -17,6 +17,8 @@ const AuditLog = lazy(() => import("../pages/AuditLog"));
 const Settings = lazy(() => import("../pages/Settings"));
 const PolicyDetails = lazy(() => import("../pages/folders/PolicyDetails"));
 const GSTDetails = lazy(() => import("../pages/folders/GSTDetails"));
+const IncomeTaxDetails = lazy(() => import("../pages/folders/IncomeTaxDetails"));
+
 
 
 // ✅ Loading component
@@ -83,6 +85,11 @@ const AppRoutes = () => {
 
         <Route path="/client/:clientId/gst/:gstId" element={
   <ProtectedRoute><GSTDetails /></ProtectedRoute>
+} />
+
+
+<Route path="/client/:clientId/income-tax/:id" element={
+  <ProtectedRoute><IncomeTaxDetails /></ProtectedRoute>
 } />
       </Routes>
     </Suspense>

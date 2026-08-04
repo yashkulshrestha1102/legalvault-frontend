@@ -134,6 +134,8 @@ app.use('/api/audit', require('./routes/auditRoutes'));
 app.use('/api/documents', require('./routes/documentRoutes')); // ✅ ONLY ONCE
 app.use('/api/policies', require('./routes/policyRoutes'));
 app.use('/api/gst', require('./routes/gstRoutes'));
+app.use('/api/income-tax', require('./routes/incomeTaxRoutes'));
+
 
 
 
