@@ -122,7 +122,7 @@ initGridFS().catch(err => {
   console.error('GridFS initialization failed:', err);
 });
 
-// ✅ Routes - FIXED (removed duplicate)
+// ✅ ✅ ✅ Routes - FIXED (no duplicate)
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/clients', require('./routes/clientRoutes'));
 app.use('/api/dashboard', require('./routes/dashboardRoutes'));
@@ -131,7 +131,7 @@ app.use('/api/registrations', require('./routes/registrationRoutes'));
 app.use('/api/contracts', require('./routes/contractRoutes'));
 app.use('/api/pdfs', require('./routes/uploadGridFSRoutes'));
 app.use('/api/audit', require('./routes/auditRoutes'));
-app.use('/api/documents', require('./routes/uploadGridFSRoutes')); // ✅ Only ONCE
+app.use('/api/documents', require('./routes/documentRoutes')); // ✅ ONLY ONCE
 
 // ✅ Health Check
 app.get('/health', (req, res) => {
