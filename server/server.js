@@ -132,6 +132,8 @@ app.use('/api/contracts', require('./routes/contractRoutes'));
 app.use('/api/pdfs', require('./routes/uploadGridFSRoutes'));
 app.use('/api/audit', require('./routes/auditRoutes'));
 app.use('/api/documents', require('./routes/documentRoutes')); // ✅ ONLY ONCE
+app.use('/api/policies', require('./routes/policyRoutes'));
+
 
 // ✅ Health Check
 app.get('/health', (req, res) => {

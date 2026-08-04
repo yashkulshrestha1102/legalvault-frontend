@@ -6,6 +6,20 @@ import AuthContext from '../context/AuthContext';
 import AddRegistrationModal from "../components/modals/AddRegistrationModal";
 import AddContractModal from "../components/modals/AddContractModal";
 
+
+
+// ✅ Import statements - pages/folders/ se directly import karo
+import DocumentsPage from "./folders/DocumentsPage";
+import PoliciesPage from "./folders/PoliciesPage";
+import GSTPage from "./folders/GSTPage";
+import IncomeTaxPage from "./folders/IncomeTaxPage";
+import HRPage from "./folders/HRPage";
+import CorporateSecretariatPage from "./folders/CorporateSecretariatPage"; // ✅ Secretariat
+import FinancialsPage from "./folders/FinancialsPage";
+
+
+
+
 const API_URL = 'https://legalvault-jm2n.onrender.com';
 
 function ClientDetails() {
@@ -1018,6 +1032,30 @@ function ClientDetails() {
         onSave={saveContract}
         editData={editContract}
       />
+      
+{/* baki ke folder  */}
+
+{/* Policies */}
+{selectedFolder === "policies" && <PoliciesPage clientId={id} />}
+
+{/* GST */}
+{selectedFolder === "gst" && <GSTPage clientId={id} />}
+
+{/* Income Tax */}
+{selectedFolder === "incomeTax" && <IncomeTaxPage clientId={id} />}
+
+{/* HR */}
+{selectedFolder === "hr" && <HRPage clientId={id} />}
+
+{/* Corporate Secretariat */}
+{selectedFolder === "corporateSecretariat" && <CorporateSecretariatPage clientId={id} />}
+
+{/* Financials */}
+{selectedFolder === "financials" && <FinancialsPage clientId={id} />}
+
+{/* Documents */}
+{selectedFolder === "documents" && <DocumentsPage clientId={id} />}
+
     </MainLayout>
   );
 }
