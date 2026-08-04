@@ -16,6 +16,8 @@ const ContractDetails = lazy(() => import("../pages/ContractDetails"));
 const AuditLog = lazy(() => import("../pages/AuditLog"));
 const Settings = lazy(() => import("../pages/Settings"));
 const PolicyDetails = lazy(() => import("../pages/folders/PolicyDetails"));
+const GSTDetails = lazy(() => import("../pages/folders/GSTDetails"));
+
 
 // ✅ Loading component
 const PageLoader = () => (
@@ -77,6 +79,11 @@ const AppRoutes = () => {
         <Route path="/settings" element={
           <ProtectedRoute><Settings /></ProtectedRoute>
         } />
+
+
+        <Route path="/client/:clientId/gst/:gstId" element={
+  <ProtectedRoute><GSTDetails /></ProtectedRoute>
+} />
       </Routes>
     </Suspense>
   );
