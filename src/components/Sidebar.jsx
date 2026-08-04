@@ -5,7 +5,6 @@ import {
   FaBars,
   FaUserCircle,
   FaHistory,
-  FaFileInvoice, // ✅ GST ke liye icon
 } from "react-icons/fa";
 
 import {
@@ -57,18 +56,20 @@ function Sidebar() {
 
   const role = user?.role || 'user';
 
-  // ✅ Menu items — GST added for admin
+  // ✅ Menu items
   const menuItems = [
     { id: 'dashboard', path: "/", label: "Dashboard", icon: <FaTachometerAlt /> },
     { id: 'clients', path: "/clients", label: "Clients", icon: <FaUsers /> },
   ];
 
+  if (role === 'admin') {
     menuItems.push({ id: 'users', path: "/users", label: "Users", icon: <FaUsers /> });
     menuItems.push({ id: 'audit', path: "/audit", label: "Audit Log", icon: <FaHistory /> });
   }
 
   menuItems.push({ id: 'profile', path: "/profile", label: "Profile", icon: <FaUserCircle /> });
 
+  // ✅ ✅ ✅ YEH RETURN SAHI HONA CHAHIYE — FUNCTION KE ANDAR
   return (
     <>
       <div className={`
@@ -138,6 +139,6 @@ function Sidebar() {
       )}
     </>
   );
-
+}
 
 export default Sidebar;
