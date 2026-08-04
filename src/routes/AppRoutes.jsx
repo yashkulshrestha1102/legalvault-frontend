@@ -2,11 +2,6 @@ import { lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import ProtectedRoute from "../components/ProtectedRoute";
 import ProtectedFolder from "../components/ProtectedFolder";
-import GSTDashboard from "../pages/gst/Dashboard";
-import GSTCollection from "../pages/gst/StageCollection";
-import GSTSorting from "../pages/gst/StageSorting";
-import GSTDataEntry from "../pages/gst/StageDataEntry";
-import GSTFiling from "../pages/gst/StageFiling";
 
 // ✅ Lazy load pages
 const Dashboard = lazy(() => import("../pages/Dashboard"));
@@ -78,22 +73,7 @@ const AppRoutes = () => {
           <ProtectedRoute><Settings /></ProtectedRoute>
         } />
 
-        {/* ✅ GST Automation Routes */}
-        <Route path="/gst" element={
-          <ProtectedRoute><GSTDashboard /></ProtectedRoute>
-        } />
-        <Route path="/gst/collection/:id" element={
-          <ProtectedRoute><GSTCollection /></ProtectedRoute>
-        } />
-        <Route path="/gst/sorting/:id" element={
-          <ProtectedRoute><GSTSorting /></ProtectedRoute>
-        } />
-        <Route path="/gst/dataentry/:id" element={
-          <ProtectedRoute><GSTDataEntry /></ProtectedRoute>
-        } />
-        <Route path="/gst/filing/:id" element={
-          <ProtectedRoute><GSTFiling /></ProtectedRoute>
-        } />
+        
 
       </Routes>
     </Suspense>

@@ -63,14 +63,6 @@ function Sidebar() {
     { id: 'clients', path: "/clients", label: "Clients", icon: <FaUsers /> },
   ];
 
-  if (role === 'admin') {
-    // ✅ ✅ ✅ Naya GST option add karo (Automation hatao)
-    menuItems.push({ 
-      id: 'gst', 
-      path: "/gst", 
-      label: "GST Automation", 
-      icon: <FaFileInvoice /> 
-    });
     menuItems.push({ id: 'users', path: "/users", label: "Users", icon: <FaUsers /> });
     menuItems.push({ id: 'audit', path: "/audit", label: "Audit Log", icon: <FaHistory /> });
   }
@@ -146,6 +138,6 @@ function Sidebar() {
       )}
     </>
   );
-}
+
 
 export default Sidebar;
