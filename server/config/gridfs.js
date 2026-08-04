@@ -14,7 +14,7 @@ const initGridFS = async () => {
     await client.connect();
     
     const db = client.db('legalvault');
-    gridFSBucket = new GridFSBucket(db, { bucketName: 'pdfs' });
+gridFSBucket = new GridFSBucket(db, { bucketName: 'uploads' });
     
     console.log('✅ GridFS initialized successfully');
     return gridFSBucket;

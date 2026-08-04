@@ -1,13 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
-const upload = require('../middleware/uploadGridFS');
+const upload = require('../middleware/uploadGridFS'); // ✅ GridFS upload
 const { getGridFS } = require('../config/gridfs');
 const Document = require('../models/Document');
 const { ObjectId } = require('mongodb');
 const jwt = require('jsonwebtoken');
 
-// ✅ Upload multiple documents (PDF, Images, etc.)
+// ✅ Upload multiple documents (GridFS)
 router.post('/upload', auth, upload.array('documents', 50), async (req, res) => {
   try {
     console.log('📥 Upload request - Files:', req.files?.length || 0);
@@ -35,7 +35,7 @@ router.post('/upload', auth, upload.array('documents', 50), async (req, res) => 
       await new Promise((resolve, reject) => {
         uploadStream.on('finish', async () => {
           const host = req.get('host');
-          const protocol = 'https';
+          const protocol = req.protocol === 'https' ? 'https' : 'http';
           const url = `${protocol}://${host}/api/documents/${uploadStream.id}`;
 
           const doc = new Document({
@@ -114,6 +114,7 @@ router.put('/:id/rename', auth, async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
+
 // ✅ Get all documents for a client
 router.get('/client/:clientId', auth, async (req, res) => {
   try {
@@ -123,6 +124,7 @@ router.get('/client/:clientId', auth, async (req, res) => {
     }).sort({ createdAt: -1 });
     res.json(documents);
   } catch (error) {
+    console.error('Error fetching documents:', error);
     res.status(500).json({ message: error.message });
   }
 });
@@ -140,11 +142,12 @@ router.delete('/:id', auth, async (req, res) => {
     }
     res.json({ message: 'Document deleted successfully' });
   } catch (error) {
+    console.error('Delete error:', error);
     res.status(500).json({ message: error.message });
   }
 });
 
-// ✅ Get document by ID (with token)
+// ✅ Get document by ID (GridFS)
 router.get('/:id', async (req, res) => {
   try {
     let token = req.header('Authorization')?.replace('Bearer ', '');

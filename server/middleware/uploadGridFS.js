@@ -1,30 +1,51 @@
 const multer = require('multer');
+const { GridFsStorage } = require('multer-gridfs-storage');
+const crypto = require('crypto');
 const path = require('path');
 
-// ✅ Storage
-const storage = multer.memoryStorage();
+// ✅ GridFS Storage
+const storage = new GridFsStorage({
+  url: process.env.MONGO_URI,
+  options: { useNewUrlParser: true, useUnifiedTopology: true },
+  file: (req, file) => {
+    return new Promise((resolve, reject) => {
+      crypto.randomBytes(16, (err, buf) => {
+        if (err) {
+          return reject(err);
+        }
+        const filename = buf.toString('hex') + path.extname(file.originalname);
+        const fileInfo = {
+          filename: filename,
+          bucketName: 'uploads'
+        };
+        resolve(fileInfo);
+      });
+    });
+  }
+});
 
-// ✅ File filter — accept both 'pdf' and 'document'
+// ✅ Fixed - Multiple file types allowed
 const fileFilter = (req, file, cb) => {
-  console.log('🔍 Multer - File received:', file.fieldname, file.originalname);
+  const allowedTypes = [
+    'image/jpeg', 'image/png', 'image/gif', 
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'text/plain'
+  ];
   
-  // ✅ Accept both 'pdf' and 'document' field names
-  if (file.fieldname === 'pdf' || file.fieldname === 'document') {
-    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
-    if (allowedTypes.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error('Invalid file type. Only PDF, JPEG, PNG allowed.'), false);
-    }
+  if (allowedTypes.includes(file.mimetype)) {
+    cb(null, true);
   } else {
-    return cb(new Error(`Unexpected field: ${file.fieldname}`), false);
+    cb(new Error(`File type not allowed: ${file.mimetype}. Allowed: PDF, Images, Word, Excel, Text`), false);
   }
 };
 
-// ✅ Upload middleware
 const upload = multer({
   storage: storage,
-  limits: { fileSize: 50 * 1024 * 1024 },
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
   fileFilter: fileFilter
 });
 
