@@ -1,6 +1,5 @@
 import Sidebar from "../components/Sidebar";
 import Navbar from "../components/Navbar";
-import FloatingActions from "../components/FloatingActions";
 
 import { useContext } from "react";
 import { ThemeContext } from "../context/ThemeContext";
@@ -97,7 +96,6 @@ const MainLayout = ({ children }) => {
 
         {/* Floating Button */}
 
-        <FloatingActions />
 
         {/* Page */}
 

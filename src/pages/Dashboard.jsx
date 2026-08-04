@@ -64,10 +64,8 @@ function Dashboard() {
           growth="12" 
           icon={<FaUsers />} 
         />
-        {/* ❌ Active Cases, Documents, Consultants removed */}
       </div>
 
-      {/* ❌ Quick Actions removed */}
     </MainLayout>
   );
 }
