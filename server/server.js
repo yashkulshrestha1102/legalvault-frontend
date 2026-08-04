@@ -136,6 +136,7 @@ app.use('/api/policies', require('./routes/policyRoutes'));
 app.use('/api/gst', require('./routes/gstRoutes'));
 app.use('/api/income-tax', require('./routes/incomeTaxRoutes'));
 app.use('/api/hr', require('./routes/hrRoutes'));
+app.use('/api/corporate-secretariat', require('./routes/corporateSecretariatRoutes'));
 
 
 
