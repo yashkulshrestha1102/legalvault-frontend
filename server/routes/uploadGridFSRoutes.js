@@ -4,7 +4,7 @@ const auth = require('../middleware/auth');
 const upload = require('../middleware/uploadGridFS');
 const { getGridFS } = require('../config/gridfs');
 const PDF = require('../models/PDF');
-const GSTAutomation = require('../models/GSTAutomation');
+// const GSTAutomation = require('../models/GSTAutomation'); // ✅ REMOVED
 const { ObjectId } = require('mongodb');
 const jwt = require('jsonwebtoken');
 
@@ -49,11 +49,12 @@ router.post('/pdf', auth, upload.array('pdf', 10), async (req, res) => {
           });
           await pdfDoc.save();
 
-          if (automationId) {
-            await GSTAutomation.findByIdAndUpdate(automationId, {
-              $push: { documents: { fileId: pdfDoc._id, fileName: file.originalname, fileType: file.mimetype } }
-            });
-          }
+          // ✅ Automation linking disabled - model removed
+          // if (automationId) {
+          //   await GSTAutomation.findByIdAndUpdate(automationId, {
+          //     $push: { documents: { fileId: pdfDoc._id, fileName: file.originalname, fileType: file.mimetype } }
+          //   });
+          // }
 
           const host = req.get('host');
           const protocol = 'https';
@@ -135,10 +136,10 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// ✅ Upload for GST Automation (Complete)
+// ✅ Upload for Automation (without GST linking)
 router.post('/automation-upload', auth, upload.single('document'), async (req, res) => {
   try {
-    console.log('🚀 ===== AUTOMATION UPLOAD STARTED =====');
+    console.log('🚀 ===== UPLOAD STARTED =====');
     console.log('📤 req.file:', req.file);
     console.log('📦 req.body:', req.body);
     console.log('👤 req.user:', req.user?.id);
@@ -213,13 +214,13 @@ router.post('/automation-upload', auth, upload.single('document'), async (req, r
     await pdfDoc.save();
     console.log('✅ Document saved to DB, _id:', pdfDoc._id);
 
-    // ✅ Link to automation
-    if (automationId) {
-      await GSTAutomation.findByIdAndUpdate(automationId, {
-        $push: { documents: { fileId: pdfDoc._id, fileName: req.file.originalname, fileType: req.file.mimetype } }
-      });
-      console.log('✅ Document linked to automation:', automationId);
-    }
+    // ✅ Automation linking disabled - model removed
+    // if (automationId) {
+    //   await GSTAutomation.findByIdAndUpdate(automationId, {
+    //     $push: { documents: { fileId: pdfDoc._id, fileName: req.file.originalname, fileType: req.file.mimetype } }
+    //   });
+    //   console.log('✅ Document linked to automation:', automationId);
+    // }
 
     res.status(201).json({
       message: 'Document uploaded successfully',
