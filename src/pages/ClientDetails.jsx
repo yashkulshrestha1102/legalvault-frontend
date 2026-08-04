@@ -6,24 +6,21 @@ import AuthContext from '../context/AuthContext';
 import AddRegistrationModal from "../components/modals/AddRegistrationModal";
 import AddContractModal from "../components/modals/AddContractModal";
 
-
-
 // ✅ Import statements - pages/folders/ se directly import karo
 import DocumentsPage from "./folders/DocumentsPage";
 import PoliciesPage from "./folders/PoliciesPage";
 import GSTPage from "./folders/GSTPage";
 import IncomeTaxPage from "./folders/IncomeTaxPage";
 import HRPage from "./folders/HRPage";
-import CorporateSecretariatPage from "./folders/CorporateSecretariatPage"; // ✅ Secretariat
+import CorporateSecretariatPage from "./folders/CorporateSecretariatPage";
 import FinancialsPage from "./folders/FinancialsPage";
-
-
-
 
 const API_URL = 'https://legalvault-jm2n.onrender.com';
 
 function ClientDetails() {
-  const { id } = useParams();
+  // ✅ FIX: Dono params lo aur actualId use karo
+  const { id, clientId } = useParams();
+  const actualId = id || clientId; // ✅ Dono mein se jo mile
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
 
@@ -49,14 +46,14 @@ function ClientDetails() {
   const fetchClient = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
-      console.log('📥 Fetching client with ID:', id);
+      console.log('📥 Fetching client with ID:', actualId);
       
-      const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(id);
+      const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(actualId);
       let clientData = null;
       
       if (isValidObjectId) {
         try {
-          const response = await axios.get(`${API_URL}/api/clients/${id}`, {
+          const response = await axios.get(`${API_URL}/api/clients/${actualId}`, {
             headers: { Authorization: `Bearer ${token}` }
           });
           clientData = response.data;
@@ -64,14 +61,14 @@ function ClientDetails() {
           
           const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
           const updatedClients = savedClients.map(c => 
-            String(c._id) === String(id) || String(c.id) === String(id) ? clientData : c
+            String(c._id) === String(actualId) || String(c.id) === String(actualId) ? clientData : c
           );
           localStorage.setItem("clients", JSON.stringify(updatedClients));
           
         } catch (backendError) {
           console.warn('⚠️ Backend fetch failed, trying localStorage...', backendError);
           const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
-          const foundClient = savedClients.find(c => String(c._id) === String(id) || String(c.id) === String(id));
+          const foundClient = savedClients.find(c => String(c._id) === String(actualId) || String(c.id) === String(actualId));
           if (foundClient) {
             clientData = foundClient;
             console.log('✅ Client loaded from localStorage fallback:', clientData);
@@ -82,7 +79,7 @@ function ClientDetails() {
       } else {
         console.warn('⚠️ Invalid ObjectId format, loading from localStorage...');
         const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
-        const foundClient = savedClients.find(c => String(c.id) === String(id) || String(c._id) === String(id));
+        const foundClient = savedClients.find(c => String(c.id) === String(actualId) || String(c._id) === String(actualId));
         if (foundClient) {
           clientData = foundClient;
           console.log('✅ Client found in localStorage:', clientData);
@@ -97,7 +94,7 @@ function ClientDetails() {
     } catch (error) {
       console.error('❌ Error fetching client:', error);
       const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
-      const foundClient = savedClients.find(c => String(c.id) === String(id) || String(c._id) === String(id));
+      const foundClient = savedClients.find(c => String(c.id) === String(actualId) || String(c._id) === String(actualId));
       if (foundClient) {
         setClient({ ...foundClient });
         setRefreshKey(prev => prev + 1);
@@ -108,7 +105,7 @@ function ClientDetails() {
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [actualId]);
 
   // ✅ Fetch client on mount and when id changes
   useEffect(() => {
@@ -118,14 +115,14 @@ function ClientDetails() {
   // ✅ Refresh data when page becomes visible
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (!document.hidden && id) {
+      if (!document.hidden && actualId) {
         console.log('🔄 Page visible, refreshing client data...');
         fetchClient();
       }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [id, fetchClient]);
+  }, [actualId, fetchClient]);
 
   // ✅ Force refresh when component mounts
   useEffect(() => {
@@ -135,33 +132,33 @@ function ClientDetails() {
   // ✅ Refresh data when URL changes
   useEffect(() => {
     const handleRouteChange = () => {
-      if (id) {
+      if (actualId) {
         console.log('🔄 Route changed, refreshing client data...');
         fetchClient();
       }
     };
     window.addEventListener('popstate', handleRouteChange);
     return () => window.removeEventListener('popstate', handleRouteChange);
-  }, [id, fetchClient]);
+  }, [actualId, fetchClient]);
 
   // ✅ Fetch registrations
   const fetchRegistrations = async () => {
     try {
       const token = localStorage.getItem('token');
-      if (!id) {
+      if (!actualId) {
         console.error('❌ Client ID is undefined!');
         return;
       }
-      console.log('📋 Fetching registrations for client ID:', id);
+      console.log('📋 Fetching registrations for client ID:', actualId);
       
-      const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(id);
+      const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(actualId);
       if (!isValidObjectId) {
         console.warn('⚠️ Invalid ObjectId, skipping registrations fetch');
         setRegistrations([]);
         return;
       }
       
-      const response = await axios.get(`${API_URL}/api/registrations/client/${id}`, {
+      const response = await axios.get(`${API_URL}/api/registrations/client/${actualId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       console.log('✅ Registrations fetched:', response.data);
@@ -176,16 +173,16 @@ function ClientDetails() {
   const fetchContracts = async () => {
     try {
       const token = localStorage.getItem('token');
-      console.log('📋 Fetching contracts for client ID:', id);
+      console.log('📋 Fetching contracts for client ID:', actualId);
       
-      const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(id);
+      const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(actualId);
       if (!isValidObjectId) {
         console.warn('⚠️ Invalid ObjectId, skipping contracts fetch');
         setContracts([]);
         return;
       }
       
-      const response = await axios.get(`${API_URL}/api/contracts/client/${id}`, {
+      const response = await axios.get(`${API_URL}/api/contracts/client/${actualId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       console.log('✅ Contracts fetched:', response.data);
@@ -200,20 +197,20 @@ function ClientDetails() {
   const fetchDocuments = async () => {
     try {
       const token = localStorage.getItem('token');
-      if (!id) {
+      if (!actualId) {
         console.error('❌ Client ID is undefined!');
         return;
       }
-      console.log('📋 Fetching documents for client ID:', id);
+      console.log('📋 Fetching documents for client ID:', actualId);
       
-      const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(id);
+      const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(actualId);
       if (!isValidObjectId) {
         console.warn('⚠️ Invalid ObjectId, skipping documents fetch');
         setDocuments([]);
         return;
       }
       
-      const response = await axios.get(`${API_URL}/api/documents/client/${id}`, {
+      const response = await axios.get(`${API_URL}/api/documents/client/${actualId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       console.log('✅ Documents fetched:', response.data);
@@ -226,9 +223,9 @@ function ClientDetails() {
 
   // ✅ Load data on mount
   useEffect(() => {
-    if (id) {
-      console.log('🔄 Loading data for client ID:', id);
-      const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(id);
+    if (actualId) {
+      console.log('🔄 Loading data for client ID:', actualId);
+      const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(actualId);
       if (isValidObjectId) {
         fetchRegistrations();
         fetchContracts();
@@ -238,7 +235,7 @@ function ClientDetails() {
       console.error('❌ No client ID available');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, [actualId]);
 
   // ✅ Rename document
   const renameDocument = async (docId, newName) => {
@@ -296,7 +293,7 @@ function ClientDetails() {
       for (const file of files) {
         formData.append('documents', file);
       }
-      formData.append('clientId', id);
+      formData.append('clientId', actualId);
       
       setUploadingDocs(true);
       const response = await axios.post(`${API_URL}/api/documents/upload`, formData, {
@@ -412,13 +409,13 @@ function ClientDetails() {
     try {
       const token = localStorage.getItem('token');
       
-      let validClientId = id;
-      const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(id);
+      let validClientId = actualId;
+      const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(actualId);
       
       if (!isValidObjectId) {
         console.log('⚠️ Invalid ObjectId, trying to sync client to backend...');
         const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
-        const localClient = savedClients.find(c => String(c.id) === String(id) || String(c._id) === String(id));
+        const localClient = savedClients.find(c => String(c.id) === String(actualId) || String(c._id) === String(actualId));
         
         if (localClient) {
           try {
@@ -432,7 +429,7 @@ function ClientDetails() {
               validClientId = existingClient._id;
               console.log('✅ Client already exists in backend, using ID:', validClientId);
               const updatedClients = savedClients.map(c => 
-                String(c.id) === String(id) || String(c._id) === String(id) 
+                String(c.id) === String(actualId) || String(c._id) === String(actualId) 
                   ? { ...c, _id: validClientId } 
                   : c
               );
@@ -451,7 +448,7 @@ function ClientDetails() {
               console.log('✅ Client synced to backend:', createResponse.data);
               validClientId = createResponse.data._id;
               const updatedClients = savedClients.map(c => 
-                String(c.id) === String(id) || String(c._id) === String(id) 
+                String(c.id) === String(actualId) || String(c._id) === String(actualId) 
                   ? { ...c, _id: validClientId } 
                   : c
               );
@@ -521,13 +518,13 @@ function ClientDetails() {
     try {
       const token = localStorage.getItem('token');
       
-      let validClientId = id;
-      const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(id);
+      let validClientId = actualId;
+      const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(actualId);
       
       if (!isValidObjectId) {
         console.log('⚠️ Invalid ObjectId, trying to sync client to backend...');
         const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
-        const localClient = savedClients.find(c => String(c.id) === String(id) || String(c._id) === String(id));
+        const localClient = savedClients.find(c => String(c.id) === String(actualId) || String(c._id) === String(actualId));
         
         if (localClient) {
           try {
@@ -541,7 +538,7 @@ function ClientDetails() {
               validClientId = existingClient._id;
               console.log('✅ Client already exists in backend, using ID:', validClientId);
               const updatedClients = savedClients.map(c => 
-                String(c.id) === String(id) || String(c._id) === String(id) 
+                String(c.id) === String(actualId) || String(c._id) === String(actualId) 
                   ? { ...c, _id: validClientId } 
                   : c
               );
@@ -560,7 +557,7 @@ function ClientDetails() {
               console.log('✅ Client synced to backend:', createResponse.data);
               validClientId = createResponse.data._id;
               const updatedClients = savedClients.map(c => 
-                String(c.id) === String(id) || String(c._id) === String(id) 
+                String(c.id) === String(actualId) || String(c._id) === String(actualId) 
                   ? { ...c, _id: validClientId } 
                   : c
               );
@@ -726,7 +723,7 @@ function ClientDetails() {
               <p className="text-gray-400 text-sm">Assigned Users:</p>
               <div className="flex flex-wrap gap-3 mt-1">
                 {client.userPermissions.map((p, index) => (
-  <div key={`perm-${p.userId?._id || p.userId || 'unknown'}-${index}`} className="px-3 py-1 bg-cyan-500/20 text-cyan-400 rounded-full text-sm flex items-center gap-2">
+                  <div key={`perm-${p.userId?._id || p.userId || 'unknown'}-${index}`} className="px-3 py-1 bg-cyan-500/20 text-cyan-400 rounded-full text-sm flex items-center gap-2">
                     <span>{p.userId?.name || 'Unknown'}</span>
                     <span className="text-xs bg-cyan-500/30 px-1.5 py-0.5 rounded">
                       {p.folderPermissions?.length || 0} folders
@@ -814,7 +811,7 @@ function ClientDetails() {
                         </td>
                         <td className="p-4">
                           <div className="flex gap-3">
-                            <button onClick={() => navigate(`/clients/${id}/registration/${item._id || item.id}`)} className="text-cyan-400">View</button>
+                            <button onClick={() => navigate(`/clients/${actualId}/registration/${item._id || item.id}`)} className="text-cyan-400">View</button>
                             <button onClick={() => handleEdit(item)} className="text-yellow-400">Edit</button>
                             <button onClick={() => deleteRegistration(item._id || item.id)} className="text-red-400">Delete</button>
                           </div>
@@ -876,7 +873,7 @@ function ClientDetails() {
                         </td>
                         <td className="p-4">
                           <div className="flex gap-3">
-                            <button className="text-cyan-400" onClick={() => navigate(`/clients/${id}/contract/${item._id || item.id}`)}>View</button>
+                            <button className="text-cyan-400" onClick={() => navigate(`/clients/${actualId}/contract/${item._id || item.id}`)}>View</button>
                             <button onClick={() => handleEditContract(item)} className="text-yellow-400">Edit</button>
                             <button onClick={() => deleteContract(item._id || item.id)} className="text-red-400">Delete</button>
                           </div>
@@ -1017,6 +1014,15 @@ function ClientDetails() {
             </div>
           </div>
         )}
+
+        {/* ✅ Other Folders */}
+        {selectedFolder === "policies" && <PoliciesPage clientId={actualId} />}
+        {selectedFolder === "gst" && <GSTPage clientId={actualId} />}
+        {selectedFolder === "incomeTax" && <IncomeTaxPage clientId={actualId} />}
+        {selectedFolder === "hr" && <HRPage clientId={actualId} />}
+        {selectedFolder === "corporateSecretariat" && <CorporateSecretariatPage clientId={actualId} />}
+        {selectedFolder === "financials" && <FinancialsPage clientId={actualId} />}
+        {selectedFolder === "documents" && <DocumentsPage clientId={actualId} />}
       </div>
 
       <AddRegistrationModal
@@ -1032,30 +1038,6 @@ function ClientDetails() {
         onSave={saveContract}
         editData={editContract}
       />
-      
-{/* baki ke folder  */}
-
-{/* Policies */}
-{selectedFolder === "policies" && <PoliciesPage clientId={id} />}
-
-{/* GST */}
-{selectedFolder === "gst" && <GSTPage clientId={id} />}
-
-{/* Income Tax */}
-{selectedFolder === "incomeTax" && <IncomeTaxPage clientId={id} />}
-
-{/* HR */}
-{selectedFolder === "hr" && <HRPage clientId={id} />}
-
-{/* Corporate Secretariat */}
-{selectedFolder === "corporateSecretariat" && <CorporateSecretariatPage clientId={id} />}
-
-{/* Financials */}
-{selectedFolder === "financials" && <FinancialsPage clientId={id} />}
-
-{/* Documents */}
-{selectedFolder === "documents" && <DocumentsPage clientId={id} />}
-
     </MainLayout>
   );
 }

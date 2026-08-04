@@ -15,6 +15,7 @@ const RegistrationDetails = lazy(() => import("../pages/RegistrationDetails"));
 const ContractDetails = lazy(() => import("../pages/ContractDetails"));
 const AuditLog = lazy(() => import("../pages/AuditLog"));
 const Settings = lazy(() => import("../pages/Settings"));
+const PolicyDetails = lazy(() => import("../pages/folders/PolicyDetails"));
 
 // ✅ Loading component
 const PageLoader = () => (
@@ -57,7 +58,7 @@ const AppRoutes = () => {
           <ProtectedRoute><SearchResults /></ProtectedRoute>
         } />
 
-        <Route path="/client/:id" element={
+        <Route path="/client/:clientId" element={
           <ProtectedRoute><ClientDetails /></ProtectedRoute>
         } />
 
@@ -69,12 +70,13 @@ const AppRoutes = () => {
           <ProtectedRoute><ContractDetails /></ProtectedRoute>
         } />
 
+        <Route path="/client/:clientId/policy/:policyId" element={
+          <ProtectedRoute><PolicyDetails /></ProtectedRoute>
+        } />
+
         <Route path="/settings" element={
           <ProtectedRoute><Settings /></ProtectedRoute>
         } />
-
-        
-
       </Routes>
     </Suspense>
   );

@@ -1,13 +1,13 @@
 ﻿import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom'; // ✅ useParams hatao
 import axios from 'axios';
-import { FaEye, FaEdit, FaTrash, FaFilePdf } from 'react-icons/fa';
+import { FaEye, FaEdit, FaTrash } from 'react-icons/fa';
 import AddPolicyModal from '../../components/modals/AddPolicyModal';
 
 const API_URL = 'https://legalvault-jm2n.onrender.com';
 
-const PoliciesPage = () => {
-  const { id: clientId } = useParams();
+// ✅ clientId prop se lo, URL se nahi
+const PoliciesPage = ({ clientId }) => {
   const navigate = useNavigate();
   const [policies, setPolicies] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -15,16 +15,42 @@ const PoliciesPage = () => {
   const [editData, setEditData] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // ✅ Fetch policies
+  // ✅ Fetch policies with better error handling
   const fetchPolicies = async () => {
     try {
       const token = localStorage.getItem('token');
+      console.log('🔑 Token:', token ? '✅ Yes' : '❌ No');
+      
+      if (!token) {
+        console.error('❌ No token found!');
+        setPolicies([]);
+        setLoading(false);
+        return;
+      }
+
+      if (!clientId) {
+        console.error('❌ No clientId available!');
+        setPolicies([]);
+        setLoading(false);
+        return;
+      }
+
+      console.log('📋 Fetching policies for client:', clientId);
+      
       const response = await axios.get(`${API_URL}/api/policies/client/${clientId}`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { 
+          'Authorization': `Bearer ${token}` 
+        }
       });
-      setPolicies(response.data);
+      
+      console.log('✅ Policies response:', response.data);
+      setPolicies(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
-      console.error('❌ Error fetching policies:', error);
+      console.error('❌ Error fetching policies:', {
+        status: error.response?.status,
+        data: error.response?.data,
+        message: error.message
+      });
       setPolicies([]);
     } finally {
       setLoading(false);
@@ -32,24 +58,39 @@ const PoliciesPage = () => {
   };
 
   useEffect(() => {
-    if (clientId) fetchPolicies();
+    if (clientId) {
+      fetchPolicies();
+    } else {
+      console.error('❌ No clientId available');
+      setLoading(false);
+    }
   }, [clientId]);
 
   // ✅ Save policy (Create/Update)
   const savePolicy = async (data) => {
     try {
       const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Please login again');
+        return;
+      }
+
+      if (!clientId) {
+        alert('Client ID not found');
+        return;
+      }
+
       const payload = { ...data, clientId };
 
       if (editData) {
         // Update
         await axios.put(`${API_URL}/api/policies/${editData._id}`, payload, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { 'Authorization': `Bearer ${token}` }
         });
       } else {
         // Create
         await axios.post(`${API_URL}/api/policies`, payload, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { 'Authorization': `Bearer ${token}` }
         });
       }
 
@@ -58,8 +99,8 @@ const PoliciesPage = () => {
       setEditData(null);
       alert('✅ Policy saved successfully!');
     } catch (error) {
-      console.error('❌ Error saving policy:', error);
-      alert('Failed to save policy');
+      console.error('❌ Error saving policy:', error.response?.data || error.message);
+      alert('Failed to save policy: ' + (error.response?.data?.message || error.message));
     }
   };
 
@@ -68,13 +109,18 @@ const PoliciesPage = () => {
     if (!window.confirm('Delete this policy?')) return;
     try {
       const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Please login again');
+        return;
+      }
+
       await axios.delete(`${API_URL}/api/policies/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { 'Authorization': `Bearer ${token}` }
       });
       fetchPolicies();
       alert('✅ Policy deleted!');
     } catch (error) {
-      console.error('❌ Error deleting policy:', error);
+      console.error('❌ Error deleting policy:', error.response?.data || error.message);
       alert('Failed to delete policy');
     }
   };
@@ -83,6 +129,10 @@ const PoliciesPage = () => {
   const viewPDF = (pdfUrl) => {
     if (!pdfUrl) return;
     const token = localStorage.getItem('token');
+    if (!token) {
+      alert('Please login again');
+      return;
+    }
     window.open(`${pdfUrl}?token=${token}`, '_blank');
   };
 
@@ -91,8 +141,13 @@ const PoliciesPage = () => {
     if (!pdfUrl) return;
     try {
       const token = localStorage.getItem('token');
+      if (!token) {
+        alert('Please login again');
+        return;
+      }
+
       const response = await axios.get(pdfUrl, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { 'Authorization': `Bearer ${token}` },
         responseType: 'blob'
       });
       const blob = new Blob([response.data]);
@@ -130,7 +185,12 @@ const PoliciesPage = () => {
   if (loading) {
     return (
       <div className="glass p-6">
-        <p className="text-center text-gray-400">Loading policies...</p>
+        <div className="flex justify-center items-center h-32">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-400 mx-auto mb-3"></div>
+            <p className="text-gray-400">Loading policies...</p>
+          </div>
+        </div>
       </div>
     );
   }

@@ -4,17 +4,18 @@ import axios from 'axios';
 
 const API_URL = 'https://legalvault-jm2n.onrender.com';
 
-const AddPolicyModal = ({ open, onClose, onSave, editData }) => {
+const AddGSTModal = ({ open, onClose, onSave, editData }) => {
   const [formData, setFormData] = useState({
-    policyName: '',
-    policyType: '',
-    category: 'Internal',
+    gstName: '',
+    gstType: '',
+    gstin: '',
+    category: 'Central',
     issueDate: '',
     reviewDate: '',
     expiryDate: '',
     status: 'Active',
     description: '',
-    department: 'General',
+    department: 'Tax',
     approvedBy: ''
   });
 
@@ -25,29 +26,31 @@ const AddPolicyModal = ({ open, onClose, onSave, editData }) => {
   useEffect(() => {
     if (editData) {
       setFormData({
-        policyName: editData.policyName || '',
-        policyType: editData.policyType || '',
-        category: editData.category || 'Internal',
+        gstName: editData.gstName || '',
+        gstType: editData.gstType || '',
+        gstin: editData.gstin || '',
+        category: editData.category || 'Central',
         issueDate: editData.issueDate ? editData.issueDate.split('T')[0] : '',
         reviewDate: editData.reviewDate ? editData.reviewDate.split('T')[0] : '',
         expiryDate: editData.expiryDate ? editData.expiryDate.split('T')[0] : '',
         status: editData.status || 'Active',
         description: editData.description || '',
-        department: editData.department || 'General',
+        department: editData.department || 'Tax',
         approvedBy: editData.approvedBy || ''
       });
       setPdfs(editData.pdfs || []);
     } else {
       setFormData({
-        policyName: '',
-        policyType: '',
-        category: 'Internal',
+        gstName: '',
+        gstType: '',
+        gstin: '',
+        category: 'Central',
         issueDate: '',
         reviewDate: '',
         expiryDate: '',
         status: 'Active',
         description: '',
-        department: 'General',
+        department: 'Tax',
         approvedBy: ''
       });
       setPdfs([]);
@@ -79,8 +82,6 @@ const AddPolicyModal = ({ open, onClose, onSave, editData }) => {
       });
       
       console.log('✅ PDF uploaded:', response.data);
-      
-      // ✅ Handle both response formats
       const uploadedUrl = response.data.url || response.data.urls?.[0] || response.data.fileUrl;
       return uploadedUrl;
     } catch (error) {
@@ -92,12 +93,10 @@ const AddPolicyModal = ({ open, onClose, onSave, editData }) => {
     }
   };
 
-  // ✅ Handle PDF file selection
   const handlePDFUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    // Check if file is PDF
     if (file.type !== 'application/pdf') {
       alert('Please upload a PDF file');
       return;
@@ -106,12 +105,10 @@ const AddPolicyModal = ({ open, onClose, onSave, editData }) => {
     const url = await uploadPDF(file);
     if (url) {
       setPdfs(prev => [...prev, url]);
-      console.log('✅ PDF URL added to list:', url);
     }
-    e.target.value = ''; // Reset input
+    e.target.value = '';
   };
 
-  // ✅ Remove PDF
   const removePDF = (index) => {
     setPdfs(pdfs.filter((_, i) => i !== index));
   };
@@ -120,17 +117,11 @@ const AddPolicyModal = ({ open, onClose, onSave, editData }) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const dataToSave = { 
-        ...formData, 
-        pdfs: pdfs 
-      };
-      console.log('📤 Saving policy with data:', dataToSave);
-      console.log('📤 PDFs being saved:', pdfs);
-      await onSave(dataToSave);
+      await onSave({ ...formData, pdfs });
       onClose();
     } catch (error) {
-      console.error('Error saving policy:', error);
-      alert('Failed to save policy');
+      console.error('Error saving GST:', error);
+      alert('Failed to save GST record');
     } finally {
       setLoading(false);
     }
@@ -141,52 +132,60 @@ const AddPolicyModal = ({ open, onClose, onSave, editData }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
       <div className="glass w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 rounded-2xl relative">
-        <button 
-          onClick={onClose} 
-          className="absolute top-4 right-4 text-gray-400 hover:text-white transition"
-        >
+        <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white transition">
           <FaTimes size={22} />
         </button>
 
         <h2 className="text-2xl font-bold mb-6">
-          {editData ? '✏️ Edit Policy' : '➕ Add New Policy'}
+          {editData ? '✏️ Edit GST Record' : '➕ Add GST Record'}
         </h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid md:grid-cols-2 gap-4">
-            {/* Policy Name */}
+            {/* GST Name */}
             <div className="md:col-span-2">
-              <label className="block text-sm text-gray-400 mb-1">Policy Name *</label>
+              <label className="block text-sm text-gray-400 mb-1">GST Name *</label>
               <input
                 type="text"
-                name="policyName"
-                value={formData.policyName}
+                name="gstName"
+                value={formData.gstName}
                 onChange={handleChange}
                 required
                 className="w-full glass-card p-3 outline-none focus:border-cyan-400/40 transition"
-                placeholder="Enter policy name"
+                placeholder="e.g., GST Registration, GST Compliance"
               />
             </div>
 
-            {/* Policy Type */}
+            {/* GST Type */}
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Policy Type *</label>
+              <label className="block text-sm text-gray-400 mb-1">GST Type *</label>
               <select
-                name="policyType"
-                value={formData.policyType}
+                name="gstType"
+                value={formData.gstType}
                 onChange={handleChange}
                 required
                 className="w-full glass-card p-3 outline-none focus:border-cyan-400/40 transition"
               >
                 <option value="">Select Type</option>
-                <option value="HR Policy">HR Policy</option>
-                <option value="Compliance">Compliance</option>
-                <option value="Data Privacy">Data Privacy</option>
-                <option value="Security">Security</option>
-                <option value="Financial">Financial</option>
-                <option value="Quality">Quality</option>
-                <option value="Other">Other</option>
+                <option value="Regular">Regular</option>
+                <option value="Composition">Composition</option>
+                <option value="Unregistered">Unregistered</option>
+                <option value="Casual">Casual</option>
+                <option value="Non-Resident">Non-Resident</option>
               </select>
+            </div>
+
+            {/* GSTIN */}
+            <div>
+              <label className="block text-sm text-gray-400 mb-1">GSTIN</label>
+              <input
+                type="text"
+                name="gstin"
+                value={formData.gstin}
+                onChange={handleChange}
+                placeholder="22AAAAA0000A1Z5"
+                className="w-full glass-card p-3 outline-none focus:border-cyan-400/40 transition uppercase"
+              />
             </div>
 
             {/* Category */}
@@ -198,10 +197,10 @@ const AddPolicyModal = ({ open, onClose, onSave, editData }) => {
                 onChange={handleChange}
                 className="w-full glass-card p-3 outline-none focus:border-cyan-400/40 transition"
               >
-                <option value="Internal">Internal</option>
-                <option value="External">External</option>
-                <option value="Client">Client</option>
-                <option value="Vendor">Vendor</option>
+                <option value="Central">Central</option>
+                <option value="State">State</option>
+                <option value="Integrated">Integrated</option>
+                <option value="Union Territory">Union Territory</option>
               </select>
             </div>
 
@@ -268,7 +267,7 @@ const AddPolicyModal = ({ open, onClose, onSave, editData }) => {
                 value={formData.department}
                 onChange={handleChange}
                 className="w-full glass-card p-3 outline-none focus:border-cyan-400/40 transition"
-                placeholder="e.g., Legal, HR, IT"
+                placeholder="e.g., Tax, Finance"
               />
             </div>
 
@@ -295,11 +294,11 @@ const AddPolicyModal = ({ open, onClose, onSave, editData }) => {
               onChange={handleChange}
               rows="3"
               className="w-full glass-card p-3 outline-none focus:border-cyan-400/40 transition resize-none"
-              placeholder="Brief description of the policy..."
+              placeholder="Brief description..."
             />
           </div>
 
-          {/* ✅ PDF Upload Section */}
+          {/* PDF Upload */}
           <div>
             <label className="block text-sm text-gray-400 mb-1">Upload PDF</label>
             <div className="flex items-center gap-3">
@@ -319,15 +318,12 @@ const AddPolicyModal = ({ open, onClose, onSave, editData }) => {
               )}
             </div>
 
-            {/* PDF List */}
             {pdfs.length > 0 && (
               <div className="mt-3 flex flex-wrap gap-2">
                 {pdfs.map((url, idx) => (
                   <div key={idx} className="glass-card px-3 py-2 text-sm flex items-center gap-2">
                     <FaFilePdf className="text-red-400" />
-                    <span className="truncate max-w-[150px]">
-                      Policy_{idx + 1}.pdf
-                    </span>
+                    <span className="truncate max-w-[150px]">GST_{idx + 1}.pdf</span>
                     <button
                       type="button"
                       onClick={() => removePDF(idx)}
@@ -348,7 +344,7 @@ const AddPolicyModal = ({ open, onClose, onSave, editData }) => {
               disabled={loading}
               className="glass-card px-6 py-3 blue-glow hover:scale-105 transition disabled:opacity-50"
             >
-              {loading ? '⏳ Saving...' : editData ? '💾 Update Policy' : '➕ Add Policy'}
+              {loading ? '⏳ Saving...' : editData ? '💾 Update GST' : '➕ Add GST'}
             </button>
             <button
               type="button"
@@ -364,4 +360,4 @@ const AddPolicyModal = ({ open, onClose, onSave, editData }) => {
   );
 };
 
-export default AddPolicyModal;
+export default AddGSTModal;
