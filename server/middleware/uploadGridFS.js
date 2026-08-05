@@ -27,7 +27,7 @@ const storage = new GridFsStorage({
 // ✅ Sabhi file types allow
 const fileFilter = (req, file, cb) => {
   // ✅ Field name check (dono allow karega)
-  if (file.fieldname !== 'file' && file.fieldname !== 'documents') {
+  if (file.fieldname !== 'file' && file.fieldname !== 'documents' && file.fieldname !== 'pdf') {
     return cb(new Error('Unexpected field: ' + file.fieldname));
   }
 

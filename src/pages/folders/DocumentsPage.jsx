@@ -40,7 +40,7 @@ const DocumentsPage = () => {
     if (clientId) fetchDocuments();
   }, [clientId]);
 
-  // ✅ Upload documents (500 Error Fixed Here)
+  // ✅ Upload documents (500 Error Fixed)
   const uploadDocuments = async (files) => {
     if (files.length === 0) {
       alert('Please select at least one file');
@@ -51,7 +51,7 @@ const DocumentsPage = () => {
       const token = localStorage.getItem('token');
       const formData = new FormData();
       for (const file of files) {
-        // ✅ FIX: 'documents' ki jagah 'file' use kiya
+        // ✅ FIX: Backend 'documents' expect kar raha hai
         formData.append('documents', file); 
       }
       formData.append('clientId', clientId);
@@ -71,7 +71,13 @@ const DocumentsPage = () => {
       alert(`✅ ${fileCount} files uploaded successfully!`);
     } catch (error) {
       console.error('❌ Upload error:', error);
-      alert('Failed to upload documents');
+      // ✅ Show exact backend error
+      if (error.response) {
+        console.error('🔥 Backend Error Details:', error.response.data);
+        alert(`Upload failed: ${error.response.data.message || error.message}`);
+      } else {
+        alert('Failed to upload documents: ' + error.message);
+      }
     } finally {
       setUploadingDocs(false);
     }
@@ -175,7 +181,6 @@ const DocumentsPage = () => {
     );
   }
 
-  // ✅ Return UI (Tera exact wahi code)
   return (
     <div className="glass p-6">
       <div className="flex justify-between items-center mb-6 flex-wrap gap-3">
