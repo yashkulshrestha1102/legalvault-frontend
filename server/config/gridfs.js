@@ -1,11 +1,14 @@
 const { GridFSBucket } = require('mongodb');
 const mongoose = require('mongoose');
 
-let gridFSBucket;
+let gridFSBucket = null;
 
-const initGridFS = () => {
+const initGridFS = async () => {
   try {
     const db = mongoose.connection.db;
+    if (!db) {
+      throw new Error('MongoDB connection not established');
+    }
     gridFSBucket = new GridFSBucket(db, { bucketName: 'uploads' });
     console.log('✅ GridFS initialized successfully');
     return gridFSBucket;
