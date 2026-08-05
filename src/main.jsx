@@ -9,7 +9,6 @@ import { SidebarProvider } from "./context/SidebarContext";
 import "./styles/glass.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
-    <React.StrictMode>
 
   <AuthProvider>
 
@@ -19,6 +18,5 @@ ReactDOM.createRoot(document.getElementById("root")).render(
       </SidebarProvider>
     </ThemeProvider>
   </AuthProvider>
-    </React.StrictMode>
 
 );

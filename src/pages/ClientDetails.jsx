@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useEffect, useState, useContext, useCallback } from "react";
+import { useEffect, useState, useContext } from "react";
 import axios from 'axios';
 import MainLayout from "../layouts/MainLayout";
 import AuthContext from '../context/AuthContext';
@@ -18,9 +18,8 @@ import FinancialsPage from "./folders/FinancialsPage";
 const API_URL = 'https://legalvault-jm2n.onrender.com';
 
 function ClientDetails() {
-  // ✅ FIX: Dono params lo aur actualId use karo
   const { id, clientId } = useParams();
-  const actualId = id || clientId; // ✅ Dono mein se jo mile
+  const actualId = id || clientId;
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
 
@@ -42,8 +41,8 @@ function ClientDetails() {
   const [renamingId, setRenamingId] = useState(null);
   const [newFileName, setNewFileName] = useState('');
 
-  // ✅ Fetch client function
-  const fetchClient = useCallback(async () => {
+  // ✅ Fetch client function (removed useCallback to prevent re-render loops)
+  const fetchClient = async () => {
     try {
       const token = localStorage.getItem('token');
       console.log('📥 Fetching client with ID:', actualId);
@@ -105,41 +104,7 @@ function ClientDetails() {
     } finally {
       setLoading(false);
     }
-  }, [actualId]);
-
-  // ✅ Fetch client on mount and when id changes
-  useEffect(() => {
-    fetchClient();
-  }, [fetchClient]);
-
-  // ✅ Refresh data when page becomes visible
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (!document.hidden && actualId) {
-        console.log('🔄 Page visible, refreshing client data...');
-        fetchClient();
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [actualId, fetchClient]);
-
-  // ✅ Force refresh when component mounts
-  useEffect(() => {
-    setRefreshKey(prev => prev + 1);
-  }, []);
-
-  // ✅ Refresh data when URL changes
-  useEffect(() => {
-    const handleRouteChange = () => {
-      if (actualId) {
-        console.log('🔄 Route changed, refreshing client data...');
-        fetchClient();
-      }
-    };
-    window.addEventListener('popstate', handleRouteChange);
-    return () => window.removeEventListener('popstate', handleRouteChange);
-  }, [actualId, fetchClient]);
+  };
 
   // ✅ Fetch registrations
   const fetchRegistrations = async () => {
@@ -221,10 +186,12 @@ function ClientDetails() {
     }
   };
 
-  // ✅ Load data on mount
+  // ✅ SINGLE useEffect to load all data (FIX: Double calls removed)
   useEffect(() => {
     if (actualId) {
       console.log('🔄 Loading data for client ID:', actualId);
+      fetchClient();
+      
       const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(actualId);
       if (isValidObjectId) {
         fetchRegistrations();
@@ -234,8 +201,7 @@ function ClientDetails() {
     } else {
       console.error('❌ No client ID available');
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [actualId]);
+  }, [actualId]); // ✅ Sirf actualId change hone par chalega
 
   // ✅ Rename document
   const renameDocument = async (docId, newName) => {
@@ -305,7 +271,10 @@ function ClientDetails() {
       console.log('✅ Documents uploaded:', response.data);
       fetchDocuments();
       setSelectedFiles([]);
-      alert(`✅ ${response.data.files.length} files uploaded successfully!`);
+      
+      // ✅ Safe alert
+      const fileCount = response.data.files ? response.data.files.length : (response.data.length || 0);
+      alert(`✅ ${fileCount} files uploaded successfully!`);
     } catch (error) {
       console.error('❌ Upload error:', error);
       alert('Failed to upload documents');
