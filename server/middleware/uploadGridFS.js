@@ -4,9 +4,9 @@ const crypto = require('crypto');
 const path = require('path');
 const mongoose = require('mongoose');
 
-// ✅ GridFS Storage
+// ✅ Render par kaam karne wala GridFS Storage
 const storage = new GridFsStorage({
-  db: mongoose.connection.db,
+  db: mongoose.connection.db, // ✅ URL nahi, direct db object
   file: (req, file) => {
     return new Promise((resolve, reject) => {
       crypto.randomBytes(16, (err, buf) => {
