@@ -2,11 +2,11 @@ const multer = require('multer');
 const { GridFsStorage } = require('multer-gridfs-storage');
 const crypto = require('crypto');
 const path = require('path');
-const mongoose = require('mongoose');
 
-// ✅ Render par kaam karne wala GridFS Storage
+// ✅ Render par sabse safe method: URL use karo
 const storage = new GridFsStorage({
-  db: mongoose.connection.db, // ✅ URL nahi, direct db object
+  url: process.env.MONGO_URI, 
+  options: { useNewUrlParser: true, useUnifiedTopology: true },
   file: (req, file) => {
     return new Promise((resolve, reject) => {
       crypto.randomBytes(16, (err, buf) => {

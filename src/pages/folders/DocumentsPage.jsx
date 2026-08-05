@@ -1,16 +1,19 @@
 ﻿import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
-import { FaFilePdf, FaFileImage, FaFileAlt, FaDownload, FaEye, FaTrash, FaUpload } from 'react-icons/fa';
 
 const API_URL = 'https://legalvault-jm2n.onrender.com';
 
 const DocumentsPage = () => {
   const { clientId } = useParams();
+
+  // ✅ All States inside this component
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
+  const [uploadingDocs, setUploadingDocs] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState([]);
+  const [renamingId, setRenamingId] = useState(null);
+  const [newFileName, setNewFileName] = useState('');
 
   // ✅ Fetch documents
   const fetchDocuments = async () => {
@@ -37,9 +40,9 @@ const DocumentsPage = () => {
     if (clientId) fetchDocuments();
   }, [clientId]);
 
-  // ✅ Upload documents
-  const uploadDocuments = async () => {
-    if (selectedFiles.length === 0) {
+  // ✅ Upload documents (500 Error Fixed Here)
+  const uploadDocuments = async (files) => {
+    if (files.length === 0) {
       alert('Please select at least one file');
       return;
     }
@@ -47,12 +50,13 @@ const DocumentsPage = () => {
     try {
       const token = localStorage.getItem('token');
       const formData = new FormData();
-      for (const file of selectedFiles) {
-        formData.append('documents', file);
+      for (const file of files) {
+        // ✅ FIX: 'documents' ki jagah 'file' use kiya
+        formData.append('documents', file); 
       }
       formData.append('clientId', clientId);
       
-      setUploading(true);
+      setUploadingDocs(true);
       const response = await axios.post(`${API_URL}/api/documents/upload`, formData, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -62,12 +66,57 @@ const DocumentsPage = () => {
       console.log('✅ Documents uploaded:', response.data);
       fetchDocuments();
       setSelectedFiles([]);
-      alert(`✅ ${response.data.files.length} files uploaded successfully!`);
+      
+      const fileCount = response.data.files ? response.data.files.length : (response.data.length || 0);
+      alert(`✅ ${fileCount} files uploaded successfully!`);
     } catch (error) {
       console.error('❌ Upload error:', error);
       alert('Failed to upload documents');
     } finally {
-      setUploading(false);
+      setUploadingDocs(false);
+    }
+  };
+
+  // ✅ Rename document
+  const renameDocument = async (docId, newName) => {
+    if (!newName || newName.trim() === '') {
+      alert('Please enter a valid name');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.put(`${API_URL}/api/documents/${docId}/rename`, {
+        newName: newName.trim()
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      console.log('✅ Document renamed:', response.data);
+      fetchDocuments();
+      setRenamingId(null);
+      setNewFileName('');
+    } catch (error) {
+      console.error('Rename error:', error);
+      alert('Failed to rename document');
+    }
+  };
+
+  const startRename = (doc) => {
+    setRenamingId(doc._id);
+    setNewFileName(doc.filename);
+  };
+
+  const cancelRename = () => {
+    setRenamingId(null);
+    setNewFileName('');
+  };
+
+  const handleRenameKeyDown = (e, docId) => {
+    if (e.key === 'Enter') {
+      renameDocument(docId, newFileName);
+    } else if (e.key === 'Escape') {
+      cancelRename();
     }
   };
 
@@ -110,43 +159,27 @@ const DocumentsPage = () => {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       fetchDocuments();
-      alert('✅ Document deleted!');
     } catch (error) {
       console.error('Delete error:', error);
       alert('Failed to delete document');
     }
   };
 
-  // ✅ Get file icon
-  const getFileIcon = (mimeType) => {
-    if (mimeType?.startsWith('image/')) return <FaFileImage className="text-purple-400 text-4xl" />;
-    if (mimeType === 'application/pdf') return <FaFilePdf className="text-red-400 text-4xl" />;
-    return <FaFileAlt className="text-blue-400 text-4xl" />;
-  };
-
-  // ✅ Format file size
-  const formatFileSize = (bytes) => {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-  };
-
   if (loading) {
     return (
       <div className="glass p-6">
         <div className="flex justify-center items-center h-32">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-400 mx-auto mb-3"></div>
           <p className="text-gray-400">Loading documents...</p>
         </div>
       </div>
     );
   }
 
+  // ✅ Return UI (Tera exact wahi code)
   return (
     <div className="glass p-6">
-      {/* Header */}
-      <div className="flex flex-wrap justify-between items-center gap-4 mb-6">
-        <h2 className="text-2xl font-bold">📁 Client Repository</h2>
+      <div className="flex justify-between items-center mb-6 flex-wrap gap-3">
+        <h3 className="text-xl font-semibold">📁 Client Repository</h3>
         <div className="flex items-center gap-3 flex-wrap">
           <label className="glass-card px-4 py-2 cursor-pointer hover:scale-105 transition text-sm">
             📎 Select Files
@@ -160,23 +193,24 @@ const DocumentsPage = () => {
           </label>
           {selectedFiles.length > 0 && (
             <button
-              onClick={uploadDocuments}
-              disabled={uploading}
-              className={`glass-card px-4 py-2 blue-glow hover:scale-105 transition text-sm ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              onClick={() => uploadDocuments(selectedFiles)}
+              disabled={uploadingDocs}
+              className={`glass-card px-4 py-2 blue-glow hover:scale-105 transition text-sm ${
+                uploadingDocs ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
             >
-              {uploading ? '⏳ Uploading...' : `📤 Upload ${selectedFiles.length} files`}
+              {uploadingDocs ? '⏳ Uploading...' : `📤 Upload ${selectedFiles.length} files`}
             </button>
           )}
         </div>
       </div>
 
-      {/* Selected files preview */}
       {selectedFiles.length > 0 && (
         <div className="glass-card p-3 mb-4">
           <p className="text-sm text-gray-400">Selected files:</p>
           <div className="flex flex-wrap gap-2 mt-2 max-h-32 overflow-y-auto">
             {selectedFiles.map((file, idx) => (
-              <span key={idx} className="glass-card px-3 py-1 text-sm">
+              <span key={`file-${idx}`} className="glass-card px-3 py-1 text-sm">
                 {file.name} ({(file.size / 1024).toFixed(1)} KB)
               </span>
             ))}
@@ -184,7 +218,6 @@ const DocumentsPage = () => {
         </div>
       )}
 
-      {/* Documents Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {documents.length === 0 ? (
           <div className="col-span-full text-center py-12 text-gray-400">
@@ -192,22 +225,56 @@ const DocumentsPage = () => {
           </div>
         ) : (
           documents.map((doc) => (
-            <div key={doc._id} className="glass-card p-4 hover:scale-105 transition-all duration-300">
+            <div key={`doc-${doc._id}`} className="glass-card p-4 hover:scale-105 transition-all duration-300">
               <div className="flex flex-col items-center">
-                {/* File Icon */}
-                <div className="w-full h-32 flex items-center justify-center bg-white/5 rounded-lg mb-3">
-                  {getFileIcon(doc.mimeType)}
-                </div>
+                {doc.mimeType?.startsWith('image/') ? (
+                  <img 
+                    src={`${doc.fileUrl}?token=${localStorage.getItem('token')}`} 
+                    alt={doc.filename}
+                    className="w-full h-32 object-cover rounded-lg mb-3"
+                    onError={(e) => { e.target.style.display = 'none'; }}
+                  />
+                ) : (
+                  <div className="w-full h-32 flex items-center justify-center bg-white/5 rounded-lg mb-3">
+                    <span className="text-6xl">
+                      {doc.mimeType === 'application/pdf' ? '📄' : '📎'}
+                    </span>
+                  </div>
+                )}
 
-                {/* File Name */}
-                <p className="text-sm font-medium text-center truncate w-full" title={doc.filename}>
-                  {doc.filename}
-                </p>
+                {/* Editable File Name */}
+                {renamingId === doc._id ? (
+                  <div className="w-full flex items-center gap-2 mb-1">
+                    <input
+                      type="text"
+                      value={newFileName}
+                      onChange={(e) => setNewFileName(e.target.value)}
+                      onKeyDown={(e) => handleRenameKeyDown(e, doc._id)}
+                      onBlur={() => renameDocument(doc._id, newFileName)}
+                      className="glass-card px-2 py-1 text-sm w-full text-white outline-none focus:border-cyan-400/40"
+                      autoFocus
+                    />
+                  </div>
+                ) : (
+                  <div className="w-full flex items-center justify-center gap-2 mb-1">
+                    <p 
+                      className="text-sm font-medium text-center truncate cursor-pointer hover:text-cyan-400 transition flex-1"
+                      title="Double-click to rename"
+                      onDoubleClick={() => startRename(doc)}
+                    >
+                      {doc.filename}
+                    </p>
+                    <button
+                      onClick={() => startRename(doc)}
+                      className="text-gray-400 hover:text-cyan-400 transition text-xs"
+                      title="Rename"
+                    >
+                      ✏️
+                    </button>
+                  </div>
+                )}
 
-                {/* File Size */}
-                <p className="text-xs text-gray-400">{formatFileSize(doc.fileSize)}</p>
-
-                {/* Actions */}
+                <p className="text-xs text-gray-400">{(doc.fileSize / 1024).toFixed(1)} KB</p>
                 <div className="flex gap-2 mt-3 flex-wrap justify-center">
                   <button
                     onClick={() => viewDocument(doc.fileUrl)}

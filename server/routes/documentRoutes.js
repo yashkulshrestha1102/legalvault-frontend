@@ -7,7 +7,7 @@ const Document = require('../models/Document');
 const { ObjectId } = require('mongodb');
 const jwt = require('jsonwebtoken');
 
-// ✅ Upload - GridFS
+// ✅ Upload - GridFS (FIXED: With proper error handling)
 router.post('/upload', auth, upload.array('documents', 50), async (req, res) => {
   try {
     console.log('📥 Files received:', req.files?.length || 0);
@@ -16,8 +16,20 @@ router.post('/upload', auth, upload.array('documents', 50), async (req, res) => 
       return res.status(400).json({ message: 'No files uploaded' });
     }
 
-    const bucket = getGridFS();
+    // ✅ Safety Check: Client ID
     const { clientId } = req.body;
+    if (!clientId) {
+      console.error('❌ Client ID missing from request body!');
+      return res.status(400).json({ message: 'Client ID is required!' });
+    }
+
+    // ✅ Safety Check: GridFS Bucket
+    const bucket = getGridFS();
+    if (!bucket) {
+      console.error('❌ GridFS bucket is NULL or not initialized!');
+      return res.status(500).json({ message: 'GridFS storage is not connected. Please try again.' });
+    }
+
     const uploadedFiles = [];
 
     for (const file of req.files) {
@@ -25,7 +37,7 @@ router.post('/upload', auth, upload.array('documents', 50), async (req, res) => 
         contentType: file.mimetype,
         metadata: {
           uploadedBy: req.user.id,
-          clientId: clientId || null,
+          clientId: clientId,
           uploadDate: new Date()
         }
       });
@@ -34,38 +46,44 @@ router.post('/upload', auth, upload.array('documents', 50), async (req, res) => 
 
       await new Promise((resolve, reject) => {
         uploadStream.on('finish', async () => {
-          const host = req.get('host');
-          const protocol = req.protocol === 'https' ? 'https' : 'http';
-          const url = `${protocol}://${host}/api/documents/${uploadStream.id}`;
+          try {
+            const host = req.get('host');
+            const protocol = req.protocol === 'https' ? 'https' : 'http';
+            const url = `${protocol}://${host}/api/documents/${uploadStream.id}`;
 
-          const doc = new Document({
-            clientId: clientId,
-            filename: file.originalname,
-            originalName: file.originalname,
-            fileType: file.mimetype.startsWith('image/') ? 'image' : 
-                     file.mimetype === 'application/pdf' ? 'pdf' : 'document',
-            fileSize: file.size,
-            fileUrl: url,
-            fileId: uploadStream.id,
-            mimeType: file.mimetype,
-            uploadedBy: req.user.id
-          });
-          await doc.save();
+            const doc = new Document({
+              clientId: clientId,
+              filename: file.originalname,
+              originalName: file.originalname,
+              fileType: file.mimetype.startsWith('image/') ? 'image' : 
+                       file.mimetype === 'application/pdf' ? 'pdf' : 'document',
+              fileSize: file.size,
+              fileUrl: url,
+              fileId: uploadStream.id,
+              mimeType: file.mimetype,
+              uploadedBy: req.user.id
+            });
+            
+            await doc.save();
 
-          uploadedFiles.push({
-            id: doc._id,
-            url: url,
-            fileId: uploadStream.id,
-            filename: file.originalname,
-            size: file.size,
-            mimeType: file.mimetype
-          });
+            uploadedFiles.push({
+              id: doc._id,
+              url: url,
+              fileId: uploadStream.id,
+              filename: file.originalname,
+              size: file.size,
+              mimeType: file.mimetype
+            });
 
-          resolve();
+            resolve();
+          } catch (saveError) {
+            console.error('❌ Error saving document metadata:', saveError);
+            reject(saveError);
+          }
         });
 
         uploadStream.on('error', (error) => {
-          console.error('Upload error:', error);
+          console.error('❌ Upload stream error:', error);
           reject(error);
         });
       });
@@ -77,7 +95,7 @@ router.post('/upload', auth, upload.array('documents', 50), async (req, res) => 
     });
 
   } catch (error) {
-    console.error('Upload error:', error);
+    console.error('❌ Upload error:', error);
     res.status(500).json({ message: error.message });
   }
 });
@@ -173,6 +191,11 @@ router.get('/:id', async (req, res) => {
     }
 
     const bucket = getGridFS();
+    if (!bucket) {
+      console.error('❌ GridFS bucket is NULL for download!');
+      return res.status(500).json({ message: 'GridFS storage not available' });
+    }
+
     const downloadStream = bucket.openDownloadStream(fileId);
 
     res.setHeader('Content-Type', doc.mimeType);
