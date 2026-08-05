@@ -1,18 +1,17 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
-const upload = require('../middleware/upload');
+const upload = require('../middleware/uploadGridFS'); // ✅ GridFS
 const { getGridFS } = require('../config/gridfs');
 const Document = require('../models/Document');
 const { ObjectId } = require('mongodb');
 const jwt = require('jsonwebtoken');
 
-// ✅ Upload multiple documents (GridFS)
+// ✅ Upload - GridFS
 router.post('/upload', auth, upload.array('documents', 50), async (req, res) => {
   try {
-    console.log('📥 Upload request - Files:', req.files?.length || 0);
-        console.log('📥 Body:', req.body);
-
+    console.log('📥 Files received:', req.files?.length || 0);
+    
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ message: 'No files uploaded' });
     }
