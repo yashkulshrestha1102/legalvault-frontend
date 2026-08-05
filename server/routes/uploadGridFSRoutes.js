@@ -288,14 +288,16 @@ const storage = multer.memoryStorage();
 const upload = multer({ 
   storage: storage,
   limits: { fileSize: 100 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
+    fileFilter: (req, file, cb) => {
     if (file.fieldname !== 'pdf' && file.fieldname !== 'document') {
       return cb(new Error('Unexpected field: ' + file.fieldname));
     }
-    if (file.mimetype === 'application/pdf') {
+    // ✅ Ab PDF ke alawa images bhi allow karega
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
+    if (allowedTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Only PDF files are allowed'));
+      cb(new Error('File type not allowed: ' + file.mimetype));
     }
   }
 });
