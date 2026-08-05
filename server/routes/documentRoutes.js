@@ -11,7 +11,8 @@ const jwt = require('jsonwebtoken');
 router.post('/upload', auth, upload.array('documents', 50), async (req, res) => {
   try {
     console.log('📥 Upload request - Files:', req.files?.length || 0);
-    
+        console.log('📥 Body:', req.body);
+
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ message: 'No files uploaded' });
     }
