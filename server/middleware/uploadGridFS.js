@@ -4,10 +4,9 @@ const crypto = require('crypto');
 const path = require('path');
 const mongoose = require('mongoose');
 
-// ✅ GridFS Storage - Sahi tarika
+// ✅ Storage - Sahi tarika
 const storage = new GridFsStorage({
-  db: mongoose.connection.db, // ✅ Direct db object do
-  options: { useNewUrlParser: true, useUnifiedTopology: true },
+  db: mongoose.connection.db,
   file: (req, file) => {
     return new Promise((resolve, reject) => {
       crypto.randomBytes(16, (err, buf) => {
@@ -25,7 +24,7 @@ const storage = new GridFsStorage({
   }
 });
 
-// ✅ Multiple file types allowed
+// ✅ File Filter - Multiple types allowed
 const fileFilter = (req, file, cb) => {
   const allowedTypes = [
     'image/jpeg', 'image/png', 'image/gif', 'image/webp',
@@ -46,7 +45,7 @@ const fileFilter = (req, file, cb) => {
 
 const upload = multer({
   storage: storage,
-  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
+  limits: { fileSize: 50 * 1024 * 1024 },
   fileFilter: fileFilter
 });
 
