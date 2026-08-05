@@ -1,13 +1,32 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
-const upload = require('../middleware/uploadGridFS'); // ✅ GridFS
+const multer = require('multer');
 const { getGridFS } = require('../config/gridfs');
 const Document = require('../models/Document');
 const { ObjectId } = require('mongodb');
 const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
 
-// ✅ Upload - GridFS (FIXED: With proper error handling)
+// ✅ Multer memory storage (Buffer mein rakhega, disk par nahi)
+const storage = multer.memoryStorage();
+const upload = multer({ 
+  storage: storage,
+  limits: { fileSize: 100 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (file.fieldname !== 'documents' && file.fieldname !== 'file') {
+      return cb(new Error('Unexpected field: ' + file.fieldname));
+    }
+    const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error(`File type not allowed: ${file.mimetype}`));
+    }
+  }
+});
+
+// ✅ Upload - GridFS (Direct MongoDB Driver)
 router.post('/upload', auth, upload.array('documents', 50), async (req, res) => {
   try {
     console.log('📥 Files received:', req.files?.length || 0);
@@ -16,23 +35,26 @@ router.post('/upload', auth, upload.array('documents', 50), async (req, res) => 
       return res.status(400).json({ message: 'No files uploaded' });
     }
 
-    // ✅ Safety Check: Client ID
     const { clientId } = req.body;
     if (!clientId) {
-      console.error('❌ Client ID missing from request body!');
       return res.status(400).json({ message: 'Client ID is required!' });
     }
 
-    // ✅ Safety Check: GridFS Bucket
+    // ✅ Wait for DB connection to be ready
+    if (mongoose.connection.readyState !== 1) {
+      console.error('❌ MongoDB not connected!');
+      return res.status(500).json({ message: 'Database connection not established' });
+    }
+
     const bucket = getGridFS();
     if (!bucket) {
-      console.error('❌ GridFS bucket is NULL or not initialized!');
-      return res.status(500).json({ message: 'GridFS storage is not connected. Please try again.' });
+      return res.status(500).json({ message: 'GridFS not initialized' });
     }
 
     const uploadedFiles = [];
 
     for (const file of req.files) {
+      // ✅ Directly upload buffer to GridFS
       const uploadStream = bucket.openUploadStream(file.originalname, {
         contentType: file.mimetype,
         metadata: {
@@ -42,50 +64,43 @@ router.post('/upload', auth, upload.array('documents', 50), async (req, res) => 
         }
       });
 
-      uploadStream.end(file.buffer);
+      // ✅ Write buffer to stream
+      uploadStream.write(file.buffer);
+      uploadStream.end();
 
-      await new Promise((resolve, reject) => {
-        uploadStream.on('finish', async () => {
-          try {
-            const host = req.get('host');
-            const protocol = req.protocol === 'https' ? 'https' : 'http';
-            const url = `${protocol}://${host}/api/documents/${uploadStream.id}`;
+      // ✅ Wait for finish event
+      const fileId = await new Promise((resolve, reject) => {
+        uploadStream.on('finish', () => resolve(uploadStream.id));
+        uploadStream.on('error', (err) => reject(err));
+      });
 
-            const doc = new Document({
-              clientId: clientId,
-              filename: file.originalname,
-              originalName: file.originalname,
-              fileType: file.mimetype.startsWith('image/') ? 'image' : 
-                       file.mimetype === 'application/pdf' ? 'pdf' : 'document',
-              fileSize: file.size,
-              fileUrl: url,
-              fileId: uploadStream.id,
-              mimeType: file.mimetype,
-              uploadedBy: req.user.id
-            });
-            
-            await doc.save();
+      // ✅ Save metadata to MongoDB
+      const host = req.get('host');
+      const protocol = req.protocol === 'https' ? 'https' : 'http';
+      const url = `${protocol}://${host}/api/documents/${fileId}`;
 
-            uploadedFiles.push({
-              id: doc._id,
-              url: url,
-              fileId: uploadStream.id,
-              filename: file.originalname,
-              size: file.size,
-              mimeType: file.mimetype
-            });
+      const doc = new Document({
+        clientId: clientId,
+        filename: file.originalname,
+        originalName: file.originalname,
+        fileType: file.mimetype.startsWith('image/') ? 'image' : 
+                 file.mimetype === 'application/pdf' ? 'pdf' : 'document',
+        fileSize: file.size,
+        fileUrl: url,
+        fileId: fileId,
+        mimeType: file.mimetype,
+        uploadedBy: req.user.id
+      });
+      
+      await doc.save();
 
-            resolve();
-          } catch (saveError) {
-            console.error('❌ Error saving document metadata:', saveError);
-            reject(saveError);
-          }
-        });
-
-        uploadStream.on('error', (error) => {
-          console.error('❌ Upload stream error:', error);
-          reject(error);
-        });
+      uploadedFiles.push({
+        id: doc._id,
+        url: url,
+        fileId: fileId,
+        filename: file.originalname,
+        size: file.size,
+        mimeType: file.mimetype
       });
     }
 
@@ -100,7 +115,7 @@ router.post('/upload', auth, upload.array('documents', 50), async (req, res) => 
   }
 });
 
-// ✅ Rename document
+// ✅ Rename, Get, Delete, Get by ID routes (Same as before, no change needed)
 router.put('/:id/rename', auth, async (req, res) => {
   try {
     const { newName } = req.body;
@@ -110,36 +125,20 @@ router.put('/:id/rename', auth, async (req, res) => {
 
     const doc = await Document.findOneAndUpdate(
       { _id: req.params.id, isDeleted: false },
-      { 
-        $set: { 
-          filename: newName.trim(),
-          originalName: newName.trim()
-        } 
-      },
+      { $set: { filename: newName.trim(), originalName: newName.trim() } },
       { new: true }
     );
-    
-    if (!doc) {
-      return res.status(404).json({ message: 'Document not found' });
-    }
-    
-    res.json({ 
-      message: 'Document renamed successfully', 
-      document: doc 
-    });
+    if (!doc) return res.status(404).json({ message: 'Document not found' });
+    res.json({ message: 'Document renamed successfully', document: doc });
   } catch (error) {
     console.error('Rename error:', error);
     res.status(500).json({ message: error.message });
   }
 });
 
-// ✅ Get all documents for a client
 router.get('/client/:clientId', auth, async (req, res) => {
   try {
-    const documents = await Document.find({ 
-      clientId: req.params.clientId,
-      isDeleted: false 
-    }).sort({ createdAt: -1 });
+    const documents = await Document.find({ clientId: req.params.clientId, isDeleted: false }).sort({ createdAt: -1 });
     res.json(documents);
   } catch (error) {
     console.error('Error fetching documents:', error);
@@ -147,17 +146,10 @@ router.get('/client/:clientId', auth, async (req, res) => {
   }
 });
 
-// ✅ Delete document (Soft delete)
 router.delete('/:id', auth, async (req, res) => {
   try {
-    const doc = await Document.findOneAndUpdate(
-      { _id: req.params.id, isDeleted: false },
-      { isDeleted: true },
-      { new: true }
-    );
-    if (!doc) {
-      return res.status(404).json({ message: 'Document not found' });
-    }
+    const doc = await Document.findOneAndUpdate({ _id: req.params.id, isDeleted: false }, { isDeleted: true }, { new: true });
+    if (!doc) return res.status(404).json({ message: 'Document not found' });
     res.json({ message: 'Document deleted successfully' });
   } catch (error) {
     console.error('Delete error:', error);
@@ -165,42 +157,23 @@ router.delete('/:id', auth, async (req, res) => {
   }
 });
 
-// ✅ Get document by ID (GridFS)
 router.get('/:id', async (req, res) => {
   try {
-    let token = req.header('Authorization')?.replace('Bearer ', '');
-    if (!token) {
-      token = req.query.token;
-    }
-    
-    if (!token) {
-      return res.status(401).json({ message: 'Access Denied. No token provided.' });
-    }
+    let token = req.header('Authorization')?.replace('Bearer ', '') || req.query.token;
+    if (!token) return res.status(401).json({ message: 'Access Denied' });
 
-    let decoded;
-    try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET);
-    } catch (error) {
-      return res.status(401).json({ message: 'Invalid token.' });
-    }
+    try { jwt.verify(token, process.env.JWT_SECRET); } catch (error) { return res.status(401).json({ message: 'Invalid token' }); }
 
     const fileId = new ObjectId(req.params.id);
     const doc = await Document.findOne({ fileId, isDeleted: false });
-    if (!doc) {
-      return res.status(404).json({ message: 'Document not found' });
-    }
+    if (!doc) return res.status(404).json({ message: 'Document not found' });
 
     const bucket = getGridFS();
-    if (!bucket) {
-      console.error('❌ GridFS bucket is NULL for download!');
-      return res.status(500).json({ message: 'GridFS storage not available' });
-    }
+    if (!bucket) return res.status(500).json({ message: 'GridFS not available' });
 
     const downloadStream = bucket.openDownloadStream(fileId);
-
     res.setHeader('Content-Type', doc.mimeType);
     res.setHeader('Content-Disposition', `inline; filename="${doc.filename}"`);
-    
     downloadStream.pipe(res);
 
     downloadStream.on('error', (error) => {
