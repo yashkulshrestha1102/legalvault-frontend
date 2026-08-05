@@ -114,15 +114,17 @@ app.use('/api/clients', (req, res, next) => {
 // ✅ Audit Log Middleware
 app.use(auditLog);
 
-// ✅ CONNECT TO MONGODB FIRST (Promise ke saath)
+// ✅ Connect to MongoDB first
 connectDB().then(() => {
-  console.log('✅ MongoDB connected. Initializing GridFS...');
+  console.log('✅ MongoDB Connected, initializing GridFS...');
   
-  // ✅ AB GridFS initialize karo (Jab connection pakka ho jaye)
-  initGridFS().catch(err => {
-    console.error('GridFS initialization failed:', err);
-  });
-}).catch(err => {
+  // ✅ GridFS synchronous call (No .catch() needed)
+  try {
+    initGridFS();
+  } catch (err) {
+    console.error('❌ GridFS initialization failed:', err.message);
+  }
+}).catch((err) => {
   console.error('❌ MongoDB connection failed:', err);
   process.exit(1);
 });
