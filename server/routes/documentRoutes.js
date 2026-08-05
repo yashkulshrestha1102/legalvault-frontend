@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
-const upload = require('../middleware/uploadGridFS'); // ✅ GridFS upload
+const upload = require('../middleware/upload');
 const { getGridFS } = require('../config/gridfs');
 const Document = require('../models/Document');
 const { ObjectId } = require('mongodb');
