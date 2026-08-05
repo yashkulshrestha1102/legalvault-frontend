@@ -21,6 +21,7 @@
     "jspdf-autotable": "^5.0.8",
     "lucide-react": "^1.28.0",
     "morgan": "^1.11.0",
+    "multer-gridfs-storage": "^5.0.2",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-hook-form": "^7.81.0",
