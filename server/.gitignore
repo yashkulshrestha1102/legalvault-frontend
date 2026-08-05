@@ -1,8 +1,10 @@
+# Server node_modules
 node_modules/
+
+# Server environment
 .env
-.DS_Store
+.env.local
+
+# Server build/logs
 dist/
-build/
 *.log
-Server/
-node_modules
