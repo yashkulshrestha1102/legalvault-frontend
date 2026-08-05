@@ -2,10 +2,11 @@ const multer = require('multer');
 const { GridFsStorage } = require('multer-gridfs-storage');
 const crypto = require('crypto');
 const path = require('path');
+const mongoose = require('mongoose');
 
-// ✅ GridFS Storage
+// ✅ GridFS Storage - Sahi tarika
 const storage = new GridFsStorage({
-  url: process.env.MONGO_URI,
+  db: mongoose.connection.db, // ✅ Direct db object do
   options: { useNewUrlParser: true, useUnifiedTopology: true },
   file: (req, file) => {
     return new Promise((resolve, reject) => {
@@ -24,10 +25,10 @@ const storage = new GridFsStorage({
   }
 });
 
-// ✅ Fixed - Multiple file types allowed
+// ✅ Multiple file types allowed
 const fileFilter = (req, file, cb) => {
   const allowedTypes = [
-    'image/jpeg', 'image/png', 'image/gif', 
+    'image/jpeg', 'image/png', 'image/gif', 'image/webp',
     'application/pdf',
     'application/msword',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -39,7 +40,7 @@ const fileFilter = (req, file, cb) => {
   if (allowedTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error(`File type not allowed: ${file.mimetype}. Allowed: PDF, Images, Word, Excel, Text`), false);
+    cb(new Error(`File type not allowed: ${file.mimetype}`), false);
   }
 };
 
