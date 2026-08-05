@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 
 let gridFSBucket = null;
 
-const initGridFS = async () => {
+const initGridFS = () => {
   try {
     const db = mongoose.connection.db;
     if (!db) {

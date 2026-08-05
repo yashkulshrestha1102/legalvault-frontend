@@ -2,11 +2,11 @@ const multer = require('multer');
 const { GridFsStorage } = require('multer-gridfs-storage');
 const crypto = require('crypto');
 const path = require('path');
+const mongoose = require('mongoose');
 
-// ✅ GridFS Storage with MongoDB connection
+// ✅ GridFS Storage - Direct DB object use karo
 const storage = new GridFsStorage({
-  url: process.env.MONGO_URI,
-  options: { useNewUrlParser: true, useUnifiedTopology: true },
+  db: mongoose.connection.db, // ✅ URL nahi, direct db object
   file: (req, file) => {
     return new Promise((resolve, reject) => {
       crypto.randomBytes(16, (err, buf) => {
@@ -24,23 +24,16 @@ const storage = new GridFsStorage({
   }
 });
 
-// ✅ File Filter - Sabhi file types allow
+// ✅ Sabhi file types allow
 const fileFilter = (req, file, cb) => {
   const allowedTypes = [
-    // Images
-    'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
-    // Documents
+    'image/jpeg', 'image/png', 'image/gif', 'image/webp',
     'application/pdf',
     'application/msword',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     'application/vnd.ms-excel',
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'application/vnd.ms-powerpoint',
-    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-    // Text
-    'text/plain', 'text/csv',
-    // Archives
-    'application/zip', 'application/x-rar-compressed'
+    'text/plain', 'text/csv'
   ];
   
   if (allowedTypes.includes(file.mimetype)) {
@@ -52,9 +45,7 @@ const fileFilter = (req, file, cb) => {
 
 const upload = multer({
   storage: storage,
-  limits: { 
-    fileSize: 100 * 1024 * 1024 // 100MB
-  },
+  limits: { fileSize: 100 * 1024 * 1024 },
   fileFilter: fileFilter
 });
 
