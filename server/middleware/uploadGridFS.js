@@ -24,8 +24,14 @@ const storage = new GridFsStorage({
   }
 });
 
-// ✅ Sabhi file types allow
+// ✅ FIXED: 'file' aur 'documents' dono allow karega
 const fileFilter = (req, file, cb) => {
+  // 1. Field name check (Sabse important fix)
+  if (file.fieldname !== 'file' && file.fieldname !== 'documents') {
+    return cb(new Error('Unexpected field: ' + file.fieldname));
+  }
+
+  // 2. MIME type check
   const allowedTypes = [
     'image/jpeg', 'image/png', 'image/gif', 'image/webp',
     'application/pdf',
