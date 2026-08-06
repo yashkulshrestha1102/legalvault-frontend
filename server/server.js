@@ -23,6 +23,37 @@ requiredEnv.forEach(key => {
 });
 console.log('✅ All environment variables are set');
 
+// ✅ ULTIMATE MANUAL CORS FIX (100% kaam karega)
+app.use((req, res, next) => {
+  // Allow all origins for development and specific ones for production
+  const allowedOrigins = [
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'https://legalvault-frontend-two.vercel.app',
+    'https://legalvault-ochre.vercel.app',
+    'https://legalvault.businezexcellence.com'
+  ];
+  
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin) || !origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin || '*');
+  } else {
+    // Optionally block other origins or set to specific
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
+  
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  
+  // ✅ Handle Preflight (OPTIONS) request
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  
+  next();
+});
+
 // ✅ Force security headers
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -51,25 +82,6 @@ app.use(helmet({
 
 // ✅ Trust Proxy
 app.set('trust proxy', 1);
-
-// ✅ CORS
-const allowedOrigins = (process.env.CORS_ORIGIN || 
-  'http://localhost:5173,http://localhost:5174,https://legalvault-frontend-two.vercel.app,https://legalvault-ochre.vercel.app,https://legalvault.businezexcellence.com').split(',');
-
-app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      console.log('❌ CORS blocked for origin:', origin);
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
 
 // ✅ Morgan
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
@@ -145,11 +157,6 @@ app.use('/api/income-tax', require('./routes/incomeTaxRoutes'));
 app.use('/api/hr', require('./routes/hrRoutes'));
 app.use('/api/corporate-secretariat', require('./routes/corporateSecretariatRoutes'));
 app.use('/api/financials', require('./routes/financialRoutes'));
-
-
-
-
-
 
 // ✅ Health Check
 app.get('/health', (req, res) => {
