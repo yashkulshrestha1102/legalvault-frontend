@@ -54,7 +54,7 @@ app.set('trust proxy', 1);
 
 // ✅ CORS
 const allowedOrigins = (process.env.CORS_ORIGIN || 
-  'http://localhost:5173,http://localhost:5174,https://legalvault-frontend-two.vercel.app,https://legalvault-ochre.vercel.app').split(',');
+  'http://localhost:5173,http://localhost:5174,https://legalvault-frontend-two.vercel.app,https://legalvault-ochre.vercel.app,https://legalvault.businezexcellence.com').split(',');
 
 app.use(cors({
   origin: function (origin, callback) {
