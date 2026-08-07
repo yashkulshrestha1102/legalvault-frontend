@@ -19,17 +19,22 @@ exports.getClients = async (req, res) => {
     const user = req.user;
     const query = { isDeleted: false };
     
+    // 1. Sabhi clients fetch karo
     const clients = await Client.find(query)
       .select('name company email phone status _id contactPerson onboardingDate userPermissions')
       .populate('userPermissions.userId', 'name email role')
       .sort({ createdAt: -1 });
     
-    // ✅ Filter clients for non-admin users
+    // 2. Non-admin users ke liye filter karo
     let filteredClients = clients;
     if (user.role !== 'admin') {
-      filteredClients = clients.filter(client => 
-        client.userPermissions.some(p => String(p.userId._id || p.userId) === String(user.id))
-      );
+      filteredClients = clients.filter(client => {
+        // Safe check: String comparison use karo
+        return client.userPermissions.some(p => {
+          const permUserId = p.userId?._id || p.userId;
+          return String(permUserId) === String(user.id);
+        });
+      });
     }
     
     res.json(filteredClients);
@@ -59,11 +64,12 @@ exports.getClientById = async (req, res) => {
       return res.status(404).json({ message: 'Client not found' });
     }
     
-    // ✅ Check access for non-admin
+    // ✅ Safe access check for non-admin
     if (user.role !== 'admin') {
-      const hasAccess = client.userPermissions.some(p => 
-        String(p.userId._id || p.userId) === String(user.id)
-      );
+      const hasAccess = client.userPermissions.some(p => {
+        const permUserId = p.userId?._id || p.userId;
+        return String(permUserId) === String(user.id);
+      });
       if (!hasAccess) {
         return res.status(403).json({ message: 'Access denied' });
       }
