@@ -87,6 +87,11 @@ function ClientDetails() {
         }
       }
       
+      // ✅ Safety check: Ensure userPermissions is always an array
+      if (clientData && !clientData.userPermissions) {
+        clientData.userPermissions = [];
+      }
+
       setClient({ ...clientData });
       setRefreshKey(prev => prev + 1);
       
@@ -105,15 +110,6 @@ function ClientDetails() {
       setLoading(false);
     }
   };
-
-        if (clientData) {
-        // ✅ Ensure userPermissions is always an array
-        if (!clientData.userPermissions) {
-          clientData.userPermissions = [];
-        }
-        setClient({ ...clientData });
-        setRefreshKey(prev => prev + 1);
-      }
 
   // ✅ Fetch registrations
   const fetchRegistrations = async () => {
