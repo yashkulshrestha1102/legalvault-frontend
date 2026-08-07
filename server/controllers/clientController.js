@@ -13,16 +13,17 @@ const getUserFolderPermissions = (client, userId) => {
   return userPerm?.folderPermissions || [];
 };
 
-// ✅ Get all clients (filtered by role)
+// ✅ Get all clients (filtered by role) - FIXED with .lean()
 exports.getClients = async (req, res) => {
   try {
     const user = req.user;
     const query = { isDeleted: false };
     
-    // 1. Sabhi clients fetch karo
+    // 1. Sabhi clients fetch karo (with .lean() for safe populate)
     const clients = await Client.find(query)
       .select('name company email phone status _id contactPerson onboardingDate userPermissions')
       .populate('userPermissions.userId', 'name email role')
+      .lean()
       .sort({ createdAt: -1 });
     
     // 2. Non-admin users ke liye filter karo
@@ -44,7 +45,7 @@ exports.getClients = async (req, res) => {
   }
 };
 
-// ✅ Get single client (with access check)
+// ✅ Get single client (with access check) - FIXED with .lean()
 exports.getClientById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -58,7 +59,8 @@ exports.getClientById = async (req, res) => {
     
     const client = await Client.findOne(query)
       .select('name company email phone status contactPerson onboardingDate createdBy createdAt userPermissions')
-      .populate('userPermissions.userId', 'name email role');
+      .populate('userPermissions.userId', 'name email role')
+      .lean();
     
     if (!client) {
       return res.status(404).json({ message: 'Client not found' });

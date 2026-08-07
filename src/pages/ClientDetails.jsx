@@ -106,6 +106,15 @@ function ClientDetails() {
     }
   };
 
+        if (clientData) {
+        // ✅ Ensure userPermissions is always an array
+        if (!clientData.userPermissions) {
+          clientData.userPermissions = [];
+        }
+        setClient({ ...clientData });
+        setRefreshKey(prev => prev + 1);
+      }
+
   // ✅ Fetch registrations
   const fetchRegistrations = async () => {
     try {
