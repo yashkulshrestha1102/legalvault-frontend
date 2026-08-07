@@ -690,14 +690,26 @@ function ClientDetails() {
             <div className="mt-4 glass-card p-3">
               <p className="text-gray-400 text-sm">Assigned Users:</p>
               <div className="flex flex-wrap gap-3 mt-1">
-                {client.userPermissions.map((p) => (
-                  <div key={`perm-${p.userId?._id || p.userId}`} className="px-3 py-1 bg-cyan-500/20 text-cyan-400 rounded-full text-sm flex items-center gap-2">
-                    <span>{p.userId?.name || 'Unknown'}</span>
-                    <span className="text-xs bg-cyan-500/30 px-1.5 py-0.5 rounded">
-                      {p.folderPermissions?.length || 0} folders
-                    </span>
-                  </div>
-                ))}
+                {client.userPermissions
+                  // ✅ FIX: Duplicate users ko filter karo (Unique userId ke hisaab se)
+                  .filter((p, index, self) => 
+                    index === self.findIndex((t) => 
+                      String(t.userId?._id || t.userId) === String(p.userId?._id || p.userId)
+                    )
+                  )
+                  // ✅ Render unique users
+                  .map((p) => (
+                    <div 
+                      key={`perm-${p.userId?._id || p.userId}`} 
+                      className="px-3 py-1 bg-cyan-500/20 text-cyan-400 rounded-full text-sm flex items-center gap-2"
+                    >
+                      <span>{p.userId?.name || 'Unknown'}</span>
+                      <span className="text-xs bg-cyan-500/30 px-1.5 py-0.5 rounded">
+                        {p.folderPermissions?.length || 0} folders
+                      </span>
+                    </div>
+                  ))
+                }
               </div>
             </div>
           )}
