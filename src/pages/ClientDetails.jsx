@@ -41,7 +41,7 @@ function ClientDetails() {
   const [renamingId, setRenamingId] = useState(null);
   const [newFileName, setNewFileName] = useState('');
 
-  // ✅ Fetch client function (removed useCallback to prevent re-render loops)
+  // ✅ Fetch client function
   const fetchClient = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -186,7 +186,7 @@ function ClientDetails() {
     }
   };
 
-  // ✅ SINGLE useEffect to load all data (FIX: Double calls removed)
+  // ✅ SINGLE useEffect to load all data
   useEffect(() => {
     if (actualId) {
       console.log('🔄 Loading data for client ID:', actualId);
@@ -201,7 +201,7 @@ function ClientDetails() {
     } else {
       console.error('❌ No client ID available');
     }
-  }, [actualId]); // ✅ Sirf actualId change hone par chalega
+  }, [actualId]);
 
   // ✅ Rename document
   const renameDocument = async (docId, newName) => {
@@ -272,7 +272,6 @@ function ClientDetails() {
       fetchDocuments();
       setSelectedFiles([]);
       
-      // ✅ Safe alert
       const fileCount = response.data.files ? response.data.files.length : (response.data.length || 0);
       alert(`✅ ${fileCount} files uploaded successfully!`);
     } catch (error) {
@@ -691,8 +690,8 @@ function ClientDetails() {
             <div className="mt-4 glass-card p-3">
               <p className="text-gray-400 text-sm">Assigned Users:</p>
               <div className="flex flex-wrap gap-3 mt-1">
-                {client.userPermissions.map((p, index) => (
-                  <div key={`perm-${p.userId?._id || p.userId || 'unknown'}-${index}`} className="px-3 py-1 bg-cyan-500/20 text-cyan-400 rounded-full text-sm flex items-center gap-2">
+                {client.userPermissions.map((p) => (
+                  <div key={`perm-${p.userId?._id || p.userId}`} className="px-3 py-1 bg-cyan-500/20 text-cyan-400 rounded-full text-sm flex items-center gap-2">
                     <span>{p.userId?.name || 'Unknown'}</span>
                     <span className="text-xs bg-cyan-500/30 px-1.5 py-0.5 rounded">
                       {p.folderPermissions?.length || 0} folders
