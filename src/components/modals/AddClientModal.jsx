@@ -108,11 +108,22 @@ export default function AddClientModal({
 
   const handleSave = () => {
     if (validateForm()) {
+      // ✅ FIX: Ensure userPermissions has proper object structure
+      const finalUserPermissions = (formData.userPermissions || []).map(p => ({
+        userId: p.userId,
+        folderPermissions: Array.isArray(p.folderPermissions) ? p.folderPermissions : []
+      }));
+
       const saveData = editData ? {
         ...formData,
+        userPermissions: finalUserPermissions,
         _id: editData._id || editData.id,
         id: editData.id || editData._id,
-      } : formData;
+      } : {
+        ...formData,
+        userPermissions: finalUserPermissions
+      };
+      
       onSave(saveData);
       setFormData({
         name: "",

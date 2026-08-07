@@ -23,7 +23,6 @@ function Clients() {
   const [editData, setEditData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // ✅ FIXED fetchClients
   const fetchClients = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -231,7 +230,6 @@ function Clients() {
                 <th className="p-3 text-left">Email</th>
                 <th className="p-3 text-left">Phone</th>
                 <th className="p-3 text-left">Status</th>
-                {/* ✅ Assigned To Column - Only for Admin */}
                 {isAdmin && <th className="p-3 text-left">Assigned To</th>}
                 <th className="p-3 text-left">Actions</th>
               </tr>
@@ -248,71 +246,85 @@ function Clients() {
                   .filter((client) =>
                     client?.name?.toLowerCase().includes(searchTerm.toLowerCase())
                   )
-                  .map((client, index) => (
-                    <tr
-                      key={client._id || client.id || index}
-                      className="border-b border-white/10 hover:bg-white/5 transition-all duration-300"
-                    >
-                      <td className="p-3">
-                        <button
-                          onClick={() => navigate(`/client/${client._id || client.id}`)}
-                          className="text-cyan-400 hover:underline hover:text-cyan-300 transition font-medium"
-                        >
-                          {client.name}
-                        </button>
-                      </td>
-                      <td className="p-3">{client.company}</td>
-                      <td className="p-3">{client.email}</td>
-                      <td className="p-3">{client.phone}</td>
-                      <td className="p-3">
-                        <span
-                          className={`px-3 py-1 rounded-full text-sm ${
-                            client.status === "Active"
-                              ? "bg-green-500/20 text-green-400 border border-green-400/20"
-                              : "bg-red-500/20 text-red-400 border border-red-400/20"
-                          }`}
-                        >
-                          {client.status}
-                        </span>
-                      </td>
-                      {/* ✅ Assigned To Column - Only for Admin */}
-                      {isAdmin && (
+                  .map((client, index) => {
+                    // ✅ ULTIMATE SAFE KEY
+                    const rowKey = client._id || client.id || `client-${index}-${Date.now()}`;
+                    
+                    return (
+                      <tr
+                        key={rowKey}
+                        className="border-b border-white/10 hover:bg-white/5 transition-all duration-300"
+                      >
                         <td className="p-3">
-                          {client.assignedTo && client.assignedTo.length > 0 ? (
-                            <div className="flex flex-wrap gap-1">
-                              {client.assignedTo.map((u) => (
-                                <span key={u._id || u} className="px-2 py-1 bg-cyan-500/20 text-cyan-400 rounded-full text-xs">
-                                  {u.name || u}
-                                </span>
-                              ))}
-                            </div>
-                          ) : (
-                            <span className="text-gray-500 text-sm">Unassigned</span>
-                          )}
-                        </td>
-                      )}
-                      <td className="p-3">
-                        <div className="flex gap-4">
-                          <FaEye
-                            className="cursor-pointer text-cyan-400 hover:scale-125 transition-all"
+                          <button
                             onClick={() => navigate(`/client/${client._id || client.id}`)}
-                          />
-                          <FaEdit
-                            className="cursor-pointer text-yellow-400 hover:scale-125 transition-all"
-                            onClick={() => {
-                              setEditIndex(index);
-                              setEditData(client);
-                              setOpenModal(true);
-                            }}
-                          />
-                          <FaTrash
-                            className="cursor-pointer text-red-500 hover:scale-125 transition-all"
-                            onClick={() => deleteClient(index)}
-                          />
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+                            className="text-cyan-400 hover:underline hover:text-cyan-300 transition font-medium"
+                          >
+                            {client.name}
+                          </button>
+                        </td>
+                        <td className="p-3">{client.company}</td>
+                        <td className="p-3">{client.email}</td>
+                        <td className="p-3">{client.phone}</td>
+                        <td className="p-3">
+                          <span
+                            className={`px-3 py-1 rounded-full text-sm ${
+                              client.status === "Active"
+                                ? "bg-green-500/20 text-green-400 border border-green-400/20"
+                                : "bg-red-500/20 text-red-400 border border-red-400/20"
+                            }`}
+                          >
+                            {client.status}
+                          </span>
+                        </td>
+                        {isAdmin && (
+                          <td className="p-3">
+                            {client.userPermissions && client.userPermissions.length > 0 ? (
+                              <div className="flex flex-wrap gap-1">
+                                {client.userPermissions
+                                  // ✅ FIX: Duplicate users ko filter karo
+                                  .filter((perm, index, self) => 
+                                    index === self.findIndex((t) => 
+                                      String(t.userId?._id || t.userId) === String(perm.userId?._id || perm.userId)
+                                    )
+                                  )
+                                  .map((perm) => (
+                                    <span 
+                                      key={perm.userId?._id || perm.userId || `perm-${Date.now()}`} 
+                                      className="px-2 py-1 bg-cyan-500/20 text-cyan-400 rounded-full text-xs"
+                                    >
+                                      {perm.userId?.name || 'Unknown'}
+                                    </span>
+                                  ))}
+                              </div>
+                            ) : (
+                              <span className="text-gray-500 text-sm">Unassigned</span>
+                            )}
+                          </td>
+                        )}
+                        <td className="p-3">
+                          <div className="flex gap-4">
+                            <FaEye
+                              className="cursor-pointer text-cyan-400 hover:scale-125 transition-all"
+                              onClick={() => navigate(`/client/${client._id || client.id}`)}
+                            />
+                            <FaEdit
+                              className="cursor-pointer text-yellow-400 hover:scale-125 transition-all"
+                              onClick={() => {
+                                setEditIndex(index);
+                                setEditData(client);
+                                setOpenModal(true);
+                              }}
+                            />
+                            <FaTrash
+                              className="cursor-pointer text-red-500 hover:scale-125 transition-all"
+                              onClick={() => deleteClient(index)}
+                            />
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
               )}
             </tbody>
           </table>

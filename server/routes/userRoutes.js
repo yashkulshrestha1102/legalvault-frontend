@@ -122,8 +122,6 @@ router.post('/', [auth, admin], validateUser, handleValidation, async (req, res)
       console.error('❌ Failed to send welcome email:', emailError.message);
     }
 
-    
-    
     const userResponse = user.toObject();
     delete userResponse.password;
     

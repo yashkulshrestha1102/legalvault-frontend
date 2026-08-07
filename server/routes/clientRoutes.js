@@ -11,15 +11,14 @@ const {
   deleteClient
 } = require('../controllers/clientController');
 
-// ✅ Validation rules
+// ✅ Validation rules (FIXED: userPermissions use kiya)
 const validateClient = [
   body('name').notEmpty().withMessage('Name is required'),
   body('company').notEmpty().withMessage('Company is required'),
   body('email').isEmail().withMessage('Valid email is required'),
   body('phone').isLength({ min: 10, max: 15 }).withMessage('Phone must be 10-15 digits'),
   body('status').optional().isIn(['Active', 'Inactive']),
-  body('assignedTo').optional().isArray().withMessage('assignedTo must be an array'),
-  body('folderPermissions').optional().isArray().withMessage('folderPermissions must be an array')
+  body('userPermissions').optional().isArray().withMessage('userPermissions must be an array')
 ];
 
 const handleValidation = (req, res, next) => {

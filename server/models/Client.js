@@ -9,7 +9,6 @@ const ClientSchema = new mongoose.Schema({
   contactPerson: { type: String, default: '' },
   onboardingDate: { type: String, default: '' },
   
-  // ✅ User-specific permissions
   userPermissions: [{
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     folderPermissions: { type: [String], default: [] }
@@ -20,8 +19,7 @@ const ClientSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
-// ✅ Indexes
-ClientSchema.index({ email: 1 }, { unique: true });
+// ✅ Indexes (Duplicate index remove kar diya)
 ClientSchema.index({ status: 1 });
 ClientSchema.index({ isDeleted: 1 });
 ClientSchema.index({ 'userPermissions.userId': 1 });

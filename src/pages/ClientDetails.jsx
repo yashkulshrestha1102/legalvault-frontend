@@ -6,7 +6,6 @@ import AuthContext from '../context/AuthContext';
 import AddRegistrationModal from "../components/modals/AddRegistrationModal";
 import AddContractModal from "../components/modals/AddContractModal";
 
-// ✅ Import statements - pages/folders/ se directly import karo
 import DocumentsPage from "./folders/DocumentsPage";
 import PoliciesPage from "./folders/PoliciesPage";
 import GSTPage from "./folders/GSTPage";
@@ -34,14 +33,12 @@ function ClientDetails() {
   const [editContract, setEditContract] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // ✅ Documents State
   const [documents, setDocuments] = useState([]);
   const [uploadingDocs, setUploadingDocs] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [renamingId, setRenamingId] = useState(null);
   const [newFileName, setNewFileName] = useState('');
 
-  // ✅ Fetch client function
   const fetchClient = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -87,7 +84,6 @@ function ClientDetails() {
         }
       }
       
-      // ✅ Safety check: Ensure userPermissions is always an array
       if (clientData && !clientData.userPermissions) {
         clientData.userPermissions = [];
       }
@@ -111,7 +107,6 @@ function ClientDetails() {
     }
   };
 
-  // ✅ Fetch registrations
   const fetchRegistrations = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -139,7 +134,6 @@ function ClientDetails() {
     }
   };
 
-  // ✅ Fetch contracts
   const fetchContracts = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -163,7 +157,6 @@ function ClientDetails() {
     }
   };
 
-  // ✅ Fetch documents
   const fetchDocuments = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -191,24 +184,38 @@ function ClientDetails() {
     }
   };
 
-  // ✅ SINGLE useEffect to load all data
+  // ✅ SINGLE useEffect with Invalid ObjectId safe fallback
   useEffect(() => {
     if (actualId) {
       console.log('🔄 Loading data for client ID:', actualId);
-      fetchClient();
       
       const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(actualId);
+      
       if (isValidObjectId) {
+        fetchClient();
         fetchRegistrations();
         fetchContracts();
         fetchDocuments();
+      } else {
+        console.warn('⚠️ Invalid ObjectId, attempting to load from localStorage only.');
+        const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
+        const foundClient = savedClients.find(c => 
+          String(c.id) === String(actualId) || String(c._id) === String(actualId)
+        );
+        if (foundClient) {
+          setClient({ ...foundClient });
+          setRefreshKey(prev => prev + 1);
+        } else {
+          setClient(null);
+        }
+        setLoading(false);
       }
     } else {
       console.error('❌ No client ID available');
+      setLoading(false);
     }
   }, [actualId]);
 
-  // ✅ Rename document
   const renameDocument = async (docId, newName) => {
     if (!newName || newName.trim() === '') {
       alert('Please enter a valid name');
@@ -251,7 +258,6 @@ function ClientDetails() {
     }
   };
 
-  // ✅ Upload documents
   const uploadDocuments = async (files) => {
     if (files.length === 0) {
       alert('Please select at least one file');
@@ -329,7 +335,6 @@ function ClientDetails() {
     }
   };
 
-  // mongodbpdf
   const uploadPDF = async (file) => {
     try {
       const token = localStorage.getItem('token');
@@ -377,7 +382,6 @@ function ClientDetails() {
     window.open(`${pdfUrl}?token=${token}`, '_blank');
   };
 
-  // ✅ Save registration
   const saveRegistration = async (registrationData) => {
     try {
       const token = localStorage.getItem('token');
@@ -486,7 +490,6 @@ function ClientDetails() {
     }
   };
 
-  // ✅ Save contract
   const saveContract = async (contractData) => {
     try {
       const token = localStorage.getItem('token');
@@ -609,7 +612,6 @@ function ClientDetails() {
     setOpenContractModal(true);
   };
 
-  // ✅ Get folder permissions for current user
   const getUserFolderPermissions = () => {
     if (!client || !client.userPermissions) return [];
     const userPerm = client.userPermissions.find(p => 
@@ -621,7 +623,6 @@ function ClientDetails() {
   const userFolderPermissions = getUserFolderPermissions();
   const role = user?.role || 'user';
   
-  // ✅ 9 Folders including Client Repository
   const allFolders = [
     { label: "Registrations / Certifications", value: "registrations", id: "registrations" },
     { label: "Contracts", value: "contracts", id: "contracts" },
@@ -665,7 +666,6 @@ function ClientDetails() {
   return (
     <MainLayout key={refreshKey}>
       <div className="space-y-6">
-        {/* Client Header */}
         <div className="glass p-6">
           <h1 className="text-3xl font-bold mb-4">{client.name}</h1>
           <div className="grid md:grid-cols-5 gap-4">
@@ -696,13 +696,11 @@ function ClientDetails() {
               <p className="text-gray-400 text-sm">Assigned Users:</p>
               <div className="flex flex-wrap gap-3 mt-1">
                 {client.userPermissions
-                  // ✅ FIX: Duplicate users ko filter karo (Unique userId ke hisaab se)
                   .filter((p, index, self) => 
                     index === self.findIndex((t) => 
                       String(t.userId?._id || t.userId) === String(p.userId?._id || p.userId)
                     )
                   )
-                  // ✅ Render unique users
                   .map((p) => (
                     <div 
                       key={`perm-${p.userId?._id || p.userId}`} 
@@ -720,7 +718,6 @@ function ClientDetails() {
           )}
         </div>
 
-        {/* Folders Grid */}
         {accessibleFolders.length > 0 ? (
           <div className="grid md:grid-cols-4 gap-5">
             {accessibleFolders.map((folder) => (
@@ -742,7 +739,6 @@ function ClientDetails() {
           </div>
         )}
 
-        {/* Registrations */}
         {selectedFolder === "registrations" && (
           <div className="glass p-6">
             <div className="flex justify-between items-center mb-6">
@@ -810,7 +806,6 @@ function ClientDetails() {
           </div>
         )}
 
-        {/* Contracts */}
         {selectedFolder === "contracts" && (
           <div className="glass p-6">
             <div className="flex justify-between items-center mb-6">
@@ -872,7 +867,6 @@ function ClientDetails() {
           </div>
         )}
 
-        {/* ✅ Other Folders */}
         {selectedFolder === "policies" && <PoliciesPage clientId={actualId} />}
         {selectedFolder === "gst" && <GSTPage clientId={actualId} />}
         {selectedFolder === "incomeTax" && <IncomeTaxPage clientId={actualId} />}

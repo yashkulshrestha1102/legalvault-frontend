@@ -4,37 +4,30 @@ const mongoose = require('mongoose');
 const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 const sanitizeString = (str) => str?.trim() || '';
 
-// ✅ Helper: Get folder permissions for a user
-const getUserFolderPermissions = (client, userId) => {
-  if (!client || !client.userPermissions) return [];
-  const userPerm = client.userPermissions.find(p => 
-    String(p.userId) === String(userId)
-  );
-  return userPerm?.folderPermissions || [];
-};
-
-// ✅ Get all clients (filtered by role) - FIXED with .lean()
+// ✅ GET ALL CLIENTS (Role + Folder Access) - POPULATE FIXED
 exports.getClients = async (req, res) => {
   try {
     const user = req.user;
     const query = { isDeleted: false };
     
-    // 1. Sabhi clients fetch karo (with .lean() for safe populate)
+    // 🔥 Sabhi clients fetch karo, userPermissions populate karo
     const clients = await Client.find(query)
       .select('name company email phone status _id contactPerson onboardingDate userPermissions')
       .populate('userPermissions.userId', 'name email role')
-      .lean()
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
     
-    // 2. Non-admin users ke liye filter karo
     let filteredClients = clients;
+    
+    // 🔥 Non-admin users ke liye filter
     if (user.role !== 'admin') {
       filteredClients = clients.filter(client => {
-        // Safe check: String comparison use karo
-        return client.userPermissions.some(p => {
-          const permUserId = p.userId?._id || p.userId;
-          return String(permUserId) === String(user.id);
-        });
+        if (!client.userPermissions || !Array.isArray(client.userPermissions)) return false;
+        
+        // ✅ Check assigned user
+        return client.userPermissions.some(p => 
+          String(p.userId?._id || p.userId) === String(user.id)
+        );
       });
     }
     
@@ -45,7 +38,6 @@ exports.getClients = async (req, res) => {
   }
 };
 
-// ✅ Get single client (with access check) - FIXED with .lean()
 exports.getClientById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -66,12 +58,13 @@ exports.getClientById = async (req, res) => {
       return res.status(404).json({ message: 'Client not found' });
     }
     
-    // ✅ Safe access check for non-admin
     if (user.role !== 'admin') {
-      const hasAccess = client.userPermissions.some(p => {
-        const permUserId = p.userId?._id || p.userId;
-        return String(permUserId) === String(user.id);
-      });
+      if (!client.userPermissions || !Array.isArray(client.userPermissions)) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+      const hasAccess = client.userPermissions.some(p => 
+        String(p.userId?._id || p.userId) === String(user.id)
+      );
       if (!hasAccess) {
         return res.status(403).json({ message: 'Access denied' });
       }
@@ -156,9 +149,14 @@ exports.updateClient = async (req, res) => {
     if (status !== undefined) updateData.status = status;
     if (contactPerson !== undefined) updateData.contactPerson = sanitizeString(contactPerson);
     if (onboardingDate !== undefined) updateData.onboardingDate = onboardingDate;
+    
     if (userPermissions !== undefined) {
-      // ✅ Validate userPermissions
-      updateData.userPermissions = userPermissions.filter(p => p.userId && Array.isArray(p.folderPermissions));
+      updateData.userPermissions = userPermissions
+        .filter(p => p.userId && Array.isArray(p.folderPermissions))
+        .map(p => ({
+          userId: p.userId,
+          folderPermissions: p.folderPermissions
+        }));
     }
 
     const client = await Client.findOneAndUpdate(
@@ -209,12 +207,9 @@ exports.deleteClient = async (req, res) => {
 // ✅ Dashboard stats
 exports.getDashboardStats = async (req, res) => {
   try {
-    const user = req.user;
-    const query = { isDeleted: false };
-    
-    const totalClients = await Client.countDocuments(query);
+    const totalClients = await Client.countDocuments({ isDeleted: false });
     const activeClients = await Client.countDocuments({ 
-      ...query,
+      isDeleted: false,
       status: 'Active'
     });
     

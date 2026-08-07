@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 const UserSchema = new mongoose.Schema({
   name: { type: String, required: true },
-  email: { type: String, required: true, unique: true }, // ✅ Yehi se index ban raha hai
+  email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   role: { type: String, default: 'user' },
   department: { type: String, default: 'General' },
@@ -22,7 +22,7 @@ const UserSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
-// ✅ Sirf extra indexes (jo unique:true se nahi ban rahe)
+// ✅ Sirf indexes (Email already unique)
 UserSchema.index({ role: 1 });
 UserSchema.index({ status: 1 });
 UserSchema.index({ isDeleted: 1 });
