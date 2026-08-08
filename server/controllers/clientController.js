@@ -4,11 +4,13 @@ const mongoose = require('mongoose');
 const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 const sanitizeString = (str) => str?.trim() || '';
 
-// ✅ GET ALL CLIENTS (Role + Folder Access) - POPULATE FIXED
+// ✅ GET ALL CLIENTS (Role + Folder Access) - FULLY FIXED
 exports.getClients = async (req, res) => {
   try {
     const user = req.user;
     const query = { isDeleted: false };
+    
+    console.log('🔍 Fetching clients for user:', user.email, 'Role:', user.role);
     
     // 🔥 Sabhi clients fetch karo, userPermissions populate karo
     const clients = await Client.find(query)
@@ -19,25 +21,46 @@ exports.getClients = async (req, res) => {
     
     let filteredClients = clients;
     
-    // 🔥 Non-admin users ke liye filter
+    // 🔥 CRITICAL FIX: Non-admin users ke liye filter
     if (user.role !== 'admin') {
+      console.log('🔒 Filtering clients for non-admin user:', user.email);
+      
       filteredClients = clients.filter(client => {
-        if (!client.userPermissions || !Array.isArray(client.userPermissions)) return false;
+        // Agar client ke pass userPermissions nahi hai toh skip
+        if (!client.userPermissions || !Array.isArray(client.userPermissions)) {
+          console.log(`❌ Client ${client.name} has no permissions, skipping`);
+          return false;
+        }
         
-        // ✅ Check assigned user
-        return client.userPermissions.some(p => 
-          String(p.userId?._id || p.userId) === String(user.id)
-        );
+        // Check if current user is assigned to this client
+        const hasAccess = client.userPermissions.some(perm => {
+          const userId = perm.userId?._id || perm.userId;
+          return String(userId) === String(user.id);
+        });
+        
+        if (hasAccess) {
+          console.log(`✅ User ${user.email} has access to client: ${client.name}`);
+        } else {
+          console.log(`❌ User ${user.email} has NO access to client: ${client.name}`);
+        }
+        
+        return hasAccess;
       });
+      
+      console.log(`🔒 Filtered to ${filteredClients.length} clients for user ${user.email}`);
+    } else {
+      console.log(`✅ Admin ${user.email} - Showing all ${clients.length} clients`);
     }
     
     res.json(filteredClients);
+    
   } catch (error) {
     console.error('❌ Get clients error:', error);
     res.status(500).json({ message: error.message });
   }
 };
 
+// ✅ GET CLIENT BY ID - FIXED with access check
 exports.getClientById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -58,16 +81,24 @@ exports.getClientById = async (req, res) => {
       return res.status(404).json({ message: 'Client not found' });
     }
     
+    // ✅ CRITICAL FIX: Non-admin users ke liye access check
     if (user.role !== 'admin') {
       if (!client.userPermissions || !Array.isArray(client.userPermissions)) {
-        return res.status(403).json({ message: 'Access denied' });
+        console.log(`❌ Access denied: ${user.email} - No permissions for client ${client.name}`);
+        return res.status(403).json({ message: 'Access denied. You are not assigned to this client.' });
       }
-      const hasAccess = client.userPermissions.some(p => 
-        String(p.userId?._id || p.userId) === String(user.id)
-      );
+      
+      const hasAccess = client.userPermissions.some(p => {
+        const userId = p.userId?._id || p.userId;
+        return String(userId) === String(user.id);
+      });
+      
       if (!hasAccess) {
-        return res.status(403).json({ message: 'Access denied' });
+        console.log(`❌ Access denied: ${user.email} - Not assigned to client ${client.name}`);
+        return res.status(403).json({ message: 'Access denied. You are not assigned to this client.' });
       }
+      
+      console.log(`✅ Access granted: ${user.email} - Client ${client.name}`);
     }
     
     res.json(client);

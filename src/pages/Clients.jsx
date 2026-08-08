@@ -23,9 +23,12 @@ function Clients() {
   const [editData, setEditData] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // ✅ FIXED: fetchClients with proper filtering
   const fetchClients = async () => {
     try {
       const token = localStorage.getItem('token');
+      const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+      
       const response = await axios.get(`${API_URL}/api/clients`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -44,15 +47,50 @@ function Clients() {
         }
       }
       
-      console.log('✅ Extracted clients:', clientsData);
-      console.log('✅ Is Array?', Array.isArray(clientsData));
+      // ✅ 🔥 CRITICAL FIX: Non-admin users ke liye client filtering
+      if (!isAdmin && clientsData.length > 0) {
+        console.log('🔒 Filtering clients for non-admin user:', currentUser.email);
+        
+        clientsData = clientsData.filter(client => {
+          // Agar client ke pass userPermissions nahi hai toh skip
+          if (!client.userPermissions || !Array.isArray(client.userPermissions)) {
+            return false;
+          }
+          
+          // Check if current user is assigned to this client
+          const hasAccess = client.userPermissions.some(perm => {
+            const userId = perm.userId?._id || perm.userId;
+            return String(userId) === String(currentUser.id);
+          });
+          
+          if (hasAccess) {
+            console.log(`✅ Access granted to client: ${client.name}`);
+          }
+          return hasAccess;
+        });
+        
+        console.log(`🔒 Filtered to ${clientsData.length} clients`);
+      }
       
       setClients(Array.isArray(clientsData) ? clientsData : []);
       
     } catch (error) {
       console.error('❌ Error fetching clients:', error);
+      // Fallback: localStorage se load karo with filtering
       const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
-      setClients(Array.isArray(savedClients) ? savedClients : []);
+      const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+      
+      let filteredClients = savedClients;
+      if (!isAdmin) {
+        filteredClients = savedClients.filter(client => {
+          if (!client.userPermissions) return false;
+          return client.userPermissions.some(p => 
+            String(p.userId) === String(currentUser.id)
+          );
+        });
+      }
+      
+      setClients(Array.isArray(filteredClients) ? filteredClients : []);
     } finally {
       setLoading(false);
     }
@@ -207,9 +245,11 @@ function Clients() {
           <button onClick={exportClientsExcel} className="glass-card px-4 py-3 text-sm flex-1 md:flex-none whitespace-nowrap hover:scale-105 transition-all duration-300">
             Export Excel
           </button>
-          <button onClick={() => setOpenModal(true)} className="glass-card blue-glow px-4 py-3 text-sm flex-1 md:flex-none whitespace-nowrap hover:scale-105 transition-all">
-            + Add Client
-          </button>
+          {isAdmin && (
+            <button onClick={() => setOpenModal(true)} className="glass-card blue-glow px-4 py-3 text-sm flex-1 md:flex-none whitespace-nowrap hover:scale-105 transition-all">
+              + Add Client
+            </button>
+          )}
         </div>
       </div>
 
@@ -238,7 +278,7 @@ function Clients() {
               {clientsList.length === 0 ? (
                 <tr>
                   <td colSpan={isAdmin ? 7 : 6} className="text-center py-12 text-gray-400">
-                    No Clients Found
+                    {isAdmin ? 'No Clients Found' : 'No clients assigned to you'}
                   </td>
                 </tr>
               ) : (
@@ -247,7 +287,6 @@ function Clients() {
                     client?.name?.toLowerCase().includes(searchTerm.toLowerCase())
                   )
                   .map((client, index) => {
-                    // ✅ ULTIMATE SAFE KEY
                     const rowKey = client._id || client.id || `client-${index}-${Date.now()}`;
                     
                     return (
@@ -282,7 +321,6 @@ function Clients() {
                             {client.userPermissions && client.userPermissions.length > 0 ? (
                               <div className="flex flex-wrap gap-1">
                                 {client.userPermissions
-                                  // ✅ FIX: Duplicate users ko filter karo
                                   .filter((perm, index, self) => 
                                     index === self.findIndex((t) => 
                                       String(t.userId?._id || t.userId) === String(perm.userId?._id || perm.userId)
@@ -308,18 +346,22 @@ function Clients() {
                               className="cursor-pointer text-cyan-400 hover:scale-125 transition-all"
                               onClick={() => navigate(`/client/${client._id || client.id}`)}
                             />
-                            <FaEdit
-                              className="cursor-pointer text-yellow-400 hover:scale-125 transition-all"
-                              onClick={() => {
-                                setEditIndex(index);
-                                setEditData(client);
-                                setOpenModal(true);
-                              }}
-                            />
-                            <FaTrash
-                              className="cursor-pointer text-red-500 hover:scale-125 transition-all"
-                              onClick={() => deleteClient(index)}
-                            />
+                            {isAdmin && (
+                              <>
+                                <FaEdit
+                                  className="cursor-pointer text-yellow-400 hover:scale-125 transition-all"
+                                  onClick={() => {
+                                    setEditIndex(index);
+                                    setEditData(client);
+                                    setOpenModal(true);
+                                  }}
+                                />
+                                <FaTrash
+                                  className="cursor-pointer text-red-500 hover:scale-125 transition-all"
+                                  onClick={() => deleteClient(index)}
+                                />
+                              </>
+                            )}
                           </div>
                         </td>
                       </tr>

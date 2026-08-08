@@ -612,17 +612,34 @@ function ClientDetails() {
     setOpenContractModal(true);
   };
 
+  // ✅ CRITICAL FIX: Folder permission logic with debug
   const getUserFolderPermissions = () => {
-    if (!client || !client.userPermissions) return [];
-    const userPerm = client.userPermissions.find(p => 
-      String(p.userId?._id || p.userId) === String(user?.id)
-    );
+    if (!client || !client.userPermissions) {
+      console.log('⚠️ No client or userPermissions found');
+      return [];
+    }
+    
+    if (!user) {
+      console.log('⚠️ No user found');
+      return [];
+    }
+    
+    // ✅ Find permissions for current user
+    const userPerm = client.userPermissions.find(p => {
+      const userId = p.userId?._id || p.userId;
+      return String(userId) === String(user.id);
+    });
+    
+    console.log('🔍 User permissions found:', userPerm);
+    console.log('📁 Folder permissions:', userPerm?.folderPermissions);
+    
     return userPerm?.folderPermissions || [];
   };
 
   const userFolderPermissions = getUserFolderPermissions();
   const role = user?.role || 'user';
   
+  // ✅ All folders definition
   const allFolders = [
     { label: "Registrations / Certifications", value: "registrations", id: "registrations" },
     { label: "Contracts", value: "contracts", id: "contracts" },
@@ -635,10 +652,19 @@ function ClientDetails() {
     { label: "📁 Client Repository", value: "documents", id: "documents" }
   ];
 
+  // ✅ CRITICAL FIX: Folder accessibility with debug
   const accessibleFolders = allFolders.filter(f => {
-    if (role === 'admin') return true;
-    return userFolderPermissions.includes(f.id);
+    if (role === 'admin') {
+      console.log(`✅ Admin - Access to ${f.label}`);
+      return true;
+    }
+    
+    const hasAccess = userFolderPermissions.includes(f.id);
+    console.log(`🔍 User ${user?.name} - ${f.label}: ${hasAccess ? '✅' : '❌'}`);
+    return hasAccess;
   });
+
+  console.log('📁 Accessible folders:', accessibleFolders.map(f => f.label));
 
   if (loading) {
     return (

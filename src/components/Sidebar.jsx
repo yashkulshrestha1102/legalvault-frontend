@@ -26,11 +26,16 @@ function Sidebar() {
   useEffect(() => {
     if (contextUser) {
       setUser(contextUser);
+      console.log('👤 Sidebar - User from context:', contextUser);
+      console.log('📁 Folder Permissions:', contextUser.folderPermissions);
     } else {
       const savedUser = localStorage.getItem('user');
       if (savedUser) {
         try {
-          setUser(JSON.parse(savedUser));
+          const parsedUser = JSON.parse(savedUser);
+          console.log('👤 Sidebar - User from localStorage:', parsedUser);
+          console.log('📁 Folder Permissions:', parsedUser.folderPermissions);
+          setUser(parsedUser);
         } catch (e) {
           console.error('Error parsing user from localStorage:', e);
         }
@@ -56,6 +61,12 @@ function Sidebar() {
 
   const role = user?.role || 'user';
 
+  // ✅ Role display with proper capitalization
+  const getRoleDisplay = (role) => {
+    if (!role) return 'User';
+    return role.charAt(0).toUpperCase() + role.slice(1);
+  };
+
   // ✅ Menu items
   const menuItems = [
     { id: 'dashboard', path: "/", label: "Dashboard", icon: <FaTachometerAlt /> },
@@ -69,7 +80,6 @@ function Sidebar() {
 
   menuItems.push({ id: 'profile', path: "/profile", label: "Profile", icon: <FaUserCircle /> });
 
-  // ✅ ✅ ✅ YEH RETURN SAHI HONA CHAHIYE — FUNCTION KE ANDAR
   return (
     <>
       <div className={`
@@ -118,10 +128,19 @@ function Sidebar() {
           {!collapsed && (
             <div className="glass-card mb-5 p-4">
               <div className="flex items-center gap-3">
-                <img src="https://i.pravatar.cc/50" alt="User" className="w-14 h-14 rounded-full border-2 border-cyan-400" />
+                <img 
+                  src={`https://ui-avatars.com/api/?name=${user?.name || 'User'}&background=0D9488&color=fff&size=50`} 
+                  alt="User" 
+                  className="w-14 h-14 rounded-full border-2 border-cyan-400 object-cover"
+                />
                 <div>
-                  <h3 className="font-bold">{user?.name || 'Admin User'}</h3>
-                  <p className="text-xs text-white/50">{user?.role || 'Legal Manager'}</p>
+                  <h3 className="font-bold">{user?.name || 'User'}</h3>
+                  <p className="text-xs text-white/50">{getRoleDisplay(user?.role)}</p>
+                  {user?.folderPermissions && (
+                    <p className="text-xs text-cyan-400/60 mt-0.5">
+                      📁 {user.folderPermissions.length} folders accessible
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
