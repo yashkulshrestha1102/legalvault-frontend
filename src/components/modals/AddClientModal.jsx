@@ -1,5 +1,5 @@
 import { useState, useEffect, useContext } from "react";
-import { FaTimes, FaUserPlus } from "react-icons/fa";
+import { FaTimes, FaUserPlus, FaUserMinus } from "react-icons/fa";
 import axios from 'axios';
 import AuthContext from '../../context/AuthContext';
 
@@ -38,7 +38,7 @@ export default function AddClientModal({
     { id: 'gst', label: 'GST' },
     { id: 'income-tax', label: 'Income Tax' },
     { id: 'financials', label: 'Financials' },
-    { id: 'documents', label: '📁 Client Repository' } // ✅ 9th Folder
+    { id: 'documents', label: '📁 Client Repository' }
   ];
 
   // ✅ Fetch users for assignment
@@ -106,9 +106,19 @@ export default function AddClientModal({
     return Object.keys(newErrors).length === 0;
   };
 
+  // ✅ UNASSIGN USER FUNCTION - Complete remove from client
+  const unassignUser = (userId) => {
+    const userName = users.find(u => u._id === userId)?.name || 'User';
+    if (!window.confirm(`Remove "${userName}" completely from this client?`)) return;
+    
+    setFormData(prev => ({
+      ...prev,
+      userPermissions: prev.userPermissions.filter(p => p.userId !== userId)
+    }));
+  };
+
   const handleSave = () => {
     if (validateForm()) {
-      // ✅ FIX: Ensure userPermissions has proper object structure
       const finalUserPermissions = (formData.userPermissions || []).map(p => ({
         userId: p.userId,
         folderPermissions: Array.isArray(p.folderPermissions) ? p.folderPermissions : []
@@ -192,6 +202,14 @@ export default function AddClientModal({
         userPerm.folderPermissions = ALL_FOLDERS.map(f => f.id);
       }
       
+      // Agar koi folder select nahi hai toh user ko remove karo
+      if (userPerm.folderPermissions.length === 0) {
+        return {
+          ...prev,
+          userPermissions: userPermissions.filter(p => p.userId !== userId)
+        };
+      }
+      
       return { ...prev, userPermissions };
     });
   };
@@ -270,10 +288,15 @@ export default function AddClientModal({
             {errors.status && <p className="text-red-400 text-sm mt-1">{errors.status}</p>}
           </div>
 
-          {/* ✅ Access Control - Only for Admin */}
+          {/* ✅ Access Control - Only for Admin with Unassign Feature */}
           {isAdmin && (
             <div className="border-t border-white/10 pt-4">
-              <h3 className="text-lg font-semibold text-white mb-3">🔐 Access Control</h3>
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="text-lg font-semibold text-white">🔐 Access Control</h3>
+                <span className="text-xs text-gray-400">
+                  {formData.userPermissions?.length || 0} users assigned
+                </span>
+              </div>
               
               {users.length === 0 ? (
                 <p className="text-gray-400 text-sm">No users available</p>
@@ -285,14 +308,37 @@ export default function AddClientModal({
                   return (
                     <div key={u._id} className="glass-card p-3 mb-3">
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-white">{u.name} <span className="text-gray-400 text-xs">({u.role})</span></span>
-                        <button
-                          onClick={() => toggleAllFoldersForUser(u._id)}
-                          className="text-xs bg-cyan-500/20 px-2 py-1 rounded hover:bg-cyan-500/30 transition"
-                        >
-                          {hasPermissions ? 'Deselect All' : 'Select All'}
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-white">{u.name}</span>
+                          <span className="text-gray-400 text-xs">({u.role})</span>
+                          {hasPermissions && (
+                            <span className="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full">
+                              Assigned
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex gap-2">
+                          {/* ✅ UNASSIGN BUTTON - Complete Remove */}
+                          {hasPermissions && (
+                            <button
+                              onClick={() => unassignUser(u._id)}
+                              className="flex items-center gap-1 text-xs bg-red-500/20 text-red-400 px-3 py-1 rounded hover:bg-red-500/30 transition"
+                              title={`Remove ${u.name} from this client`}
+                            >
+                              <FaUserMinus className="text-xs" />
+                              Unassign
+                            </button>
+                          )}
+                          <button
+                            onClick={() => toggleAllFoldersForUser(u._id)}
+                            className="text-xs bg-cyan-500/20 px-2 py-1 rounded hover:bg-cyan-500/30 transition"
+                          >
+                            {hasPermissions ? 'Deselect All' : 'Select All'}
+                          </button>
+                        </div>
                       </div>
+                      
+                      {/* Folder checkboxes */}
                       <div className="grid grid-cols-2 gap-1">
                         {ALL_FOLDERS.map((folder) => (
                           <label key={folder.id} className="flex items-center gap-2 cursor-pointer p-1 hover:bg-white/5 rounded text-sm">
@@ -306,10 +352,20 @@ export default function AddClientModal({
                           </label>
                         ))}
                       </div>
+                      
                       {hasPermissions && (
-                        <p className="text-xs text-cyan-400 mt-1">
-                          Selected: {userPerm.folderPermissions.length} folders
-                        </p>
+                        <div className="flex justify-between items-center mt-2">
+                          <p className="text-xs text-cyan-400">
+                            Selected: {userPerm.folderPermissions.length} folders
+                          </p>
+                          {/* ✅ UNASSIGN BUTTON - Small version */}
+                          <button
+                            onClick={() => unassignUser(u._id)}
+                            className="text-xs text-red-400 hover:text-red-300 hover:underline transition"
+                          >
+                            Remove all permissions
+                          </button>
+                        </div>
                       )}
                     </div>
                   );

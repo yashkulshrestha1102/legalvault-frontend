@@ -1,5 +1,5 @@
 import MainLayout from "../layouts/MainLayout";
-import { FaEye, FaEdit, FaTrash } from "react-icons/fa";
+import { FaEye, FaEdit, FaTrash, FaUserMinus } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect, useContext } from "react";
 import axios from 'axios';
@@ -23,7 +23,7 @@ function Clients() {
   const [editData, setEditData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // ✅ FIXED: fetchClients with proper filtering
+  // ✅ fetchClients with proper filtering
   const fetchClients = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -47,17 +47,15 @@ function Clients() {
         }
       }
       
-      // ✅ 🔥 CRITICAL FIX: Non-admin users ke liye client filtering
+      // ✅ Non-admin users ke liye client filtering
       if (!isAdmin && clientsData.length > 0) {
         console.log('🔒 Filtering clients for non-admin user:', currentUser.email);
         
         clientsData = clientsData.filter(client => {
-          // Agar client ke pass userPermissions nahi hai toh skip
           if (!client.userPermissions || !Array.isArray(client.userPermissions)) {
             return false;
           }
           
-          // Check if current user is assigned to this client
           const hasAccess = client.userPermissions.some(perm => {
             const userId = perm.userId?._id || perm.userId;
             return String(userId) === String(currentUser.id);
@@ -76,7 +74,6 @@ function Clients() {
       
     } catch (error) {
       console.error('❌ Error fetching clients:', error);
-      // Fallback: localStorage se load karo with filtering
       const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
       const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
       
@@ -99,6 +96,43 @@ function Clients() {
   useEffect(() => {
     fetchClients();
   }, []);
+
+  // ✅ UNASSIGN USER FROM CLIENT
+  const handleUnassign = async (clientId, userId, userName) => {
+    if (!window.confirm(`Remove "${userName}" from this client?`)) return;
+    
+    try {
+      const token = localStorage.getItem('token');
+      
+      // Get current client data
+      const clientResponse = await axios.get(`${API_URL}/api/clients/${clientId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      const client = clientResponse.data;
+      
+      // Remove user from userPermissions
+      const updatedPermissions = client.userPermissions.filter(
+        p => String(p.userId?._id || p.userId) !== String(userId)
+      );
+      
+      // Update client
+      await axios.put(
+        `${API_URL}/api/clients/${clientId}`,
+        { ...client, userPermissions: updatedPermissions },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      addNotification(`User "${userName}" unassigned from ${client.name}`);
+      addActivity(`User Unassigned from Client`);
+      alert(`✅ "${userName}" removed from client successfully!`);
+      fetchClients(); // Refresh list
+      
+    } catch (error) {
+      console.error('❌ Unassign error:', error);
+      alert('Failed to unassign user: ' + (error.response?.data?.message || error.message));
+    }
+  };
 
   const addClient = async (newClient) => {
     try {
@@ -326,14 +360,25 @@ function Clients() {
                                       String(t.userId?._id || t.userId) === String(perm.userId?._id || perm.userId)
                                     )
                                   )
-                                  .map((perm) => (
-                                    <span 
-                                      key={perm.userId?._id || perm.userId || `perm-${Date.now()}`} 
-                                      className="px-2 py-1 bg-cyan-500/20 text-cyan-400 rounded-full text-xs"
-                                    >
-                                      {perm.userId?.name || 'Unknown'}
-                                    </span>
-                                  ))}
+                                  .map((perm) => {
+                                    const userId = perm.userId?._id || perm.userId;
+                                    const userName = perm.userId?.name || 'Unknown';
+                                    return (
+                                      <div key={userId || `perm-${Date.now()}`} className="flex items-center gap-0.5">
+                                        <span className="px-2 py-1 bg-cyan-500/20 text-cyan-400 rounded-full text-xs">
+                                          {userName}
+                                        </span>
+                                        {/* ✅ UNASSIGN BUTTON - X icon */}
+                                        <button
+                                          onClick={() => handleUnassign(client._id, userId, userName)}
+                                          className="text-red-400 hover:text-red-300 hover:scale-125 transition text-xs ml-0.5"
+                                          title={`Remove ${userName} from this client`}
+                                        >
+                                          ✕
+                                        </button>
+                                      </div>
+                                    );
+                                  })}
                               </div>
                             ) : (
                               <span className="text-gray-500 text-sm">Unassigned</span>
