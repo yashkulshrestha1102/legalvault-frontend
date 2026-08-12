@@ -14,7 +14,7 @@ if (process.env.BREVO_API_KEY) {
 }
 
 const sendPasswordResetEmail = async (email, resetToken) => {
-  const resetLink = `https://app.businezexcellence.com/reset-password?token=${resetToken}`;
+  const resetLink = `https://legalvault.businezexcellence.com/reset-password?token=${resetToken}`;
   
   console.log(`📧 Sending to: ${email}`);
   console.log(`🔗 Link: ${resetLink}`);
@@ -86,7 +86,7 @@ const sendUserWelcomeEmail = async (email, name, password) => {
               <p><strong>Password:</strong> ${password}</p>
             </div>
             <div style="text-align: center;">
-              <a href="https://app.businezexcellence.com" style="background: #0D9488; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Login Now</a>
+              <a href="https://legalvault.businezexcellence.com" style="background: #0D9488; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Login Now</a>
             </div>
           </div>
         </body>
