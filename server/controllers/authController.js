@@ -2,6 +2,8 @@ const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+
+// ✅ CORRECT IMPORT - Check karo ki path sahi hai
 const { sendPasswordResetEmail } = require('../utils/email');
 
 // ✅ Helper: Validate email format
@@ -17,7 +19,6 @@ exports.register = async (req, res) => {
     
     console.log('📝 Register attempt:', { name, email, role });
 
-    // ✅ Validation
     if (!name || !email || !password) {
       return res.status(400).json({ message: 'Name, email, and password are required' });
     }
@@ -30,7 +31,6 @@ exports.register = async (req, res) => {
       return res.status(400).json({ message: 'Password must be at least 6 characters' });
     }
 
-    // ✅ Sanitize
     const sanitizedName = sanitizeString(name);
     const sanitizedEmail = sanitizeString(email).toLowerCase();
 
@@ -113,7 +113,7 @@ exports.login = async (req, res) => {
   }
 };
 
-// ✅ Forgot Password
+// ✅ Forgot Password - COMPLETE WORKING
 exports.forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
@@ -131,20 +131,45 @@ exports.forgotPassword = async (req, res) => {
 
     const user = await User.findOne({ email: sanitizedEmail });
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      console.log('❌ User not found:', sanitizedEmail);
+      return res.status(404).json({ message: 'No account found with this email' });
     }
 
+    // ✅ Generate reset token
     const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetTokenExpiry = Date.now() + 3600000; // 1 hour
+
+    // ✅ Save token to database
     user.resetPasswordToken = resetToken;
-    user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
+    user.resetPasswordExpires = resetTokenExpiry;
     await user.save();
 
-    console.log('📧 Sending password reset email to:', sanitizedEmail);
-    await sendPasswordResetEmail(sanitizedEmail, resetToken);
-    res.json({ message: 'Password reset email sent successfully' });
+    console.log('✅ Reset token generated for:', sanitizedEmail);
+    console.log('🔑 Token:', resetToken);
+
+    // ✅ Send email with reset link
+    try {
+      // ✅ FUNCTION KO CALL KARO
+      const result = await sendPasswordResetEmail(sanitizedEmail, resetToken);
+      console.log('✅ Email send result:', result);
+      
+      res.json({ 
+        message: 'Password reset link sent to your email address!' 
+      });
+    } catch (emailError) {
+      console.error('❌ Email send error:', emailError);
+      // ✅ TOKEN DELETE KARO AGAR EMAIL FAIL HO
+      user.resetPasswordToken = undefined;
+      user.resetPasswordExpires = undefined;
+      await user.save();
+      
+      res.status(500).json({ 
+        message: 'Failed to send reset email. Please try again.' 
+      });
+    }
   } catch (error) {
     console.error('❌ Forgot password error:', error);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ message: 'Something went wrong. Please try again.' });
   }
 };
 
@@ -157,28 +182,34 @@ exports.resetPassword = async (req, res) => {
     if (!token || !newPassword) {
       return res.status(400).json({ message: 'Token and new password are required' });
     }
+    
     if (newPassword.length < 6) {
       return res.status(400).json({ message: 'Password must be at least 6 characters' });
     }
 
+    // ✅ Find user by token and check expiry
     const user = await User.findOne({
       resetPasswordToken: token,
       resetPasswordExpires: { $gt: Date.now() }
     });
+    
     if (!user) {
-      return res.status(400).json({ message: 'Invalid or expired token' });
+      return res.status(400).json({ message: 'Invalid or expired reset token' });
     }
 
+    // ✅ Hash new password
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(newPassword, salt);
+    
+    // ✅ Clear reset tokens
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
     await user.save();
 
     console.log('✅ Password reset successfully for:', user.email);
-    res.json({ message: 'Password reset successfully' });
+    res.json({ message: 'Password reset successfully! You can now login with your new password.' });
   } catch (error) {
     console.error('❌ Reset password error:', error);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ message: 'Failed to reset password. Please try again.' });
   }
 };

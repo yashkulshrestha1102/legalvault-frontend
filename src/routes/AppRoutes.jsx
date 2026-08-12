@@ -21,8 +21,7 @@ const IncomeTaxDetails = lazy(() => import("../pages/folders/IncomeTaxDetails"))
 const HRDetails = lazy(() => import("../pages/folders/HRDetails"));
 const CorporateSecretariatDetails = lazy(() => import("../pages/folders/CorporateSecretariatDetails"));
 const FinancialsDetails = lazy(() => import("../pages/folders/FinancialsDetails"));
-
-
+const ResetPassword = lazy(() => import("../pages/ResetPassword"));
 
 
 // ✅ Loading component
@@ -57,6 +56,8 @@ const AppRoutes = () => {
         <Route path="/audit" element={
           <ProtectedRoute requiredRole="admin"><AuditLog /></ProtectedRoute>
         } />
+
+         <Route path="/reset-password" element={<ResetPassword />} />
 
         <Route path="/profile" element={
           <ProtectedRoute><Profile /></ProtectedRoute>
