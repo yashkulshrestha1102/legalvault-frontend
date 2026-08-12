@@ -21,8 +21,7 @@ const IncomeTaxDetails = lazy(() => import("../pages/folders/IncomeTaxDetails"))
 const HRDetails = lazy(() => import("../pages/folders/HRDetails"));
 const CorporateSecretariatDetails = lazy(() => import("../pages/folders/CorporateSecretariatDetails"));
 const FinancialsDetails = lazy(() => import("../pages/folders/FinancialsDetails"));
-const ResetPassword = lazy(() => import("../pages/ResetPassword"));
-
+const ResetPassword = lazy(() => import("../pages/ResetPassword")); 
 
 // ✅ Loading component
 const PageLoader = () => (
@@ -36,6 +35,7 @@ const AppRoutes = () => {
     <Suspense fallback={<PageLoader />}>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
 
         <Route path="/" element={
           <ProtectedRoute><Dashboard /></ProtectedRoute>
@@ -57,7 +57,6 @@ const AppRoutes = () => {
           <ProtectedRoute requiredRole="admin"><AuditLog /></ProtectedRoute>
         } />
 
-         <Route path="/reset-password" element={<ResetPassword />} />
 
         <Route path="/profile" element={
           <ProtectedRoute><Profile /></ProtectedRoute>
@@ -108,6 +107,9 @@ const AppRoutes = () => {
 <Route path="/client/:clientId/financials/:id" element={
   <ProtectedRoute><FinancialsDetails /></ProtectedRoute>
 } />
+
+{/* ✅ 404 - NOT FOUND */}
+        <Route path="*" element={<div className="text-center text-white text-2xl mt-20">404 - Page Not Found</div>} />
 
       </Routes>
     </Suspense>
