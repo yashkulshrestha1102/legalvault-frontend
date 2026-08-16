@@ -18,15 +18,10 @@ const MainLayout = ({ children }) => {
         overflow-x-hidden
         transition-all
         duration-300
-        ${
-          theme === "dark"
-            ? "bg-[#020617] text-white"
-            : "bg-slate-100 text-slate-900"
-        }
+        ${theme === "dark" ? "text-white" : "bg-slate-100 text-slate-900"}
       `}
     >
-      {/* Background Glow */}
-
+      {/* Background Glow - CSS se handle ho raha hai, yeh extra effect ke liye */}
       <div
         className="
           absolute
@@ -71,11 +66,9 @@ const MainLayout = ({ children }) => {
       />
 
       {/* Sidebar */}
-
       <Sidebar />
 
       {/* Main Section */}
-
       <main
         className={`
           flex-1
@@ -91,14 +84,9 @@ const MainLayout = ({ children }) => {
         `}
       >
         {/* Navbar */}
-
         <Navbar />
 
-        {/* Floating Button */}
-
-
-        {/* Page */}
-
+        {/* Page Content */}
         <div
           className="
             glass

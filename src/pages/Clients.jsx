@@ -331,15 +331,15 @@ function Clients() {
                         <td className="p-3">
                           <button
                             onClick={() => navigate(`/client/${client._id || client.id}`)}
-                            className="text-cyan-400 hover:underline hover:text-cyan-300 transition font-medium"
+                            className=" hover:underlinev hover:text-cyan-300 transition font-medium"
                           >
                             {client.name}
                           </button>
                         </td>
-                        <td className="p-3">{client.company}</td>
-                        <td className="p-3">{client.email}</td>
-                        <td className="p-3">{client.phone}</td>
-                        <td className="p-3">
+                        <td className="p-2">{client.company}</td>
+                        <td className="p-2">{client.email}</td>
+                        <td className="p-2">{client.phone}</td>
+                        <td className="p-2">
                           <span
                             className={`px-3 py-1 rounded-full text-sm ${
                               client.status === "Active"
@@ -365,7 +365,7 @@ function Clients() {
                                     const userName = perm.userId?.name || 'Unknown';
                                     return (
                                       <div key={userId || `perm-${Date.now()}`} className="flex items-center gap-0.5">
-                                        <span className="px-2 py-1 bg-cyan-500/20 text-cyan-400 rounded-full text-xs">
+                                        <span className="px-2 py-1 bg-cyan-500/20 text-white-400 rounded-full text-xs">
                                           {userName}
                                         </span>
                                         {/* ✅ UNASSIGN BUTTON - X icon */}

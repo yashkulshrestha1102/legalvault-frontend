@@ -2,14 +2,16 @@ const Brevo = require('@getbrevo/brevo');
 
 let apiInstance = null;
 
-// ✅ Initialize Brevo API
+// ✅ Initialize Brevo API - v5 compatible
 if (process.env.BREVO_API_KEY) {
   try {
+    // ✅ v5 syntax
+    const defaultClient = Brevo.ApiClient.instance;
+    defaultClient.authentications['api-key'].apiKey = process.env.BREVO_API_KEY;
     apiInstance = new Brevo.TransactionalEmailsApi();
-    apiInstance.setApiKey(Brevo.TransactionalEmailsApiApiKeys.apiKey, process.env.BREVO_API_KEY);
-    console.log('✅ Brevo API initialized');
+    console.log('✅ Brevo API initialized (v5)');
   } catch (error) {
-    console.error('❌ Brevo API init error:', error);
+    console.error('❌ Brevo API init error:', error.message);
   }
 }
 
@@ -48,7 +50,7 @@ const sendPasswordResetEmail = async (email, resetToken) => {
       sendSmtpEmail.to = [{ email: email }];
 
       const result = await apiInstance.sendTransacEmail(sendSmtpEmail);
-      console.log('✅ Email sent via Brevo API:', result.response?.statusCode || 'OK');
+      console.log('✅ Email sent via Brevo API');
       return { success: true };
     } else {
       console.log('📧 FALLBACK - No API configured');

@@ -176,16 +176,16 @@ const AddPolicyModal = ({ open, onClose, onSave, editData }) => {
                 value={formData.policyType}
                 onChange={handleChange}
                 required
-                className="w-full glass-card p-3 outline-none focus:border-cyan-400/40 transition"
+                className="w-full glass-card p-3 outline-none focus:border-cyan-400/40 transition bg-slate-800"
               >
-                <option value="">Select Type</option>
-                <option value="HR Policy">HR Policy</option>
-                <option value="Compliance">Compliance</option>
-                <option value="Data Privacy">Data Privacy</option>
-                <option value="Security">Security</option>
-                <option value="Financial">Financial</option>
-                <option value="Quality">Quality</option>
-                <option value="Other">Other</option>
+                <option className="bg-slate-800 text-white" value="">Select Type</option>
+                <option className="bg-slate-800 text-white" value="HR Policy">HR Policy</option>
+                <option className="bg-slate-800 text-white" value="Compliance">Compliance</option>
+                <option className="bg-slate-800 text-white" value="Data Privacy">Data Privacy</option>
+                <option className="bg-slate-800 text-white" value="Security">Security</option>
+                <option className="bg-slate-800 text-white" value="Financial">Financial</option>
+                <option className="bg-slate-800 text-white" value="Quality">Quality</option>
+                <option className="bg-slate-800 text-white" value="Other">Other</option>
               </select>
             </div>
 
@@ -196,12 +196,12 @@ const AddPolicyModal = ({ open, onClose, onSave, editData }) => {
                 name="category"
                 value={formData.category}
                 onChange={handleChange}
-                className="w-full glass-card p-3 outline-none focus:border-cyan-400/40 transition"
+                className="w-full glass-card p-3 outline-none focus:border-cyan-400/40 transition bg-slate-800"
               >
-                <option value="Internal">Internal</option>
-                <option value="External">External</option>
-                <option value="Client">Client</option>
-                <option value="Vendor">Vendor</option>
+                <option  className="bg-slate-800 text-white" value="Internal">Internal</option>
+                <option  className="bg-slate-800 text-white" value="External">External</option>
+                <option  className="bg-slate-800 text-white" value="Client">Client</option>
+                <option  className="bg-slate-800 text-white" value="Vendor">Vendor</option>
               </select>
             </div>
 

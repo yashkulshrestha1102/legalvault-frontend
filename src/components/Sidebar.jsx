@@ -91,7 +91,7 @@ function Sidebar() {
         <div className="flex items-center justify-between mb-10">
           {!collapsed && (
             <div>
-              <h1 className="text-4xl font-black tracking-tight bg-gradient-to-r from-cyan-500 via-blue-500 to-purple-500 bg-clip-text text-transparent">
+              <h1 className="text-4xl font-black tracking-tight bg-white bg-clip-text text-transparent">
                 LegalVault
               </h1>
               <p className="text-xs text-white/50">Premium Legal Suite</p>

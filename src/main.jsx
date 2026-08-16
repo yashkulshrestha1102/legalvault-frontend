@@ -12,7 +12,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
 
   <AuthProvider>
 
-    <ThemeProvider>   {/* ✅ BrowserRouter hatao, sirf providers rakho */}
+    <ThemeProvider>   
       <SidebarProvider>
         <App />
       </SidebarProvider>

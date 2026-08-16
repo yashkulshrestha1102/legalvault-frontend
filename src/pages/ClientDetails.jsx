@@ -696,30 +696,30 @@ function ClientDetails() {
           <h1 className="text-3xl font-bold mb-4">{client.name}</h1>
           <div className="grid md:grid-cols-5 gap-4">
             <div className="glass-card p-4">
-              <p className="text-gray-400 text-sm">Contact Person</p>
+              <p className="text-gray-100 text-sm">Contact Person</p>
               <h3 className="font-semibold mt-1">{client.contactPerson || "-"}</h3>
             </div>
             <div className="glass-card p-4">
-              <p className="text-gray-400 text-sm">Email</p>
-              <h3 className="font-semibold mt-1">{client.email}</h3>
+              <p className="text-gray-100 text-sm">Email</p>
+              <h6 className="text-sm font-semibold mt-1">{client.email}</h6>
             </div>
             <div className="glass-card p-4">
-              <p className="text-gray-400 text-sm">Mobile</p>
+              <p className="text-gray-100 text-sm">Mobile</p>
               <h3 className="font-semibold mt-1">{client.phone}</h3>
             </div>
             <div className="glass-card p-4">
-              <p className="text-gray-400 text-sm">Onboarding Date</p>
+              <p className="text-gray-100 text-sm">Onboarding Date</p>
               <h3 className="font-semibold mt-1">{client.onboardingDate || "-"}</h3>
             </div>
             <div className="glass-card p-4">
-              <p className="text-gray-400 text-sm">Status</p>
+              <p className="text-gray-100 text-sm">Status</p>
               <h3 className="font-semibold mt-1">{client.status}</h3>
             </div>
           </div>
           
           {role === 'admin' && client.userPermissions && client.userPermissions.length > 0 && (
             <div className="mt-4 glass-card p-3">
-              <p className="text-gray-400 text-sm">Assigned Users:</p>
+              <p className="text-gray-100 text-sm">Assigned Users:</p>
               <div className="flex flex-wrap gap-3 mt-1">
                 {client.userPermissions
                   .filter((p, index, self) => 
@@ -730,7 +730,7 @@ function ClientDetails() {
                   .map((p) => (
                     <div 
                       key={`perm-${p.userId?._id || p.userId}`} 
-                      className="px-3 py-1 bg-cyan-500/20 text-cyan-400 rounded-full text-sm flex items-center gap-2"
+                      className="px-3 py-1 bg-cyan-500/20 text-cyan-100 rounded-full text-sm flex items-center gap-2"
                     >
                       <span>{p.userId?.name || 'Unknown'}</span>
                       <span className="text-xs bg-cyan-500/30 px-1.5 py-0.5 rounded">

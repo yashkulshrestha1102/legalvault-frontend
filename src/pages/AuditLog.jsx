@@ -123,25 +123,25 @@ function AuditLog() {
             </div>
             <div className="glass-card p-4">
               <p className="text-gray-400 text-sm">Today</p>
-              <h2 className="text-2xl font-bold text-cyan-400">{stats.todayActions}</h2>
+              <h2 className="text-2xl font-bold">{stats.todayActions}</h2>
             </div>
             <div className="glass-card p-4">
               <p className="text-gray-400 text-sm">Most Action</p>
-              <h2 className="text-2xl font-bold text-yellow-400">
+              <h5 className="vfont-bold ">
                 {stats.actionsByType?.[0]?._id || 'N/A'}
-              </h2>
+              </h5>
             </div>
             <div className="glass-card p-4">
               <p className="text-gray-400 text-sm">Most Entity</p>
-              <h2 className="text-2xl font-bold text-purple-400">
+              <h5 className="font-bold ">
                 {stats.actionsByEntity?.[0]?._id || 'N/A'}
-              </h2>
+              </h5>
             </div>
             <div className="glass-card p-4">
               <p className="text-gray-400 text-sm">Top Client</p>
-              <h2 className="text-2xl font-bold text-green-400">
+              <h5 className="font-bold ">
                 {stats.topClients?.[0]?.name || 'N/A'}
-              </h2>
+              </h5>
             </div>
           </div>
         )}
