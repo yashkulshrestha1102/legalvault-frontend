@@ -68,7 +68,7 @@ export default function AddUserModal({ open, onClose, onSave, editData }) {
 
   if (!open) return null;
 
-  // ✅ Validation Function
+  // ✅ Validation Function - returns newErrors object
   const validateForm = () => {
     const newErrors = {};
 
@@ -133,15 +133,17 @@ export default function AddUserModal({ open, onClose, onSave, editData }) {
     }
 
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return newErrors;  // ✅ FIX: return errors object, not boolean
   };
 
   // ✅ Handle Save - Validation Check Ke Saath
   const handleSave = () => {
-    // ✅ Pehle validate karo
-    if (!validateForm()) {
-      // ✅ Scroll to first error
-      const firstErrorField = Object.keys(errors)[0];
+    // ✅ FIX: Validate karo aur errors object lo
+    const validationErrors = validateForm();
+
+    if (Object.keys(validationErrors).length > 0) {
+      // ✅ FIX: Ab validationErrors use karo, stale errors nahi
+      const firstErrorField = Object.keys(validationErrors)[0];
       if (firstErrorField) {
         const element = document.querySelector(`[name="${firstErrorField}"]`);
         if (element) {
@@ -153,7 +155,7 @@ export default function AddUserModal({ open, onClose, onSave, editData }) {
     }
 
     // ✅ Ensure folderPermissions is an array of strings
-    const folderPermissions = Array.isArray(formData.folderPermissions) 
+    const folderPermissions = Array.isArray(formData.folderPermissions)
       ? formData.folderPermissions.filter(item => typeof item === 'string')
       : [];
 
@@ -184,7 +186,7 @@ export default function AddUserModal({ open, onClose, onSave, editData }) {
 
     // ✅ Save and show popup
     onSave(userData);
-    
+
     // ✅ Show success popup
     setCreatedUser(userData);
     setShowSuccess(true);
@@ -221,12 +223,12 @@ export default function AddUserModal({ open, onClose, onSave, editData }) {
       const updated = current.includes(folderId)
         ? current.filter(id => id !== folderId)
         : [...current, folderId];
-      
+
       // ✅ Clear folder permission error if any folder is selected
       if (errors.folderPermissions && updated.length > 0) {
         setErrors(prevErrors => ({ ...prevErrors, folderPermissions: "" }));
       }
-      
+
       return {
         ...prev,
         folderPermissions: updated
@@ -284,7 +286,7 @@ export default function AddUserModal({ open, onClose, onSave, editData }) {
   // ✅ Success Popup Component
   const SuccessPopup = () => {
     if (!showSuccess || !createdUser) return null;
-    
+
     return (
       <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60 backdrop-blur-md">
         <div className="glass w-full max-w-md p-6 rounded-2xl">
@@ -484,13 +486,13 @@ export default function AddUserModal({ open, onClose, onSave, editData }) {
                 <div className="flex justify-between items-center mb-3">
                   <h3 className="text-lg font-semibold">Folder Access Permissions *</h3>
                   <div className="flex gap-2">
-                    <button 
+                    <button
                       onClick={selectAllFolders}
                       className="text-xs bg-cyan-500/20 px-3 py-1 rounded hover:bg-cyan-500/30 transition"
                     >
                       Select All
                     </button>
-                    <button 
+                    <button
                       onClick={deselectAllFolders}
                       className="text-xs bg-red-500/20 px-3 py-1 rounded hover:bg-red-500/30 transition"
                     >

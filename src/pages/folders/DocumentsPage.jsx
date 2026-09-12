@@ -10,6 +10,8 @@ const DocumentsPage = ({ clientId }) => {
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [renamingId, setRenamingId] = useState(null);
   const [newFileName, setNewFileName] = useState('');
+  // ✅ NEW: Image blob URLs cache (cookie fix)
+  const [imageUrls, setImageUrls] = useState({});
 
   // ✅ Fetch documents
   const fetchDocuments = async () => {
@@ -33,6 +35,40 @@ const DocumentsPage = ({ clientId }) => {
   useEffect(() => {
     if (clientId) fetchDocuments();
   }, [clientId]);
+
+  // ✅ FIXED: Fetch image thumbnails with cookie auth
+  useEffect(() => {
+    const fetchImageUrls = async () => {
+      const newUrls = {};
+
+      for (const doc of documents) {
+        // Only images
+        if (doc.mimeType?.startsWith('image/') && !imageUrls[doc._id]) {
+          try {
+            const response = await api.get(doc.fileUrl, { responseType: 'blob' });
+            newUrls[doc._id] = window.URL.createObjectURL(response.data);
+          } catch (error) {
+            console.error(`❌ Failed to load image for ${doc.filename}:`, error);
+          }
+        }
+      }
+
+      if (Object.keys(newUrls).length > 0) {
+        setImageUrls(prev => ({ ...prev, ...newUrls }));
+      }
+    };
+
+    if (documents.length > 0) {
+      fetchImageUrls();
+    }
+
+    // Cleanup on unmount
+    return () => {
+      Object.values(imageUrls).forEach(url => {
+        if (url) window.URL.revokeObjectURL(url);
+      });
+    };
+  }, [documents]);
 
   // ✅ Upload documents
   const uploadDocuments = async (files) => {
@@ -113,13 +149,23 @@ const DocumentsPage = ({ clientId }) => {
     }
   };
 
-  // ✅ View document
-  const viewDocument = (docUrl) => {
+  // ✅ FIXED: View document with blob (cookie auth + dynamic content type)
+  const viewDocument = async (docUrl) => {
     if (!docUrl) return;
-    window.open(docUrl, '_blank');
+    try {
+      const response = await api.get(docUrl, { responseType: 'blob' });
+      const contentType = response.headers['content-type'] || 'application/octet-stream';
+      const blob = new Blob([response.data], { type: contentType });
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+    } catch (error) {
+      console.error('❌ View error:', error);
+      alert('Failed to open document');
+    }
   };
 
-  // ✅ Download document
+  // ✅ Download document (preserve filename)
   const downloadDocument = async (docUrl, filename) => {
     if (!docUrl) return;
     try {
@@ -215,9 +261,10 @@ const DocumentsPage = ({ clientId }) => {
           documents.map((doc) => (
             <div key={`doc-${doc._id}`} className="glass-card p-4 hover:scale-105 transition-all duration-300">
               <div className="flex flex-col items-center">
-                {doc.mimeType?.startsWith('image/') ? (
+                {/* ✅ FIXED: Image thumbnail using blob URL (cookie auth) */}
+                {doc.mimeType?.startsWith('image/') && imageUrls[doc._id] ? (
                   <img 
-                    src={doc.fileUrl} 
+                    src={imageUrls[doc._id]} 
                     alt={doc.filename}
                     className="w-full h-32 object-cover rounded-lg mb-3"
                     onError={(e) => { e.target.style.display = 'none'; }}
@@ -225,7 +272,8 @@ const DocumentsPage = ({ clientId }) => {
                 ) : (
                   <div className="w-full h-32 flex items-center justify-center bg-white/5 rounded-lg mb-3">
                     <span className="text-6xl">
-                      {doc.mimeType === 'application/pdf' ? '📄' : '📎'}
+                      {doc.mimeType === 'application/pdf' ? '📄' : 
+                       doc.mimeType?.startsWith('image/') ? '🖼️' : '📎'}
                     </span>
                   </div>
                 )}

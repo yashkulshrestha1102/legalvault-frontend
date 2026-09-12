@@ -53,33 +53,27 @@ const AddHRModal = ({ open, onClose, onSave, editData }) => {
   }, [editData, open]);
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
+  // ✅ FIXED: PDF Upload - cookie-based, no API_URL, no token
   const uploadPDF = async (file) => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        alert('Please login again');
-        return null;
-      }
-
       const formData = new FormData();
       formData.append('pdf', file);
-      
+
       setUploading(true);
-      const response = await api.post(`${API_URL}/api/pdfs/pdf`, formData, {
+      const response = await api.post('/api/pdfs/pdf', formData, {
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'multipart/form-data'
         }
       });
-      
+
       console.log('✅ PDF uploaded:', response.data);
       const uploadedUrl = response.data.url || response.data.urls?.[0] || response.data.fileUrl;
       return uploadedUrl;
     } catch (error) {
-      console.error('❌ PDF upload error:', error);
+      console.error('❌ PDF upload error:', error.response?.data || error.message);
       alert('Failed to upload PDF');
       return null;
     } finally {

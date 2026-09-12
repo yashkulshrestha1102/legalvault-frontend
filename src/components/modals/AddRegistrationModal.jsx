@@ -62,25 +62,20 @@ function AddRegistrationModal({ open, onClose, onSave, editData }) {
     return Object.keys(newErrors).length === 0;
   };
 
+  // ✅ FIXED: uploadDocuments - cookie-based, no API_URL, no token
   const uploadDocuments = async (files) => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        alert('Please login again');
-        return null;
-      }
       const formData = new FormData();
       for (const file of files) {
         formData.append('pdf', file);
       }
-      const response = await api.post(`${API_URL}/api/pdfs/pdf`, formData, {
+      const response = await api.post('/api/pdfs/pdf', formData, {
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'multipart/form-data'
         }
       });
       console.log('✅ PDFs uploaded:', response.data);
-      
+
       // ✅ Return array of URLs
       if (response.data.urls) {
         return response.data.urls;
@@ -107,7 +102,7 @@ function AddRegistrationModal({ open, onClose, onSave, editData }) {
       setUploading(true);
       const result = await uploadDocuments(selectedFiles);
       setUploading(false);
-      
+
       if (result && Array.isArray(result)) {
         pdfUrls = result;
       }
@@ -116,7 +111,7 @@ function AddRegistrationModal({ open, onClose, onSave, editData }) {
     const finalData = {
       ...formData,
       category: formData.category === "Others" ? formData.customCategory : formData.category,
-      pdfs: pdfUrls,  // ✅ Array of PDF URLs
+      pdfs: pdfUrls,
     };
 
     onSave(finalData);
@@ -397,7 +392,7 @@ function AddRegistrationModal({ open, onClose, onSave, editData }) {
                 )}
               </div>
             </div>
-            
+
             {selectedFiles.length > 0 && (
               <div className="mt-3 space-y-2 max-h-40 overflow-y-auto">
                 {selectedFiles.map((file, index) => (
@@ -415,7 +410,7 @@ function AddRegistrationModal({ open, onClose, onSave, editData }) {
                 ))}
               </div>
             )}
-            
+
             {uploading && (
               <div className="mt-2 text-sm text-yellow-400">
                 ⏳ Uploading documents...

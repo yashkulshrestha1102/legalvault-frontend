@@ -40,22 +40,22 @@ function ClientDetails() {
   const fetchClient = async () => {
     try {
       console.log('📥 Fetching client with ID:', actualId);
-      
+
       const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(actualId);
       let clientData = null;
-      
+
       if (isValidObjectId) {
         try {
           const response = await api.get(`/api/clients/${actualId}`);
           clientData = response.data;
           console.log('✅ Client fetched from backend:', clientData);
-          
+
           const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
-          const updatedClients = savedClients.map(c => 
+          const updatedClients = savedClients.map(c =>
             String(c._id) === String(actualId) || String(c.id) === String(actualId) ? clientData : c
           );
           localStorage.setItem("clients", JSON.stringify(updatedClients));
-          
+
         } catch (backendError) {
           console.warn('⚠️ Backend fetch failed, trying localStorage...', backendError);
           const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
@@ -78,14 +78,14 @@ function ClientDetails() {
           throw new Error('Client not found');
         }
       }
-      
+
       if (clientData && !clientData.userPermissions) {
         clientData.userPermissions = [];
       }
 
       setClient({ ...clientData });
       setRefreshKey(prev => prev + 1);
-      
+
     } catch (error) {
       console.error('❌ Error fetching client:', error);
       const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
@@ -109,7 +109,7 @@ function ClientDetails() {
         return;
       }
       console.log('📋 Fetching registrations for client ID:', actualId);
-      
+
       const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(actualId);
       if (!isValidObjectId) {
         console.warn('⚠️ Invalid ObjectId, skipping registrations fetch');
@@ -129,7 +129,7 @@ function ClientDetails() {
   const fetchContracts = async () => {
     try {
       console.log('📋 Fetching contracts for client ID:', actualId);
-      
+
       const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(actualId);
       if (!isValidObjectId) {
         console.warn('⚠️ Invalid ObjectId, skipping contracts fetch');
@@ -153,7 +153,7 @@ function ClientDetails() {
         return;
       }
       console.log('📋 Fetching documents for client ID:', actualId);
-      
+
       const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(actualId);
       if (!isValidObjectId) {
         console.warn('⚠️ Invalid ObjectId, skipping documents fetch');
@@ -173,9 +173,9 @@ function ClientDetails() {
   useEffect(() => {
     if (actualId) {
       console.log('🔄 Loading data for client ID:', actualId);
-      
+
       const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(actualId);
-      
+
       if (isValidObjectId) {
         fetchClient();
         fetchRegistrations();
@@ -184,7 +184,7 @@ function ClientDetails() {
       } else {
         console.warn('⚠️ Invalid ObjectId, attempting to load from localStorage only.');
         const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
-        const foundClient = savedClients.find(c => 
+        const foundClient = savedClients.find(c =>
           String(c.id) === String(actualId) || String(c._id) === String(actualId)
         );
         if (foundClient) {
@@ -211,7 +211,7 @@ function ClientDetails() {
       const response = await api.put(`/api/documents/${docId}/rename`, {
         newName: newName.trim()
       });
-      
+
       console.log('✅ Document renamed:', response.data);
       fetchDocuments();
       setRenamingId(null);
@@ -252,7 +252,7 @@ function ClientDetails() {
         formData.append('documents', file);
       }
       formData.append('clientId', actualId);
-      
+
       setUploadingDocs(true);
       const response = await api.post('/api/documents/upload', formData, {
         headers: {
@@ -262,7 +262,7 @@ function ClientDetails() {
       console.log('✅ Documents uploaded:', response.data);
       fetchDocuments();
       setSelectedFiles([]);
-      
+
       const fileCount = response.data.files ? response.data.files.length : (response.data.length || 0);
       alert(`✅ ${fileCount} files uploaded successfully!`);
     } catch (error) {
@@ -273,9 +273,20 @@ function ClientDetails() {
     }
   };
 
-  const viewDocument = (docUrl) => {
+  // ✅ FIXED: Blob-based view for documents (dynamic content type)
+  const viewDocument = async (docUrl) => {
     if (!docUrl) return;
-    window.open(docUrl, '_blank');
+    try {
+      const response = await api.get(docUrl, { responseType: 'blob' });
+      const contentType = response.headers['content-type'] || 'application/octet-stream';
+      const blob = new Blob([response.data], { type: contentType });
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+    } catch (error) {
+      console.error('❌ View error:', error);
+      alert('Failed to open document');
+    }
   };
 
   const downloadDocument = async (docUrl, filename) => {
@@ -314,7 +325,7 @@ function ClientDetails() {
     try {
       const formData = new FormData();
       formData.append('pdf', file);
-      
+
       const response = await api.post('/api/pdfs/pdf', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
@@ -328,38 +339,62 @@ function ClientDetails() {
     }
   };
 
-  const viewPDF = (pdfUrl) => {
+  // ✅ FIXED: Blob-based view for PDFs (cookie auth)
+  const viewPDF = async (pdfUrl) => {
     if (!pdfUrl) return;
-    window.open(pdfUrl, '_blank');
+    try {
+      const response = await api.get(pdfUrl, { responseType: 'blob' });
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+    } catch (error) {
+      console.error('❌ View error:', error);
+      alert('Failed to open PDF');
+    }
   };
 
-  const downloadPDF = (pdfUrl) => {
+  const downloadPDF = async (pdfUrl) => {
     if (!pdfUrl) return;
-    window.open(pdfUrl, '_blank');
+    try {
+      const response = await api.get(pdfUrl, { responseType: 'blob' });
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'document.pdf';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('❌ Download error:', error);
+      alert('Failed to download PDF');
+    }
   };
 
   const saveRegistration = async (registrationData) => {
     try {
       let validClientId = actualId;
       const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(actualId);
-      
+
       if (!isValidObjectId) {
         console.log('⚠️ Invalid ObjectId, trying to sync client to backend...');
         const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
         const localClient = savedClients.find(c => String(c.id) === String(actualId) || String(c._id) === String(actualId));
-        
+
         if (localClient) {
           try {
             const allClientsRes = await api.get('/api/clients');
             const allClients = allClientsRes.data?.clients || allClientsRes.data || [];
             const existingClient = allClients.find(c => c.email === localClient.email);
-            
+
             if (existingClient) {
               validClientId = existingClient._id;
               console.log('✅ Client already exists in backend, using ID:', validClientId);
-              const updatedClients = savedClients.map(c => 
-                String(c.id) === String(actualId) || String(c._id) === String(actualId) 
-                  ? { ...c, _id: validClientId } 
+              const updatedClients = savedClients.map(c =>
+                String(c.id) === String(actualId) || String(c._id) === String(actualId)
+                  ? { ...c, _id: validClientId }
                   : c
               );
               localStorage.setItem("clients", JSON.stringify(updatedClients));
@@ -374,9 +409,9 @@ function ClientDetails() {
               });
               console.log('✅ Client synced to backend:', createResponse.data);
               validClientId = createResponse.data._id;
-              const updatedClients = savedClients.map(c => 
-                String(c.id) === String(actualId) || String(c._id) === String(actualId) 
-                  ? { ...c, _id: validClientId } 
+              const updatedClients = savedClients.map(c =>
+                String(c.id) === String(actualId) || String(c._id) === String(actualId)
+                  ? { ...c, _id: validClientId }
                   : c
               );
               localStorage.setItem("clients", JSON.stringify(updatedClients));
@@ -393,16 +428,16 @@ function ClientDetails() {
           return;
         }
       }
-      
-      const data = { 
-        ...registrationData, 
-        clientId: validClientId 
+
+      const data = {
+        ...registrationData,
+        clientId: validClientId
       };
-      
+
       if (registrationData.pdfs && registrationData.pdfs.length > 0) {
         data.pdfs = registrationData.pdfs;
       }
-      
+
       if (editRegistration) {
         const response = await api.put(`/api/registrations/${editRegistration._id}`, data);
         console.log('✅ Registration updated:', response.data);
@@ -410,12 +445,12 @@ function ClientDetails() {
         const response = await api.post('/api/registrations', data);
         console.log('✅ Registration created:', response.data);
       }
-      
+
       fetchRegistrations();
       setEditRegistration(null);
       setOpenModal(false);
       alert('✅ Registration saved successfully!');
-      
+
     } catch (error) {
       console.error('❌ Error saving registration:', error);
       alert('Failed to save registration: ' + (error.response?.data?.message || error.message));
@@ -437,24 +472,24 @@ function ClientDetails() {
     try {
       let validClientId = actualId;
       const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(actualId);
-      
+
       if (!isValidObjectId) {
         console.log('⚠️ Invalid ObjectId, trying to sync client to backend...');
         const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
         const localClient = savedClients.find(c => String(c.id) === String(actualId) || String(c._id) === String(actualId));
-        
+
         if (localClient) {
           try {
             const allClientsRes = await api.get('/api/clients');
             const allClients = allClientsRes.data?.clients || allClientsRes.data || [];
             const existingClient = allClients.find(c => c.email === localClient.email);
-            
+
             if (existingClient) {
               validClientId = existingClient._id;
               console.log('✅ Client already exists in backend, using ID:', validClientId);
-              const updatedClients = savedClients.map(c => 
-                String(c.id) === String(actualId) || String(c._id) === String(actualId) 
-                  ? { ...c, _id: validClientId } 
+              const updatedClients = savedClients.map(c =>
+                String(c.id) === String(actualId) || String(c._id) === String(actualId)
+                  ? { ...c, _id: validClientId }
                   : c
               );
               localStorage.setItem("clients", JSON.stringify(updatedClients));
@@ -469,9 +504,9 @@ function ClientDetails() {
               });
               console.log('✅ Client synced to backend:', createResponse.data);
               validClientId = createResponse.data._id;
-              const updatedClients = savedClients.map(c => 
-                String(c.id) === String(actualId) || String(c._id) === String(actualId) 
-                  ? { ...c, _id: validClientId } 
+              const updatedClients = savedClients.map(c =>
+                String(c.id) === String(actualId) || String(c._id) === String(actualId)
+                  ? { ...c, _id: validClientId }
                   : c
               );
               localStorage.setItem("clients", JSON.stringify(updatedClients));
@@ -488,13 +523,13 @@ function ClientDetails() {
           return;
         }
       }
-      
+
       const data = { ...contractData, clientId: validClientId };
-      
+
       if (contractData.pdfs && contractData.pdfs.length > 0) {
         data.pdfs = contractData.pdfs;
       }
-      
+
       if (editContract) {
         const response = await api.put(`/api/contracts/${editContract._id}`, data);
         console.log('✅ Contract updated:', response.data);
@@ -502,12 +537,12 @@ function ClientDetails() {
         const response = await api.post('/api/contracts', data);
         console.log('✅ Contract created:', response.data);
       }
-      
+
       fetchContracts();
       setEditContract(null);
       setOpenContractModal(false);
       alert('✅ Contract saved successfully!');
-      
+
     } catch (error) {
       console.error('Error saving contract:', error);
       alert('Failed to save contract: ' + (error.response?.data?.message || error.message));
@@ -661,20 +696,20 @@ function ClientDetails() {
               <h3 className="font-semibold mt-1">{client.status}</h3>
             </div>
           </div>
-          
+
           {role === 'admin' && client.userPermissions && client.userPermissions.length > 0 && (
             <div className="mt-4 glass-card p-3">
               <p className="text-gray-100 text-sm">Assigned Users:</p>
               <div className="flex flex-wrap gap-3 mt-1">
                 {client.userPermissions
-                  .filter((p, index, self) => 
-                    index === self.findIndex((t) => 
+                  .filter((p, index, self) =>
+                    index === self.findIndex((t) =>
                       String(t.userId?._id || t.userId) === String(p.userId?._id || p.userId)
                     )
                   )
                   .map((p) => (
-                    <div 
-                      key={`perm-${p.userId?._id || p.userId}`} 
+                    <div
+                      key={`perm-${p.userId?._id || p.userId}`}
                       className="px-3 py-1 bg-cyan-500/20 text-cyan-100 rounded-full text-sm flex items-center gap-2"
                     >
                       <span>{p.userId?.name || 'Unknown'}</span>
@@ -692,9 +727,9 @@ function ClientDetails() {
         {accessibleFolders.length > 0 ? (
           <div className="grid md:grid-cols-4 gap-5">
             {accessibleFolders.map((folder) => (
-              <div 
-                key={folder.value} 
-                onClick={() => setSelectedFolder(folder.value)} 
+              <div
+                key={folder.value}
+                onClick={() => setSelectedFolder(folder.value)}
                 className="glass-card p-6 cursor-pointer hover:scale-105 transition-all duration-300"
               >
                 <div className="text-5xl mb-4">📁</div>
@@ -704,8 +739,8 @@ function ClientDetails() {
           </div>
         ) : (
           <div className="glass-card p-6 text-center text-gray-400">
-            {role === 'admin' 
-              ? 'No folders available' 
+            {role === 'admin'
+              ? 'No folders available'
               : 'You do not have access to any folders for this client'}
           </div>
         )}

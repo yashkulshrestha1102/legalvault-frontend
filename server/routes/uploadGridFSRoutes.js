@@ -349,7 +349,11 @@ router.post('/pdf', auth, upload.array('pdf', 10), async (req, res) => {
 // ✅ Get PDF by ID (Same as before)
 router.get('/:id', async (req, res) => {
   try {
-    let token = req.header('Authorization')?.replace('Bearer ', '') || req.query.token;
+    // ✅ FIX: Cookie se bhi token lo
+    let token = req.cookies?.token
+      || req.header('Authorization')?.replace('Bearer ', '')
+      || req.query.token;
+
     if (!token) return res.status(401).json({ message: 'Access Denied' });
     try { jwt.verify(token, process.env.JWT_SECRET); } catch (error) { return res.status(401).json({ message: 'Invalid token' }); }
 

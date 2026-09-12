@@ -15,8 +15,9 @@ function ContractDetails() {
   useEffect(() => {
     const fetchContract = async () => {
       try {
-        const token = localStorage.getItem('token');
         console.log('📋 Fetching contract with ID:', contractId);
+        // ✅ FIX: Missing api.get() call added
+        const response = await api.get(`/api/contracts/${contractId}`);
         console.log('✅ Contract fetched:', response.data);
         setContract(response.data);
       } catch (error) {
@@ -26,37 +27,37 @@ function ContractDetails() {
         setLoading(false);
       }
     };
-    
+
     if (contractId) {
       fetchContract();
     }
   }, [contractId]);
 
-  const viewPDF = (pdfUrl) => {
+  // ✅ FIXED: Blob-based view (cookie auth, no ?token=)
+  const viewPDF = async (pdfUrl) => {
     if (!pdfUrl) return;
-    const token = localStorage.getItem('token');
-    if (!token) {
-      alert('Please login again');
-      return;
+    try {
+      const response = await api.get(pdfUrl, { responseType: 'blob' });
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+    } catch (error) {
+      console.error('❌ View error:', error);
+      alert('Failed to open PDF');
     }
-    window.open(`${pdfUrl}?token=${token}`, '_blank');
   };
 
+  // ✅ FIXED: Blob-based download (no ?token=, actual download)
   const downloadPDF = async (pdfUrl) => {
     if (!pdfUrl) return;
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        alert('Please login again');
-        return;
-      }
-      
-      const finalUrl = `${pdfUrl}?token=${token}`;
+      const response = await api.get(pdfUrl, { responseType: 'blob' });
       const blob = new Blob([response.data], { type: 'application/pdf' });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = 'contract.pdf';
+      link.download = getFileName(pdfUrl) || 'contract.pdf';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -142,8 +143,8 @@ function ContractDetails() {
             <p className="text-gray-400 text-sm">Status</p>
             <h3 className="font-semibold mt-1">
               <span className={`px-3 py-1 rounded-full text-sm ${
-                contract.status === 'Active' 
-                  ? 'bg-green-500/20 text-green-400 border border-green-400/20' 
+                contract.status === 'Active'
+                  ? 'bg-green-500/20 text-green-400 border border-green-400/20'
                   : contract.status === 'Expired'
                   ? 'bg-red-500/20 text-red-400 border border-red-400/20'
                   : 'bg-yellow-500/20 text-yellow-400 border border-yellow-400/20'

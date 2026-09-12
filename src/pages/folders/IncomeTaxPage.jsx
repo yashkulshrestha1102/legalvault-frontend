@@ -70,9 +70,19 @@ const IncomeTaxPage = ({ clientId }) => {
     }
   };
 
-  const viewPDF = (pdfUrl) => {
+  // ✅ FIXED: Blob-based view (cookie auth)
+  const viewPDF = async (pdfUrl) => {
     if (!pdfUrl) return;
-    window.open(pdfUrl, '_blank');
+    try {
+      const response = await api.get(pdfUrl, { responseType: 'blob' });
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+    } catch (error) {
+      console.error('❌ View error:', error);
+      alert('Failed to open PDF');
+    }
   };
 
   const downloadPDF = async (pdfUrl) => {

@@ -27,20 +27,34 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// ✅ Response interceptor - Auto-handle 401
+// ✅ Response interceptor - Selective 401 handling
 api.interceptors.response.use(
   (response) => response,
+
   (error) => {
-    // Token expired or invalid
-    if (error.response?.status === 401) {
+    const status = error.response?.status;
+    const url = error.config?.url || '';
+
+    // ✅ ONLY logout on AUTH endpoints (login/session check)
+    const isAuthEndpoint =
+      url.includes('/api/auth/login') ||
+      url.includes('/api/auth/logout') ||
+      url.includes('/api/auth/me') ||
+      url.includes('/api/auth/verify');
+
+    if (status === 401 && isAuthEndpoint) {
+      // Real session expiry — logout
       localStorage.removeItem('token');
       localStorage.removeItem('user');
 
-      // Redirect to login (only if not already there)
       if (window.location.pathname !== '/login') {
         window.location.href = '/login';
       }
     }
+    // ✅ For all other 401s (documents, pdfs, clients, etc.)
+    // → Just reject, do NOT logout
+    // → UI can show a friendly error
+
     return Promise.reject(error);
   }
 );

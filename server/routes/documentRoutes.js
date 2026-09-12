@@ -115,7 +115,7 @@ router.post('/upload', auth, upload.array('documents', 50), async (req, res) => 
   }
 });
 
-// ✅ Rename, Get, Delete, Get by ID routes (Same as before, no change needed)
+// ✅ Rename document
 router.put('/:id/rename', auth, async (req, res) => {
   try {
     const { newName } = req.body;
@@ -136,6 +136,7 @@ router.put('/:id/rename', auth, async (req, res) => {
   }
 });
 
+// ✅ Get all documents for a client
 router.get('/client/:clientId', auth, async (req, res) => {
   try {
     const documents = await Document.find({ clientId: req.params.clientId, isDeleted: false }).sort({ createdAt: -1 });
@@ -146,6 +147,7 @@ router.get('/client/:clientId', auth, async (req, res) => {
   }
 });
 
+// ✅ Delete document (soft delete)
 router.delete('/:id', auth, async (req, res) => {
   try {
     const doc = await Document.findOneAndUpdate({ _id: req.params.id, isDeleted: false }, { isDeleted: true }, { new: true });
@@ -157,13 +159,9 @@ router.delete('/:id', auth, async (req, res) => {
   }
 });
 
-router.get('/:id', async (req, res) => {
+// ✅ Get document by GridFS file ID (view/download) — FIXED with auth middleware
+router.get('/:id', auth, async (req, res) => {
   try {
-    let token = req.header('Authorization')?.replace('Bearer ', '') || req.query.token;
-    if (!token) return res.status(401).json({ message: 'Access Denied' });
-
-    try { jwt.verify(token, process.env.JWT_SECRET); } catch (error) { return res.status(401).json({ message: 'Invalid token' }); }
-
     const fileId = new ObjectId(req.params.id);
     const doc = await Document.findOne({ fileId, isDeleted: false });
     if (!doc) return res.status(404).json({ message: 'Document not found' });

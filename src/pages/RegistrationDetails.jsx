@@ -14,8 +14,9 @@ function RegistrationDetails() {
   useEffect(() => {
     const fetchRegistration = async () => {
       try {
-        const token = localStorage.getItem('token');
         console.log('📋 Fetching registration:', registrationId);
+        // ✅ FIX: Missing api.get() call added
+        const response = await api.get(`/api/registrations/${registrationId}`);
         console.log('✅ Registration fetched:', response.data);
         setRegistration(response.data);
       } catch (error) {
@@ -24,33 +25,34 @@ function RegistrationDetails() {
         setLoading(false);
       }
     };
-    fetchRegistration();
+    if (registrationId) fetchRegistration();
   }, [registrationId]);
 
-  const viewPDF = (pdfUrl) => {
+  // ✅ FIXED: Blob-based view (cookie auth, no ?token=)
+  const viewPDF = async (pdfUrl) => {
     if (!pdfUrl) return;
-    const token = localStorage.getItem('token');
-    if (!token) {
-      alert('Please login again');
-      return;
+    try {
+      const response = await api.get(pdfUrl, { responseType: 'blob' });
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+    } catch (error) {
+      console.error('❌ View error:', error);
+      alert('Failed to open PDF');
     }
-    window.open(`${pdfUrl}?token=${token}`, '_blank');
   };
 
+  // ✅ FIXED: Blob-based download (no ?token=, actual download)
   const downloadPDF = async (pdfUrl) => {
     if (!pdfUrl) return;
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        alert('Please login again');
-        return;
-      }
-      const finalUrl = `${pdfUrl}?token=${token}`;
+      const response = await api.get(pdfUrl, { responseType: 'blob' });
       const blob = new Blob([response.data], { type: 'application/pdf' });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = 'document.pdf';
+      link.download = getFileName(pdfUrl) || 'document.pdf';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
