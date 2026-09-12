@@ -542,50 +542,7 @@ function ClientDetails() {
     setOpenContractModal(true);
   };
 
-  const getUserFolderPermissions = () => {
-  if (!user) {
-    console.log('⚠️ No user found');
-    return [];
-  }
-
-  // ✅ Admin has access to all folders
-  if (user.role === 'admin') {
-    console.log('✅ Admin - all folders accessible');
-    return allFolders.map(f => f.id);
-  }
-
-  // ✅ Priority 1: Client-level permissions (per-client override)
-  let clientLevelPerms = [];
-  if (client && client.userPermissions && Array.isArray(client.userPermissions)) {
-    const userPerm = client.userPermissions.find(p => {
-      const userId = p.userId?._id || p.userId;
-      return String(userId) === String(user.id);
-    });
-    
-    if (userPerm && Array.isArray(userPerm.folderPermissions)) {
-      clientLevelPerms = userPerm.folderPermissions;
-    }
-  }
-
-  // ✅ Priority 2: User-level permissions (global fallback)
-  let userLevelPerms = [];
-  if (user.folderPermissions && Array.isArray(user.folderPermissions)) {
-    userLevelPerms = user.folderPermissions;
-  }
-
-  // ✅ Merge both (client-level + user-level)
-  const mergedPermissions = [...new Set([...clientLevelPerms, ...userLevelPerms])];
-
-  console.log('🔍 Client-level perms:', clientLevelPerms);
-  console.log('🔍 User-level perms:', userLevelPerms);
-  console.log('✅ Merged permissions:', mergedPermissions);
-
-  return mergedPermissions;
-};
-
-  const userFolderPermissions = getUserFolderPermissions();
-  const role = user?.role || 'user';
-  
+  // ✅ FIX: allFolders PEHLE declare karo (TDZ error fix)
   const allFolders = [
     { label: "Registrations / Certifications", value: "registrations", id: "registrations" },
     { label: "Contracts", value: "contracts", id: "contracts" },
@@ -598,11 +555,58 @@ function ClientDetails() {
     { label: "📁 Client Repository", value: "documents", id: "documents" }
   ];
 
+  // ✅ FIX: Ab ye function allFolders ko safely access kar sakta hai
+  const getUserFolderPermissions = () => {
+    if (!user) {
+      console.log('⚠️ No user found');
+      return [];
+    }
+
+    // ✅ Admin has access to all folders
+    if (user.role === 'admin') {
+      console.log('✅ Admin - all folders accessible');
+      return allFolders.map(f => f.id);
+    }
+
+    // ✅ Priority 1: Client-level permissions (per-client override)
+    let clientLevelPerms = [];
+    if (client && client.userPermissions && Array.isArray(client.userPermissions)) {
+      const userPerm = client.userPermissions.find(p => {
+        const userId = p.userId?._id || p.userId;
+        return String(userId) === String(user.id);
+      });
+
+      if (userPerm && Array.isArray(userPerm.folderPermissions)) {
+        clientLevelPerms = userPerm.folderPermissions;
+      }
+    }
+
+    // ✅ Priority 2: User-level permissions (global fallback)
+    let userLevelPerms = [];
+    if (user.folderPermissions && Array.isArray(user.folderPermissions)) {
+      userLevelPerms = user.folderPermissions;
+    }
+
+    // ✅ Merge both (client-level + user-level)
+    const mergedPermissions = [...new Set([...clientLevelPerms, ...userLevelPerms])];
+
+    console.log('🔍 Client-level perms:', clientLevelPerms);
+    console.log('🔍 User-level perms:', userLevelPerms);
+    console.log('✅ Merged permissions:', mergedPermissions);
+
+    return mergedPermissions;
+  };
+
+  // ✅ Ab function call karo (allFolders already defined hai)
+  const userFolderPermissions = getUserFolderPermissions();
+  const role = user?.role || 'user';
+
+  // ✅ accessibleFolders calculate karo
   const accessibleFolders = allFolders.filter(f => {
     if (role === 'admin') {
       return true;
     }
-    
+
     const hasAccess = userFolderPermissions.includes(f.id);
     return hasAccess;
   });
