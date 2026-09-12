@@ -1,10 +1,9 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import axios from 'axios';
 import MainLayout from "../layouts/MainLayout";
 import { FaFilePdf, FaEye, FaDownload, FaFile } from "react-icons/fa";
 
-const API_URL = 'https://legalvault-jm2n.onrender.com';
+import api from '../utils/api';
 
 function ContractDetails() {
   const { id, contractId } = useParams();
@@ -18,11 +17,6 @@ function ContractDetails() {
       try {
         const token = localStorage.getItem('token');
         console.log('📋 Fetching contract with ID:', contractId);
-        
-        const response = await axios.get(`${API_URL}/api/contracts/${contractId}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        
         console.log('✅ Contract fetched:', response.data);
         setContract(response.data);
       } catch (error) {
@@ -58,10 +52,6 @@ function ContractDetails() {
       }
       
       const finalUrl = `${pdfUrl}?token=${token}`;
-      const response = await axios.get(finalUrl, {
-        responseType: 'blob'
-      });
-      
       const blob = new Blob([response.data], { type: 'application/pdf' });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');

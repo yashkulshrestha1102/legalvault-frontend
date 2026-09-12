@@ -1,9 +1,6 @@
 import { useEffect, useState } from "react";
 import Select from "react-select";
-import axios from 'axios'; 
-
-const API_URL = 'https://legalvault-jm2n.onrender.com';
-
+import api from '../../utils/api';
 
 function AddContractModal({
   open,
@@ -20,7 +17,7 @@ function AddContractModal({
     startDate: "",
     endDate: "",
     status: "Active",
-    pdfs: [], // ✅ Array of PDF URLs
+    pdfs: [],
   });
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
@@ -89,20 +86,15 @@ function AddContractModal({
     return Object.keys(newErrors).length === 0;
   };
 
+  // ✅ Upload documents - FIXED
   const uploadDocuments = async (files) => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        alert('Please login again');
-        return null;
-      }
       const formData = new FormData();
       for (const file of files) {
         formData.append('pdf', file);
       }
-      const response = await axios.post(`${API_URL}/api/pdfs/pdf`, formData, {
+      const response = await api.post('/api/pdfs/pdf', formData, {
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'multipart/form-data'
         }
       });

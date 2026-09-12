@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FaTimes, FaFilePdf, FaUpload } from 'react-icons/fa';
-import axios from 'axios';
-
-const API_URL = 'https://legalvault-jm2n.onrender.com';
+import api from '../../utils/api';
 
 const AddFinancialModal = ({ open, onClose, onSave, editData }) => {
   const [formData, setFormData] = useState({
@@ -65,21 +63,15 @@ const AddFinancialModal = ({ open, onClose, onSave, editData }) => {
     setFormData({ ...formData, [name]: value });
   };
 
+  // ✅ PDF Upload - FIXED
   const uploadPDF = async (file) => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        alert('Please login again');
-        return null;
-      }
-
       const formData = new FormData();
       formData.append('pdf', file);
       
       setUploading(true);
-      const response = await axios.post(`${API_URL}/api/pdfs/pdf`, formData, {
+      const response = await api.post('/api/pdfs/pdf', formData, {
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'multipart/form-data'
         }
       });
@@ -145,7 +137,6 @@ const AddFinancialModal = ({ open, onClose, onSave, editData }) => {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid md:grid-cols-2 gap-4">
-            {/* Finance Name */}
             <div className="md:col-span-2">
               <label className="block text-sm text-gray-400 mb-1">Finance Name *</label>
               <input
@@ -159,7 +150,6 @@ const AddFinancialModal = ({ open, onClose, onSave, editData }) => {
               />
             </div>
 
-            {/* Finance Type */}
             <div>
               <label className="block text-sm text-gray-400 mb-1">Finance Type *</label>
               <select
@@ -180,7 +170,6 @@ const AddFinancialModal = ({ open, onClose, onSave, editData }) => {
               </select>
             </div>
 
-            {/* Period */}
             <div>
               <label className="block text-sm text-gray-400 mb-1">Period</label>
               <input
@@ -193,7 +182,6 @@ const AddFinancialModal = ({ open, onClose, onSave, editData }) => {
               />
             </div>
 
-            {/* Amount */}
             <div>
               <label className="block text-sm text-gray-400 mb-1">Amount</label>
               <input
@@ -206,7 +194,6 @@ const AddFinancialModal = ({ open, onClose, onSave, editData }) => {
               />
             </div>
 
-            {/* Currency */}
             <div>
               <label className="block text-sm text-gray-400 mb-1">Currency</label>
               <select
@@ -222,7 +209,6 @@ const AddFinancialModal = ({ open, onClose, onSave, editData }) => {
               </select>
             </div>
 
-            {/* Issue Date */}
             <div>
               <label className="block text-sm text-gray-400 mb-1">Issue Date *</label>
               <input
@@ -235,7 +221,6 @@ const AddFinancialModal = ({ open, onClose, onSave, editData }) => {
               />
             </div>
 
-            {/* Review Date */}
             <div>
               <label className="block text-sm text-gray-400 mb-1">Review Date</label>
               <input
@@ -247,7 +232,6 @@ const AddFinancialModal = ({ open, onClose, onSave, editData }) => {
               />
             </div>
 
-            {/* Expiry Date */}
             <div>
               <label className="block text-sm text-gray-400 mb-1">Expiry Date</label>
               <input
@@ -259,7 +243,6 @@ const AddFinancialModal = ({ open, onClose, onSave, editData }) => {
               />
             </div>
 
-            {/* Status */}
             <div>
               <label className="block text-sm text-gray-400 mb-1">Status *</label>
               <select
@@ -276,7 +259,6 @@ const AddFinancialModal = ({ open, onClose, onSave, editData }) => {
               </select>
             </div>
 
-            {/* Department */}
             <div>
               <label className="block text-sm text-gray-400 mb-1">Department</label>
               <input
@@ -288,7 +270,6 @@ const AddFinancialModal = ({ open, onClose, onSave, editData }) => {
               />
             </div>
 
-            {/* Approved By */}
             <div>
               <label className="block text-sm text-gray-400 mb-1">Approved By</label>
               <input
@@ -302,7 +283,6 @@ const AddFinancialModal = ({ open, onClose, onSave, editData }) => {
             </div>
           </div>
 
-          {/* Description */}
           <div>
             <label className="block text-sm text-gray-400 mb-1">Description</label>
             <textarea
@@ -315,7 +295,6 @@ const AddFinancialModal = ({ open, onClose, onSave, editData }) => {
             />
           </div>
 
-          {/* PDF Upload */}
           <div>
             <label className="block text-sm text-gray-400 mb-1">Upload PDF</label>
             <div className="flex items-center gap-3">
@@ -354,7 +333,6 @@ const AddFinancialModal = ({ open, onClose, onSave, editData }) => {
             )}
           </div>
 
-          {/* Buttons */}
           <div className="flex gap-3 pt-4">
             <button
               type="submit"

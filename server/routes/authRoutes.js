@@ -4,6 +4,7 @@ const { body, validationResult } = require('express-validator');
 const { 
   register, 
   login, 
+  logout, 
   forgotPassword, 
   resetPassword 
 } = require('../controllers/authController');
@@ -38,10 +39,29 @@ const handleValidation = (req, res, next) => {
   next();
 };
 
+
+// ✅ Logout - Clear HTTP-only cookie
+exports.logout = async (req, res) => {
+  try {
+    res.clearCookie('token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      path: '/',
+    });
+    
+    console.log('✅ Logout successful');
+    res.json({ message: 'Logged out successfully' });
+  } catch (error) {
+    console.error('❌ Logout error:', error);
+    res.status(500).json({ message: 'Logout failed' });
+  }
+};
 // ✅ Public Routes
 router.post('/register', validateRegister, handleValidation, register);
 router.post('/login', validateLogin, handleValidation, login);
 router.post('/forgot-password', validateForgotPassword, handleValidation, forgotPassword);
 router.post('/reset-password', validateResetPassword, handleValidation, resetPassword);
+router.post('/logout', logout);
 
 module.exports = router;

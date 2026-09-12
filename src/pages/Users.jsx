@@ -14,10 +14,8 @@ import {
   FaUserCheck,
 } from "react-icons/fa";
 import { useState, useEffect, useContext } from "react";
-import axios from 'axios';
 import AuthContext from '../context/AuthContext';
-
-const API_URL = 'https://legalvault-jm2n.onrender.com';
+import api from '../utils/api';
 
 function Users() {
   const { user: currentUser, setUser, refreshUser } = useContext(AuthContext);
@@ -33,41 +31,12 @@ function Users() {
 
   const fetchUsers = async () => {
     try {
-      const token = localStorage.getItem('token');
-      console.log('👥 Fetching users from:', `${API_URL}/api/users`);
-      const response = await axios.get(`${API_URL}/api/users`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await api.get('/api/users');
+      console.log('👥 Users fetched:', response.data.length);
       setUsers(response.data);
     } catch (error) {
       console.error('❌ Error fetching users:', error);
-      const savedUsers = JSON.parse(localStorage.getItem("users")) || [];
-      if (savedUsers.length > 0) {
-        setUsers(savedUsers);
-      } else {
-        setUsers([
-          {
-            id: 1,
-            name: "Yash Kulshrestha",
-            email: "admin@legalvault.com",
-            phone: "9876543210",
-            department: "Management",
-            role: "Admin",
-            status: "Active",
-            createdAt: "01/01/2026",
-          },
-          {
-            id: 2,
-            name: "Rahul Sharma",
-            email: "rahul@gmail.com",
-            phone: "9876543211",
-            department: "Legal",
-            role: "Consultant",
-            status: "Active",
-            createdAt: "01/01/2026",
-          },
-        ]);
-      }
+      setUsers([]);
     } finally {
       setLoading(false);
     }
@@ -79,22 +48,15 @@ function Users() {
 
   const addUser = async (newUser) => {
     try {
-      const token = localStorage.getItem('token');
-      await axios.post(`${API_URL}/api/users`, newUser, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.post('/api/users', newUser);
       fetchUsers();
     } catch (error) {
       console.error('❌ Error adding user:', error);
-      const updatedUsers = [...users, { ...newUser, id: Date.now() }];
-      setUsers(updatedUsers);
-      localStorage.setItem("users", JSON.stringify(updatedUsers));
+      alert('Failed to add user: ' + (error.response?.data?.message || error.message));
     }
   };
 
-  // ✅ Update User - with proper ID handling
   const updateUser = async (updatedUser) => {
-    // ✅ Ensure user ID is present
     const userId = updatedUser._id || updatedUser.id;
     if (!userId) {
       console.error('❌ Cannot update user: No ID found', updatedUser);
@@ -103,25 +65,20 @@ function Users() {
     }
 
     try {
-      const token = localStorage.getItem('token');
       console.log('📤 Updating user with ID:', userId);
       
-      const response = await axios.put(`${API_URL}/api/users/${userId}`, updatedUser, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await api.put(`/api/users/${userId}`, updatedUser);
       
       console.log('✅ User updated:', response.data);
       fetchUsers();
 
-      // ✅ Check if the updated user is the currently logged-in user
+      // Check if the updated user is the currently logged-in user
       const currentUserData = JSON.parse(localStorage.getItem('user'));
       if (currentUserData && (currentUserData.id === userId || currentUserData._id === userId)) {
         console.log('🔄 Current user updated, refreshing...');
         
-        // Update localStorage
         localStorage.setItem('user', JSON.stringify(response.data));
         
-        // Update AuthContext
         if (refreshUser) {
           await refreshUser();
         } else if (setUser) {
@@ -133,25 +90,12 @@ function Users() {
       
     } catch (error) {
       console.error('❌ Error updating user:', error);
-      // Fallback: Local storage mein update karo
-      const updatedUsers = users.map((user) =>
-        user.id === updatedUser.id || user._id === updatedUser._id ? updatedUser : user
-      );
-      setUsers(updatedUsers);
-      localStorage.setItem("users", JSON.stringify(updatedUsers));
-      
-      // Fallback for current user
-      const currentUserData = JSON.parse(localStorage.getItem('user'));
-      if (currentUserData && (currentUserData.id === userId || currentUserData._id === userId)) {
-        localStorage.setItem('user', JSON.stringify(updatedUser));
-        if (setUser) setUser(updatedUser);
-      }
+      alert('Failed to update user: ' + (error.response?.data?.message || error.message));
     }
   };
 
   const deleteUser = async () => {
     try {
-      const token = localStorage.getItem('token');
       const user = users[selectedIndex];
       const userId = user?._id || user?.id;
       
@@ -161,15 +105,11 @@ function Users() {
         return;
       }
       
-      await axios.delete(`${API_URL}/api/users/${userId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.delete(`/api/users/${userId}`);
       fetchUsers();
     } catch (error) {
       console.error('❌ Error deleting user:', error);
-      const updatedUsers = users.filter((_, index) => index !== selectedIndex);
-      setUsers(updatedUsers);
-      localStorage.setItem("users", JSON.stringify(updatedUsers));
+      alert('Failed to delete user: ' + (error.response?.data?.message || error.message));
     } finally {
       setDeleteModal(false);
       setSelectedUser(null);
@@ -179,7 +119,7 @@ function Users() {
 
   const totalUsers = users.length;
   const activeUsers = users.filter((u) => u.status === "Active").length;
-  const adminUsers = users.filter((u) => u.role === "Admin").length;
+  const adminUsers = users.filter((u) => u.role === "Admin" || u.role === "admin").length;
 
   if (loading) {
     return (
@@ -191,7 +131,6 @@ function Users() {
     );
   }
 
-  // ✅ Get unique key for table rows
   const getRowKey = (user, index) => {
     return user._id || user.id || `user-${index}`;
   };
@@ -268,7 +207,7 @@ function Users() {
                       <td className="p-4">
                         <div className="flex items-center gap-3">
                           <div className="w-12 h-12 rounded-full glass-card flex items-center justify-center">
-                            {user.role === "Admin" ? <FaUserShield /> : <FaUserTie />}
+                            {user.role === "Admin" || user.role === "admin" ? <FaUserShield /> : <FaUserTie />}
                           </div>
                           <div>
                             <h4 className="font-semibold">{user.name}</h4>
@@ -292,7 +231,11 @@ function Users() {
                           {user.status || 'Active'}
                         </span>
                       </td>
-                      <td className="p-4">{user.createdAt || new Date().toLocaleDateString()}</td>
+                      <td className="p-4">
+                        {user.createdAt 
+                          ? new Date(user.createdAt).toLocaleDateString() 
+                          : 'N/A'}
+                      </td>
                       <td className="p-4">
                         <div className="flex gap-2">
                           <button

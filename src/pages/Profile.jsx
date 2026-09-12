@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import MainLayout from '../layouts/MainLayout';
 import AuthContext from '../context/AuthContext';
 import { FaUser, FaEnvelope, FaPhone, FaBriefcase, FaSave, FaEdit, FaUsers, FaFileAlt, FaFileContract } from 'react-icons/fa';
 
-const API_URL = 'https://legalvault-jm2n.onrender.com';
+import api from '../utils/api';
 
 function Profile() {
   const { user, setUser } = useContext(AuthContext);
@@ -44,7 +43,7 @@ function Profile() {
   const fetchUserStats = async () => {
     try {
       const token = localStorage.getItem('token');
-      const clientsRes = await axios.get(`${API_URL}/api/clients`, {
+      const clientsRes = await api.get(`${API_URL}/api/clients`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const userClients = clientsRes.data.filter(c => c.createdBy === user?.id);
@@ -61,7 +60,7 @@ function Profile() {
 
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.put(`${API_URL}/api/users/${user.id}`, formData, {
+      const response = await api.put(`${API_URL}/api/users/${user.id}`, formData, {
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -92,7 +91,7 @@ function Profile() {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      await axios.put(`${API_URL}/api/users/${user.id}`, {
+      await api.put(`${API_URL}/api/users/${user.id}`, {
         ...formData,
         password: passwordData.newPassword
       }, {

@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useContext } from 'react';
-import axios from 'axios';
 import MainLayout from '../layouts/MainLayout';
 import AuthContext from '../context/AuthContext';
 import { FaUndo, FaInfoCircle, FaSearch, FaFilePdf, FaUser, FaBuilding } from 'react-icons/fa';
 
-const API_URL = 'https://legalvault-jm2n.onrender.com';
+import api from '../utils/api';
 
 function AuditLog() {
   const { user } = useContext(AuthContext);
@@ -26,11 +25,6 @@ function AuditLog() {
       if (filter.action) params.action = filter.action;
       if (filter.entity) params.entity = filter.entity;
       if (filter.search) params.search = filter.search;
-
-      const response = await axios.get(`${API_URL}/api/audit`, {
-        headers: { Authorization: `Bearer ${token}` },
-        params
-      });
       setLogs(response.data.logs);
       setPagination(prev => ({ ...prev, total: response.data.pagination.total }));
     } catch (error) {
@@ -43,9 +37,6 @@ function AuditLog() {
   const fetchStats = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/api/audit/stats`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
       setStats(response.data);
     } catch (error) {
       console.error('Error fetching stats:', error);
@@ -83,7 +74,7 @@ function AuditLog() {
     if (!window.confirm('Are you sure you want to rollback this action? This cannot be undone.')) return;
     try {
       const token = localStorage.getItem('token');
-      await axios.post(`${API_URL}/api/audit/${logId}/rollback`, {}, {
+      await api.post(`${API_URL}/api/audit/${logId}/rollback`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
       alert('✅ Rollback successful!');

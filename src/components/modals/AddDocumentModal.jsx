@@ -1,8 +1,6 @@
 import { useState } from "react";
 import { FaTimes, FaUpload } from "react-icons/fa";
-import axios from 'axios';
-
-const API_URL = 'https://legalvault-jm2n.onrender.com';
+import api from '../../utils/api';
 
 export default function AddDocumentModal({ open, onClose, clientId, onUpload }) {
   const [files, setFiles] = useState([]);
@@ -19,7 +17,6 @@ export default function AddDocumentModal({ open, onClose, clientId, onUpload }) 
     }
 
     try {
-      const token = localStorage.getItem('token');
       const formData = new FormData();
       for (const file of files) {
         formData.append('documents', file);
@@ -27,9 +24,8 @@ export default function AddDocumentModal({ open, onClose, clientId, onUpload }) 
       formData.append('clientId', clientId);
 
       setUploading(true);
-      const response = await axios.post(`${API_URL}/api/documents/upload`, formData, {
+      const response = await api.post('/api/documents/upload', formData, {
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'multipart/form-data'
         }
       });
@@ -56,16 +52,16 @@ export default function AddDocumentModal({ open, onClose, clientId, onUpload }) 
           </button>
         </div>
 
-        <div className="border-2 border-dashed border-gray-600 rounded-lg p-8 text-center">
+        <div className="relative border-2 border-dashed border-gray-600 rounded-lg p-8 text-center">
           <input
             type="file"
             multiple
             accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xlsx,.txt"
             onChange={handleFileChange}
-            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
           />
           <FaUpload className="text-4xl text-gray-400 mx-auto mb-3" />
-          <p className="text-gray-400">Drag & drop files here, or click to select</p>
+          <p className="text-gray-400">Click to select files</p>
           <p className="text-xs text-gray-500 mt-2">Supports: PDF, JPG, PNG, DOC, XLSX, TXT</p>
         </div>
 

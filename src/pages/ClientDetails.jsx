@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState, useContext } from "react";
-import axios from 'axios';
+import api from '../utils/api';
 import MainLayout from "../layouts/MainLayout";
 import AuthContext from '../context/AuthContext';
 import AddRegistrationModal from "../components/modals/AddRegistrationModal";
@@ -13,8 +13,6 @@ import IncomeTaxPage from "./folders/IncomeTaxPage";
 import HRPage from "./folders/HRPage";
 import CorporateSecretariatPage from "./folders/CorporateSecretariatPage";
 import FinancialsPage from "./folders/FinancialsPage";
-
-const API_URL = 'https://legalvault-jm2n.onrender.com';
 
 function ClientDetails() {
   const { id, clientId } = useParams();
@@ -41,7 +39,6 @@ function ClientDetails() {
 
   const fetchClient = async () => {
     try {
-      const token = localStorage.getItem('token');
       console.log('📥 Fetching client with ID:', actualId);
       
       const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(actualId);
@@ -49,9 +46,7 @@ function ClientDetails() {
       
       if (isValidObjectId) {
         try {
-          const response = await axios.get(`${API_URL}/api/clients/${actualId}`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
+          const response = await api.get(`/api/clients/${actualId}`);
           clientData = response.data;
           console.log('✅ Client fetched from backend:', clientData);
           
@@ -109,7 +104,6 @@ function ClientDetails() {
 
   const fetchRegistrations = async () => {
     try {
-      const token = localStorage.getItem('token');
       if (!actualId) {
         console.error('❌ Client ID is undefined!');
         return;
@@ -122,10 +116,8 @@ function ClientDetails() {
         setRegistrations([]);
         return;
       }
-      
-      const response = await axios.get(`${API_URL}/api/registrations/client/${actualId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+
+      const response = await api.get(`/api/registrations/client/${actualId}`);
       console.log('✅ Registrations fetched:', response.data);
       setRegistrations(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
@@ -136,7 +128,6 @@ function ClientDetails() {
 
   const fetchContracts = async () => {
     try {
-      const token = localStorage.getItem('token');
       console.log('📋 Fetching contracts for client ID:', actualId);
       
       const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(actualId);
@@ -145,10 +136,8 @@ function ClientDetails() {
         setContracts([]);
         return;
       }
-      
-      const response = await axios.get(`${API_URL}/api/contracts/client/${actualId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+
+      const response = await api.get(`/api/contracts/client/${actualId}`);
       console.log('✅ Contracts fetched:', response.data);
       setContracts(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
@@ -159,7 +148,6 @@ function ClientDetails() {
 
   const fetchDocuments = async () => {
     try {
-      const token = localStorage.getItem('token');
       if (!actualId) {
         console.error('❌ Client ID is undefined!');
         return;
@@ -172,10 +160,8 @@ function ClientDetails() {
         setDocuments([]);
         return;
       }
-      
-      const response = await axios.get(`${API_URL}/api/documents/client/${actualId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+
+      const response = await api.get(`/api/documents/client/${actualId}`);
       console.log('✅ Documents fetched:', response.data);
       setDocuments(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
@@ -184,7 +170,6 @@ function ClientDetails() {
     }
   };
 
-  // ✅ SINGLE useEffect with Invalid ObjectId safe fallback
   useEffect(() => {
     if (actualId) {
       console.log('🔄 Loading data for client ID:', actualId);
@@ -223,11 +208,8 @@ function ClientDetails() {
     }
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.put(`${API_URL}/api/documents/${docId}/rename`, {
+      const response = await api.put(`/api/documents/${docId}/rename`, {
         newName: newName.trim()
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
       });
       
       console.log('✅ Document renamed:', response.data);
@@ -265,7 +247,6 @@ function ClientDetails() {
     }
 
     try {
-      const token = localStorage.getItem('token');
       const formData = new FormData();
       for (const file of files) {
         formData.append('documents', file);
@@ -273,9 +254,8 @@ function ClientDetails() {
       formData.append('clientId', actualId);
       
       setUploadingDocs(true);
-      const response = await axios.post(`${API_URL}/api/documents/upload`, formData, {
+      const response = await api.post('/api/documents/upload', formData, {
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'multipart/form-data'
         }
       });
@@ -295,17 +275,15 @@ function ClientDetails() {
 
   const viewDocument = (docUrl) => {
     if (!docUrl) return;
-    const token = localStorage.getItem('token');
-    window.open(`${docUrl}?token=${token}`, '_blank');
+    window.open(docUrl, '_blank');
   };
 
   const downloadDocument = async (docUrl, filename) => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(docUrl, {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await api.get(docUrl, {
         responseType: 'blob'
       });
+
       const blob = new Blob([response.data]);
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -324,10 +302,7 @@ function ClientDetails() {
   const deleteDocument = async (docId) => {
     if (!window.confirm('Delete this document?')) return;
     try {
-      const token = localStorage.getItem('token');
-      await axios.delete(`${API_URL}/api/documents/${docId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.delete(`/api/documents/${docId}`);
       fetchDocuments();
     } catch (error) {
       console.error('Delete error:', error);
@@ -337,20 +312,11 @@ function ClientDetails() {
 
   const uploadPDF = async (file) => {
     try {
-      const token = localStorage.getItem('token');
-      console.log('🔑 ClientDetails - PDF Upload Token:', token ? '✅ Yes' : '❌ No');
-
-      if (!token) {
-        alert('Please login again');
-        return null;
-      }
-
       const formData = new FormData();
       formData.append('pdf', file);
       
-      const response = await axios.post(`${API_URL}/api/pdfs/pdf`, formData, {
+      const response = await api.post('/api/pdfs/pdf', formData, {
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'multipart/form-data'
         }
       });
@@ -364,28 +330,16 @@ function ClientDetails() {
 
   const viewPDF = (pdfUrl) => {
     if (!pdfUrl) return;
-    const token = localStorage.getItem('token');
-    if (!token) {
-      alert('Please login again');
-      return;
-    }
-    window.open(`${pdfUrl}?token=${token}`, '_blank');
+    window.open(pdfUrl, '_blank');
   };
 
   const downloadPDF = (pdfUrl) => {
     if (!pdfUrl) return;
-    const token = localStorage.getItem('token');
-    if (!token) {
-      alert('Please login again');
-      return;
-    }
-    window.open(`${pdfUrl}?token=${token}`, '_blank');
+    window.open(pdfUrl, '_blank');
   };
 
   const saveRegistration = async (registrationData) => {
     try {
-      const token = localStorage.getItem('token');
-      
       let validClientId = actualId;
       const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(actualId);
       
@@ -396,9 +350,7 @@ function ClientDetails() {
         
         if (localClient) {
           try {
-            const allClientsRes = await axios.get(`${API_URL}/api/clients`, {
-              headers: { Authorization: `Bearer ${token}` }
-            });
+            const allClientsRes = await api.get('/api/clients');
             const allClients = allClientsRes.data?.clients || allClientsRes.data || [];
             const existingClient = allClients.find(c => c.email === localClient.email);
             
@@ -413,14 +365,12 @@ function ClientDetails() {
               localStorage.setItem("clients", JSON.stringify(updatedClients));
               window.history.replaceState(null, '', `/client/${validClientId}`);
             } else {
-              const createResponse = await axios.post(`${API_URL}/api/clients`, {
+              const createResponse = await api.post('/api/clients', {
                 name: localClient.name || 'Unknown',
                 company: localClient.company || 'Unknown',
                 email: localClient.email,
                 phone: localClient.phone || '0000000000',
                 status: localClient.status || 'Active'
-              }, {
-                headers: { Authorization: `Bearer ${token}` }
               });
               console.log('✅ Client synced to backend:', createResponse.data);
               validClientId = createResponse.data._id;
@@ -454,14 +404,10 @@ function ClientDetails() {
       }
       
       if (editRegistration) {
-        const response = await axios.put(`${API_URL}/api/registrations/${editRegistration._id}`, data, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const response = await api.put(`/api/registrations/${editRegistration._id}`, data);
         console.log('✅ Registration updated:', response.data);
       } else {
-        const response = await axios.post(`${API_URL}/api/registrations`, data, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const response = await api.post('/api/registrations', data);
         console.log('✅ Registration created:', response.data);
       }
       
@@ -479,10 +425,7 @@ function ClientDetails() {
   const deleteRegistration = async (registrationId) => {
     if (!window.confirm("Delete Registration?")) return;
     try {
-      const token = localStorage.getItem('token');
-      await axios.delete(`${API_URL}/api/registrations/${registrationId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.delete(`/api/registrations/${registrationId}`);
       fetchRegistrations();
     } catch (error) {
       console.error('Error deleting registration:', error);
@@ -492,8 +435,6 @@ function ClientDetails() {
 
   const saveContract = async (contractData) => {
     try {
-      const token = localStorage.getItem('token');
-      
       let validClientId = actualId;
       const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(actualId);
       
@@ -504,9 +445,7 @@ function ClientDetails() {
         
         if (localClient) {
           try {
-            const allClientsRes = await axios.get(`${API_URL}/api/clients`, {
-              headers: { Authorization: `Bearer ${token}` }
-            });
+            const allClientsRes = await api.get('/api/clients');
             const allClients = allClientsRes.data?.clients || allClientsRes.data || [];
             const existingClient = allClients.find(c => c.email === localClient.email);
             
@@ -521,14 +460,12 @@ function ClientDetails() {
               localStorage.setItem("clients", JSON.stringify(updatedClients));
               window.history.replaceState(null, '', `/client/${validClientId}`);
             } else {
-              const createResponse = await axios.post(`${API_URL}/api/clients`, {
+              const createResponse = await api.post('/api/clients', {
                 name: localClient.name || 'Unknown',
                 company: localClient.company || 'Unknown',
                 email: localClient.email,
                 phone: localClient.phone || '0000000000',
                 status: localClient.status || 'Active'
-              }, {
-                headers: { Authorization: `Bearer ${token}` }
               });
               console.log('✅ Client synced to backend:', createResponse.data);
               validClientId = createResponse.data._id;
@@ -559,14 +496,10 @@ function ClientDetails() {
       }
       
       if (editContract) {
-        const response = await axios.put(`${API_URL}/api/contracts/${editContract._id}`, data, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const response = await api.put(`/api/contracts/${editContract._id}`, data);
         console.log('✅ Contract updated:', response.data);
       } else {
-        const response = await axios.post(`${API_URL}/api/contracts`, data, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const response = await api.post('/api/contracts', data);
         console.log('✅ Contract created:', response.data);
       }
       
@@ -584,10 +517,7 @@ function ClientDetails() {
   const deleteContract = async (contractId) => {
     if (!window.confirm("Delete Contract?")) return;
     try {
-      const token = localStorage.getItem('token');
-      await axios.delete(`${API_URL}/api/contracts/${contractId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.delete(`/api/contracts/${contractId}`);
       fetchContracts();
     } catch (error) {
       console.error('Error deleting contract:', error);
@@ -612,34 +542,50 @@ function ClientDetails() {
     setOpenContractModal(true);
   };
 
-  // ✅ CRITICAL FIX: Folder permission logic with debug
   const getUserFolderPermissions = () => {
-    if (!client || !client.userPermissions) {
-      console.log('⚠️ No client or userPermissions found');
-      return [];
-    }
-    
-    if (!user) {
-      console.log('⚠️ No user found');
-      return [];
-    }
-    
-    // ✅ Find permissions for current user
+  if (!user) {
+    console.log('⚠️ No user found');
+    return [];
+  }
+
+  // ✅ Admin has access to all folders
+  if (user.role === 'admin') {
+    console.log('✅ Admin - all folders accessible');
+    return allFolders.map(f => f.id);
+  }
+
+  // ✅ Priority 1: Client-level permissions (per-client override)
+  let clientLevelPerms = [];
+  if (client && client.userPermissions && Array.isArray(client.userPermissions)) {
     const userPerm = client.userPermissions.find(p => {
       const userId = p.userId?._id || p.userId;
       return String(userId) === String(user.id);
     });
     
-    console.log('🔍 User permissions found:', userPerm);
-    console.log('📁 Folder permissions:', userPerm?.folderPermissions);
-    
-    return userPerm?.folderPermissions || [];
-  };
+    if (userPerm && Array.isArray(userPerm.folderPermissions)) {
+      clientLevelPerms = userPerm.folderPermissions;
+    }
+  }
+
+  // ✅ Priority 2: User-level permissions (global fallback)
+  let userLevelPerms = [];
+  if (user.folderPermissions && Array.isArray(user.folderPermissions)) {
+    userLevelPerms = user.folderPermissions;
+  }
+
+  // ✅ Merge both (client-level + user-level)
+  const mergedPermissions = [...new Set([...clientLevelPerms, ...userLevelPerms])];
+
+  console.log('🔍 Client-level perms:', clientLevelPerms);
+  console.log('🔍 User-level perms:', userLevelPerms);
+  console.log('✅ Merged permissions:', mergedPermissions);
+
+  return mergedPermissions;
+};
 
   const userFolderPermissions = getUserFolderPermissions();
   const role = user?.role || 'user';
   
-  // ✅ All folders definition
   const allFolders = [
     { label: "Registrations / Certifications", value: "registrations", id: "registrations" },
     { label: "Contracts", value: "contracts", id: "contracts" },
@@ -652,19 +598,14 @@ function ClientDetails() {
     { label: "📁 Client Repository", value: "documents", id: "documents" }
   ];
 
-  // ✅ CRITICAL FIX: Folder accessibility with debug
   const accessibleFolders = allFolders.filter(f => {
     if (role === 'admin') {
-      console.log(`✅ Admin - Access to ${f.label}`);
       return true;
     }
     
     const hasAccess = userFolderPermissions.includes(f.id);
-    console.log(`🔍 User ${user?.name} - ${f.label}: ${hasAccess ? '✅' : '❌'}`);
     return hasAccess;
   });
-
-  console.log('📁 Accessible folders:', accessibleFolders.map(f => f.label));
 
   if (loading) {
     return (
@@ -809,10 +750,10 @@ function ClientDetails() {
                           )}
                         </td>
                         <td className="p-4">
-                          {item.pdf ? (
+                          {item.pdfs && item.pdfs.length > 0 ? (
                             <div className="flex gap-2">
-                              <button onClick={() => viewPDF(item.pdf)} className="text-cyan-400 hover:underline text-sm">📄 View</button>
-                              <button onClick={() => downloadPDF(item.pdf)} className="text-green-400 hover:underline text-sm">⬇️ Download</button>
+                              <button onClick={() => viewPDF(item.pdfs[0])} className="text-cyan-400 hover:underline text-sm">📄 View</button>
+                              <button onClick={() => downloadPDF(item.pdfs[0])} className="text-green-400 hover:underline text-sm">⬇️ Download</button>
                             </div>
                           ) : "-"}
                         </td>
@@ -870,10 +811,10 @@ function ClientDetails() {
                         <td className="p-4">{item.startDate}</td>
                         <td className="p-4">{item.endDate}</td>
                         <td className="p-4">
-                          {item.pdf ? (
+                          {item.pdfs && item.pdfs.length > 0 ? (
                             <div className="flex gap-2">
-                              <button onClick={() => viewPDF(item.pdf)} className="text-cyan-400 hover:underline text-sm">📄 View</button>
-                              <button onClick={() => downloadPDF(item.pdf)} className="text-green-400 hover:underline text-sm">⬇️ Download</button>
+                              <button onClick={() => viewPDF(item.pdfs[0])} className="text-cyan-400 hover:underline text-sm">📄 View</button>
+                              <button onClick={() => downloadPDF(item.pdfs[0])} className="text-green-400 hover:underline text-sm">⬇️ Download</button>
                             </div>
                           ) : "-"}
                         </td>

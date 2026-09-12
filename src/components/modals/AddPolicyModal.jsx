@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FaTimes, FaFilePdf, FaUpload } from 'react-icons/fa';
-import axios from 'axios';
-
-const API_URL = 'https://legalvault-jm2n.onrender.com';
+import api from '../../utils/api';
 
 const AddPolicyModal = ({ open, onClose, onSave, editData }) => {
   const [formData, setFormData] = useState({
@@ -58,28 +56,21 @@ const AddPolicyModal = ({ open, onClose, onSave, editData }) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // ✅ PDF Upload Function
+  // ✅ PDF Upload Function - FIXED
   const uploadPDF = async (file) => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        alert('Please login again');
-        return null;
-      }
-
       const formData = new FormData();
       formData.append('pdf', file);
-      
+
       setUploading(true);
-      const response = await axios.post(`${API_URL}/api/pdfs/pdf`, formData, {
+      const response = await api.post('/api/pdfs/pdf', formData, {
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'multipart/form-data'
         }
       });
-      
+
       console.log('✅ PDF uploaded:', response.data);
-      
+
       // ✅ Handle both response formats
       const uploadedUrl = response.data.url || response.data.urls?.[0] || response.data.fileUrl;
       return uploadedUrl;
@@ -92,12 +83,10 @@ const AddPolicyModal = ({ open, onClose, onSave, editData }) => {
     }
   };
 
-  // ✅ Handle PDF file selection
   const handlePDFUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    // Check if file is PDF
     if (file.type !== 'application/pdf') {
       alert('Please upload a PDF file');
       return;
@@ -108,10 +97,9 @@ const AddPolicyModal = ({ open, onClose, onSave, editData }) => {
       setPdfs(prev => [...prev, url]);
       console.log('✅ PDF URL added to list:', url);
     }
-    e.target.value = ''; // Reset input
+    e.target.value = '';
   };
 
-  // ✅ Remove PDF
   const removePDF = (index) => {
     setPdfs(pdfs.filter((_, i) => i !== index));
   };
@@ -125,7 +113,6 @@ const AddPolicyModal = ({ open, onClose, onSave, editData }) => {
         pdfs: pdfs 
       };
       console.log('📤 Saving policy with data:', dataToSave);
-      console.log('📤 PDFs being saved:', pdfs);
       await onSave(dataToSave);
       onClose();
     } catch (error) {
@@ -198,10 +185,10 @@ const AddPolicyModal = ({ open, onClose, onSave, editData }) => {
                 onChange={handleChange}
                 className="w-full glass-card p-3 outline-none focus:border-cyan-400/40 transition bg-slate-800"
               >
-                <option  className="bg-slate-800 text-white" value="Internal">Internal</option>
-                <option  className="bg-slate-800 text-white" value="External">External</option>
-                <option  className="bg-slate-800 text-white" value="Client">Client</option>
-                <option  className="bg-slate-800 text-white" value="Vendor">Vendor</option>
+                <option className="bg-slate-800 text-white" value="Internal">Internal</option>
+                <option className="bg-slate-800 text-white" value="External">External</option>
+                <option className="bg-slate-800 text-white" value="Client">Client</option>
+                <option className="bg-slate-800 text-white" value="Vendor">Vendor</option>
               </select>
             </div>
 
@@ -319,7 +306,6 @@ const AddPolicyModal = ({ open, onClose, onSave, editData }) => {
               )}
             </div>
 
-            {/* PDF List */}
             {pdfs.length > 0 && (
               <div className="mt-3 flex flex-wrap gap-2">
                 {pdfs.map((url, idx) => (

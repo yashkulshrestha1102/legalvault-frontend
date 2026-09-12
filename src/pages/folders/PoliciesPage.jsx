@@ -1,12 +1,9 @@
 ﻿import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom'; // ✅ useParams hatao
-import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
+import api from '../../utils/api';
 import { FaEye, FaEdit, FaTrash } from 'react-icons/fa';
 import AddPolicyModal from '../../components/modals/AddPolicyModal';
 
-const API_URL = 'https://legalvault-jm2n.onrender.com';
-
-// ✅ clientId prop se lo, URL se nahi
 const PoliciesPage = ({ clientId }) => {
   const navigate = useNavigate();
   const [policies, setPolicies] = useState([]);
@@ -15,19 +12,9 @@ const PoliciesPage = ({ clientId }) => {
   const [editData, setEditData] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // ✅ Fetch policies with better error handling
+  // ✅ Fetch policies
   const fetchPolicies = async () => {
     try {
-      const token = localStorage.getItem('token');
-      console.log('🔑 Token:', token ? '✅ Yes' : '❌ No');
-      
-      if (!token) {
-        console.error('❌ No token found!');
-        setPolicies([]);
-        setLoading(false);
-        return;
-      }
-
       if (!clientId) {
         console.error('❌ No clientId available!');
         setPolicies([]);
@@ -36,13 +23,8 @@ const PoliciesPage = ({ clientId }) => {
       }
 
       console.log('📋 Fetching policies for client:', clientId);
-      
-      const response = await axios.get(`${API_URL}/api/policies/client/${clientId}`, {
-        headers: { 
-          'Authorization': `Bearer ${token}` 
-        }
-      });
-      
+
+      const response = await api.get(`/api/policies/client/${clientId}`);
       console.log('✅ Policies response:', response.data);
       setPolicies(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
@@ -69,12 +51,6 @@ const PoliciesPage = ({ clientId }) => {
   // ✅ Save policy (Create/Update)
   const savePolicy = async (data) => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        alert('Please login again');
-        return;
-      }
-
       if (!clientId) {
         alert('Client ID not found');
         return;
@@ -83,15 +59,9 @@ const PoliciesPage = ({ clientId }) => {
       const payload = { ...data, clientId };
 
       if (editData) {
-        // Update
-        await axios.put(`${API_URL}/api/policies/${editData._id}`, payload, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
+        await api.put(`/api/policies/${editData._id}`, payload);
       } else {
-        // Create
-        await axios.post(`${API_URL}/api/policies`, payload, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
+        await api.post('/api/policies', payload);
       }
 
       fetchPolicies();
@@ -108,15 +78,7 @@ const PoliciesPage = ({ clientId }) => {
   const deletePolicy = async (id) => {
     if (!window.confirm('Delete this policy?')) return;
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        alert('Please login again');
-        return;
-      }
-
-      await axios.delete(`${API_URL}/api/policies/${id}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      await api.delete(`/api/policies/${id}`);
       fetchPolicies();
       alert('✅ Policy deleted!');
     } catch (error) {
@@ -128,28 +90,17 @@ const PoliciesPage = ({ clientId }) => {
   // ✅ View PDF
   const viewPDF = (pdfUrl) => {
     if (!pdfUrl) return;
-    const token = localStorage.getItem('token');
-    if (!token) {
-      alert('Please login again');
-      return;
-    }
-    window.open(`${pdfUrl}?token=${token}`, '_blank');
+    window.open(pdfUrl, '_blank');
   };
 
   // ✅ Download PDF
   const downloadPDF = async (pdfUrl) => {
     if (!pdfUrl) return;
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        alert('Please login again');
-        return;
-      }
-
-      const response = await axios.get(pdfUrl, {
-        headers: { 'Authorization': `Bearer ${token}` },
+      const response = await api.get(pdfUrl, {
         responseType: 'blob'
       });
+
       const blob = new Blob([response.data]);
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');

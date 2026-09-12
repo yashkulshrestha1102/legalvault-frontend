@@ -1,10 +1,9 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import axios from 'axios';
 import MainLayout from "../layouts/MainLayout";
 import { FaFilePdf, FaEye, FaDownload } from "react-icons/fa";
 
-const API_URL = 'https://legalvault-jm2n.onrender.com';
+import api from '../utils/api';
 
 function RegistrationDetails() {
   const { id, registrationId } = useParams();
@@ -17,9 +16,6 @@ function RegistrationDetails() {
       try {
         const token = localStorage.getItem('token');
         console.log('📋 Fetching registration:', registrationId);
-        const response = await axios.get(`${API_URL}/api/registrations/${registrationId}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
         console.log('✅ Registration fetched:', response.data);
         setRegistration(response.data);
       } catch (error) {
@@ -50,11 +46,6 @@ function RegistrationDetails() {
         return;
       }
       const finalUrl = `${pdfUrl}?token=${token}`;
-      
-      const response = await axios.get(finalUrl, {
-        responseType: 'blob'
-      });
-      
       const blob = new Blob([response.data], { type: 'application/pdf' });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');

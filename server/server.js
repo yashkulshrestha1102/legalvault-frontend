@@ -10,6 +10,8 @@ const morgan = require('morgan');
 const connectDB = require('./config/db');
 const { initGridFS } = require('./config/gridfs');
 const auditLog = require('./middleware/audit');
+const cookieParser = require('cookie-parser');
+
 
 const app = express();
 
@@ -23,32 +25,41 @@ requiredEnv.forEach(key => {
 });
 console.log('✅ All environment variables are set');
 
-// ✅ ULTIMATE MANUAL CORS FIX (100% kaam karega)
 app.use((req, res, next) => {
-  // Allow all origins for development and specific ones for production
   const allowedOrigins = [
     'http://localhost:5173',
     'http://localhost:5174',
     'https://legalvault-frontend-two.vercel.app',
     'https://legalvault-ochre.vercel.app',
-    'https://legalvault.businezexcellence.com'
+    'https://legalvault.businezexcellence.com',
+    'https://legalvault-jm2n.onrender.com'
   ];
   
   const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin) || !origin) {
-    res.setHeader('Access-Control-Allow-Origin', origin || '*');
-  } else {
-    // Optionally block other origins or set to specific
-    res.setHeader('Access-Control-Allow-Origin', '*');
+
+
+
+  
+  // ✅ Only set if origin is in whitelist
+  if (origin && allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin'); // ✅ Cache busting for CDN
+  } else if (!origin) {
+    // ✅ No origin (like Postman, mobile apps) - allow
+    res.setHeader('Access-Control-Allow-Origin', allowedOrigins[0]);
   }
+  // ❌ Otherwise: NO CORS header → browser blocks
   
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+  res.setHeader(
+    'Access-Control-Allow-Headers', 
+    'Origin, X-Requested-With, Content-Type, Accept, Authorization'
+  );
   res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Max-Age', '86400'); // ✅ Cache preflight 24h
   
-  // ✅ Handle Preflight (OPTIONS) request
   if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
+    return res.sendStatus(204); // ✅ 204 No Content better than 200
   }
   
   next();
@@ -114,6 +125,10 @@ app.use('/api/', limiter);
 // ✅ Body Parser
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// ✅ cookie-parser -
+app.use(cookieParser());
+
 
 // ✅ Cache Headers
 app.use('/api/clients', (req, res, next) => {

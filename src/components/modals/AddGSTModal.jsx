@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FaTimes, FaFilePdf, FaUpload } from 'react-icons/fa';
-import axios from 'axios';
-
-const API_URL = 'https://legalvault-jm2n.onrender.com';
+import api from '../../utils/api';
 
 const AddGSTModal = ({ open, onClose, onSave, editData }) => {
   const [formData, setFormData] = useState({
@@ -61,22 +59,15 @@ const AddGSTModal = ({ open, onClose, onSave, editData }) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // ✅ PDF Upload Function
+  // ✅ PDF Upload - FIXED
   const uploadPDF = async (file) => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        alert('Please login again');
-        return null;
-      }
-
       const formData = new FormData();
       formData.append('pdf', file);
       
       setUploading(true);
-      const response = await axios.post(`${API_URL}/api/pdfs/pdf`, formData, {
+      const response = await api.post('/api/pdfs/pdf', formData, {
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'multipart/form-data'
         }
       });
@@ -142,7 +133,6 @@ const AddGSTModal = ({ open, onClose, onSave, editData }) => {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid md:grid-cols-2 gap-4">
-            {/* GST Name */}
             <div className="md:col-span-2">
               <label className="block text-sm text-gray-400 mb-1">GST Name *</label>
               <input
@@ -156,7 +146,6 @@ const AddGSTModal = ({ open, onClose, onSave, editData }) => {
               />
             </div>
 
-            {/* GST Type */}
             <div>
               <label className="block text-sm text-gray-400 mb-1">GST Type *</label>
               <select
@@ -175,7 +164,6 @@ const AddGSTModal = ({ open, onClose, onSave, editData }) => {
               </select>
             </div>
 
-            {/* GSTIN */}
             <div>
               <label className="block text-sm text-gray-400 mb-1">GSTIN</label>
               <input
@@ -188,7 +176,6 @@ const AddGSTModal = ({ open, onClose, onSave, editData }) => {
               />
             </div>
 
-            {/* Category */}
             <div>
               <label className="block text-sm text-gray-400 mb-1">Category</label>
               <select
@@ -204,7 +191,6 @@ const AddGSTModal = ({ open, onClose, onSave, editData }) => {
               </select>
             </div>
 
-            {/* Issue Date */}
             <div>
               <label className="block text-sm text-gray-400 mb-1">Issue Date *</label>
               <input
@@ -217,7 +203,6 @@ const AddGSTModal = ({ open, onClose, onSave, editData }) => {
               />
             </div>
 
-            {/* Review Date */}
             <div>
               <label className="block text-sm text-gray-400 mb-1">Review Date</label>
               <input
@@ -229,7 +214,6 @@ const AddGSTModal = ({ open, onClose, onSave, editData }) => {
               />
             </div>
 
-            {/* Expiry Date */}
             <div>
               <label className="block text-sm text-gray-400 mb-1">Expiry Date</label>
               <input
@@ -241,7 +225,6 @@ const AddGSTModal = ({ open, onClose, onSave, editData }) => {
               />
             </div>
 
-            {/* Status */}
             <div>
               <label className="block text-sm text-gray-400 mb-1">Status *</label>
               <select
@@ -258,7 +241,6 @@ const AddGSTModal = ({ open, onClose, onSave, editData }) => {
               </select>
             </div>
 
-            {/* Department */}
             <div>
               <label className="block text-sm text-gray-400 mb-1">Department</label>
               <input
@@ -271,7 +253,6 @@ const AddGSTModal = ({ open, onClose, onSave, editData }) => {
               />
             </div>
 
-            {/* Approved By */}
             <div>
               <label className="block text-sm text-gray-400 mb-1">Approved By</label>
               <input
@@ -285,7 +266,6 @@ const AddGSTModal = ({ open, onClose, onSave, editData }) => {
             </div>
           </div>
 
-          {/* Description */}
           <div>
             <label className="block text-sm text-gray-400 mb-1">Description</label>
             <textarea
@@ -298,7 +278,6 @@ const AddGSTModal = ({ open, onClose, onSave, editData }) => {
             />
           </div>
 
-          {/* PDF Upload */}
           <div>
             <label className="block text-sm text-gray-400 mb-1">Upload PDF</label>
             <div className="flex items-center gap-3">
@@ -337,7 +316,6 @@ const AddGSTModal = ({ open, onClose, onSave, editData }) => {
             )}
           </div>
 
-          {/* Buttons */}
           <div className="flex gap-3 pt-4">
             <button
               type="submit"

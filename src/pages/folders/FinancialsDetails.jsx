@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import { FaArrowLeft, FaFilePdf, FaEye, FaDownload } from 'react-icons/fa';
-
-const API_URL = 'https://legalvault-jm2n.onrender.com';
+import api from '../../utils/api';
 
 const FinancialsDetails = () => {
   const { clientId, id } = useParams();
@@ -14,10 +12,7 @@ const FinancialsDetails = () => {
   useEffect(() => {
     const fetchRecord = async () => {
       try {
-        const token = localStorage.getItem('token');
-        const response = await axios.get(`${API_URL}/api/financials/${id}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
+        const response = await api.get(`/api/financials/${id}`);
         setRecord(response.data);
       } catch (error) {
         console.error('❌ Error fetching record:', error);
@@ -30,16 +25,13 @@ const FinancialsDetails = () => {
 
   const viewPDF = (pdfUrl) => {
     if (!pdfUrl) return;
-    const token = localStorage.getItem('token');
-    window.open(`${pdfUrl}?token=${token}`, '_blank');
+    window.open(pdfUrl, '_blank');
   };
 
   const downloadPDF = async (pdfUrl) => {
     if (!pdfUrl) return;
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(pdfUrl, {
-        headers: { 'Authorization': `Bearer ${token}` },
+      const response = await api.get(pdfUrl, {
         responseType: 'blob'
       });
       const blob = new Blob([response.data]);

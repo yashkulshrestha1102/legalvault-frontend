@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
 import { Bell, Check, X, BellRing } from 'lucide-react';
 
 const NotificationBell = () => {
@@ -18,7 +17,7 @@ const NotificationBell = () => {
       const token = getToken();
       if (!token) return;
 
-      const res = await axios.get(`${import.meta.env.VITE_API_URL || 'https://legalvault-jm2n.onrender.com'}/api/notifications`, {
+      const res = await api.get(`${import.meta.env.VITE_API_URL || 'https://legalvault-jm2n.onrender.com'}/api/notifications`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -33,7 +32,7 @@ const NotificationBell = () => {
   const markAsRead = async (id) => {
     try {
       const token = getToken();
-      await axios.put(
+      await api.put(
         `${import.meta.env.VITE_API_URL || 'https://legalvault-jm2n.onrender.com'}/api/notifications/${id}/read`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
@@ -48,7 +47,7 @@ const NotificationBell = () => {
   const markAllAsRead = async () => {
     try {
       const token = getToken();
-      await axios.put(
+      await api.put(
         `${import.meta.env.VITE_API_URL || 'https://legalvault-jm2n.onrender.com'}/api/notifications/read-all`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
@@ -64,7 +63,7 @@ const NotificationBell = () => {
     e.stopPropagation();
     try {
       const token = getToken();
-      await axios.delete(
+      await api.delete(
         `${import.meta.env.VITE_API_URL || 'https://legalvault-jm2n.onrender.com'}/api/notifications/${id}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );

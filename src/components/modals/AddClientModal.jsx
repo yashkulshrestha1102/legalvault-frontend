@@ -1,9 +1,7 @@
 import { useState, useEffect, useContext } from "react";
 import { FaTimes, FaUserPlus, FaUserMinus } from "react-icons/fa";
-import axios from 'axios';
 import AuthContext from '../../context/AuthContext';
-
-const API_URL = 'https://legalvault-jm2n.onrender.com';
+import api from '../../utils/api';
 
 export default function AddClientModal({
   open,
@@ -46,10 +44,7 @@ export default function AddClientModal({
     const fetchUsers = async () => {
       if (!isAdmin) return;
       try {
-        const token = localStorage.getItem('token');
-        const response = await axios.get(`${API_URL}/api/users`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const response = await api.get('/api/users');
         setUsers(response.data);
       } catch (error) {
         console.error('❌ Error fetching users:', error);

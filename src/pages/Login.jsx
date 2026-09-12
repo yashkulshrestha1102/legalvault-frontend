@@ -1,6 +1,7 @@
 import { useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import AuthContext from "../context/AuthContext";
+import api from '../utils/api';
 
 function Login() {
   const navigate = useNavigate();
@@ -19,8 +20,6 @@ function Login() {
   const [resetLoading, setResetLoading] = useState(false);
   const [resetSuccess, setResetSuccess] = useState(false);
 
-  const API_URL = 'https://legalvault-jm2n.onrender.com';
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -35,7 +34,7 @@ function Login() {
     setLoading(false);
   };
 
-  // ✅ Handle Forgot Password
+  // ✅ Handle Forgot Password - FIXED with api client
   const handleForgotPassword = async (e) => {
     e.preventDefault();
     setResetError("");
@@ -49,26 +48,19 @@ function Login() {
     }
 
     try {
-      const response = await fetch(`${API_URL}/api/auth/forgot-password`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email: resetEmail })
+      // ✅ Use api client instead of fetch
+      const response = await api.post('/api/auth/forgot-password', {
+        email: resetEmail
       });
 
-      const data = await response.json();
-
-      if (response.ok) {
-        setResetSuccess(true);
-        setResetMessage("✅ Password reset link sent to your email!");
-        setResetEmail("");
-      } else {
-        setResetError(data.message || "Failed to send reset email");
-      }
+      setResetSuccess(true);
+      setResetMessage("✅ Password reset link sent to your email!");
+      setResetEmail("");
     } catch (error) {
       console.error('Forgot password error:', error);
-      setResetError("Network error. Please try again.");
+      setResetError(
+        error.response?.data?.message || "Failed to send reset email"
+      );
     } finally {
       setResetLoading(false);
     }

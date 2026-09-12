@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
 import Select from "react-select";
-import axios from 'axios';
-
-const API_URL = 'https://legalvault-jm2n.onrender.com';
+import api from '../../utils/api';
 
 function AddRegistrationModal({ open, onClose, onSave, editData }) {
   const [formData, setFormData] = useState({
@@ -75,7 +73,7 @@ function AddRegistrationModal({ open, onClose, onSave, editData }) {
       for (const file of files) {
         formData.append('pdf', file);
       }
-      const response = await axios.post(`${API_URL}/api/pdfs/pdf`, formData, {
+      const response = await api.post(`${API_URL}/api/pdfs/pdf`, formData, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'multipart/form-data'

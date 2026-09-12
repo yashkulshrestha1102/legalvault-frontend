@@ -59,13 +59,14 @@ exports.register = async (req, res) => {
   }
 };
 
-// ✅ Login
+// ✅ Login - FULLY FIXED
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
-    
+
     console.log('🔐 Login attempt:', { email });
 
+    // ✅ Validation
     if (!email || !password) {
       return res.status(400).json({ message: 'Email and password are required' });
     }
@@ -74,20 +75,24 @@ exports.login = async (req, res) => {
       return res.status(400).json({ message: 'Please enter a valid email address' });
     }
 
+    // ✅ Sanitize email
     const sanitizedEmail = sanitizeString(email).toLowerCase();
 
+    // ✅ Find user
     const user = await User.findOne({ email: sanitizedEmail });
     console.log('👤 User found:', user ? 'Yes' : 'No');
-    
+
     if (!user) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
+    // ✅ Check password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
+    // ✅ Generate JWT
     const token = jwt.sign(
       { id: user._id, email: user.email, role: user.role },
       process.env.JWT_SECRET,
@@ -95,21 +100,48 @@ exports.login = async (req, res) => {
     );
 
     console.log('✅ Login successful:', sanitizedEmail);
-    console.log('📁 Folder Permissions from DB:', user.folderPermissions);
+    console.log('📁 Folder Permissions:', user.folderPermissions);
 
+    // ✅ Set HTTP-only cookie
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      path: '/',
+    });
+
+    // ✅ Send user data (NO token in body)
     res.json({
-      token,
-      user: { 
-        id: user._id, 
-        name: user.name, 
-        email: user.email, 
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
         role: user.role,
-        folderPermissions: user.folderPermissions || []
-      }
+        folderPermissions: user.folderPermissions || [],
+      },
     });
   } catch (error) {
     console.error('❌ Login error:', error);
     res.status(500).json({ message: error.message });
+  }
+};
+
+// ✅ Logout - Clear HTTP-only cookie
+exports.logout = async (req, res) => {
+  try {
+    res.clearCookie('token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax', 
+      path: '/',
+    });
+    
+    console.log('✅ Logout successful');
+    res.json({ message: 'Logged out successfully' });
+  } catch (error) {
+    console.error('❌ Logout error:', error);
+    res.status(500).json({ message: 'Logout failed' });
   }
 };
 

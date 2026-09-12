@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 
-// ✅ 8 Folders List
+// ✅ 9 Folders List (Including Client Repository)
 const ALL_FOLDERS = [
   { id: 'registrations', label: 'Registrations / Certifications' },
   { id: 'contracts', label: 'Contracts' },
@@ -9,7 +9,8 @@ const ALL_FOLDERS = [
   { id: 'hr', label: 'HR' },
   { id: 'gst', label: 'GST' },
   { id: 'income-tax', label: 'Income Tax' },
-  { id: 'financials', label: 'Financials' }
+  { id: 'financials', label: 'Financials' },
+  { id: 'documents', label: '📁 Client Repository' } // ✅ ADDED
 ];
 
 export default function EditUserModal({ open, onClose, onSave, user }) {
@@ -30,8 +31,8 @@ export default function EditUserModal({ open, onClose, onSave, user }) {
     if (user) {
       setFormData({
         ...user,
-        id: user._id || user.id || "",  // ✅ Ensure id is set from _id or id
-        _id: user._id || user.id || "", // ✅ Store _id separately
+        id: user._id || user.id || "",
+        _id: user._id || user.id || "",
         folderPermissions: user.folderPermissions || []
       });
     }
@@ -71,7 +72,6 @@ export default function EditUserModal({ open, onClose, onSave, user }) {
   };
 
   const handleSave = () => {
-    // ✅ Ensure id is present
     const userId = formData._id || formData.id;
     if (!userId) {
       console.error('❌ User ID is missing!', formData);
@@ -79,7 +79,6 @@ export default function EditUserModal({ open, onClose, onSave, user }) {
       return;
     }
     
-    // ✅ Create user object with proper id
     const userToSave = {
       ...formData,
       id: userId,
@@ -87,6 +86,7 @@ export default function EditUserModal({ open, onClose, onSave, user }) {
     };
     
     console.log('📤 Saving user with ID:', userId);
+    console.log('📁 Folder Permissions:', userToSave.folderPermissions);
     onSave(userToSave);
     onClose();
   };

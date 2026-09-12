@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FaTimes, FaFilePdf, FaUpload } from 'react-icons/fa';
-import axios from 'axios';
-
-const API_URL = 'https://legalvault-jm2n.onrender.com';
+import api from '../../utils/api';
 
 const AddIncomeTaxModal = ({ open, onClose, onSave, editData }) => {
   const [formData, setFormData] = useState({
@@ -73,7 +71,7 @@ const AddIncomeTaxModal = ({ open, onClose, onSave, editData }) => {
       formData.append('pdf', file);
       
       setUploading(true);
-      const response = await axios.post(`${API_URL}/api/pdfs/pdf`, formData, {
+      const response = await api.post(`${API_URL}/api/pdfs/pdf`, formData, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'multipart/form-data'

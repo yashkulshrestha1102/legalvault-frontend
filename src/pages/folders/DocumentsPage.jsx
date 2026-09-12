@@ -1,13 +1,9 @@
-﻿import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
-import axios from 'axios';
+import React, { useState, useEffect } from 'react';
+import api from '../../utils/api';
 
-const API_URL = 'https://legalvault-jm2n.onrender.com';
+const DocumentsPage = ({ clientId }) => {
+  // ✅ clientId prop se aa raha hai (ClientDetails se pass hota hai)
 
-const DocumentsPage = () => {
-  const { clientId } = useParams();
-
-  // ✅ All States inside this component
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [uploadingDocs, setUploadingDocs] = useState(false);
@@ -18,15 +14,13 @@ const DocumentsPage = () => {
   // ✅ Fetch documents
   const fetchDocuments = async () => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token || !clientId) {
+      if (!clientId) {
         setLoading(false);
         return;
       }
 
-      const response = await axios.get(`${API_URL}/api/documents/client/${clientId}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const response = await api.get(`/api/documents/client/${clientId}`);
+      console.log('✅ Documents fetched:', response.data);
       setDocuments(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error('❌ Error fetching documents:', error);
@@ -40,7 +34,7 @@ const DocumentsPage = () => {
     if (clientId) fetchDocuments();
   }, [clientId]);
 
-  // ✅ Upload documents (500 Error Fixed)
+  // ✅ Upload documents
   const uploadDocuments = async (files) => {
     if (files.length === 0) {
       alert('Please select at least one file');
@@ -48,18 +42,15 @@ const DocumentsPage = () => {
     }
 
     try {
-      const token = localStorage.getItem('token');
       const formData = new FormData();
       for (const file of files) {
-        // ✅ FIX: Backend 'documents' expect kar raha hai
-        formData.append('documents', file); 
+        formData.append('documents', file);
       }
       formData.append('clientId', clientId);
       
       setUploadingDocs(true);
-      const response = await axios.post(`${API_URL}/api/documents/upload`, formData, {
+      const response = await api.post('/api/documents/upload', formData, {
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'multipart/form-data'
         }
       });
@@ -71,7 +62,6 @@ const DocumentsPage = () => {
       alert(`✅ ${fileCount} files uploaded successfully!`);
     } catch (error) {
       console.error('❌ Upload error:', error);
-      // ✅ Show exact backend error
       if (error.response) {
         console.error('🔥 Backend Error Details:', error.response.data);
         alert(`Upload failed: ${error.response.data.message || error.message}`);
@@ -91,11 +81,8 @@ const DocumentsPage = () => {
     }
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.put(`${API_URL}/api/documents/${docId}/rename`, {
+      const response = await api.put(`/api/documents/${docId}/rename`, {
         newName: newName.trim()
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
       });
       
       console.log('✅ Document renamed:', response.data);
@@ -129,18 +116,17 @@ const DocumentsPage = () => {
   // ✅ View document
   const viewDocument = (docUrl) => {
     if (!docUrl) return;
-    const token = localStorage.getItem('token');
-    window.open(`${docUrl}?token=${token}`, '_blank');
+    window.open(docUrl, '_blank');
   };
 
   // ✅ Download document
   const downloadDocument = async (docUrl, filename) => {
+    if (!docUrl) return;
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(docUrl, {
-        headers: { 'Authorization': `Bearer ${token}` },
+      const response = await api.get(docUrl, {
         responseType: 'blob'
       });
+
       const blob = new Blob([response.data]);
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -160,10 +146,7 @@ const DocumentsPage = () => {
   const deleteDocument = async (docId) => {
     if (!window.confirm('Delete this document?')) return;
     try {
-      const token = localStorage.getItem('token');
-      await axios.delete(`${API_URL}/api/documents/${docId}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      await api.delete(`/api/documents/${docId}`);
       fetchDocuments();
     } catch (error) {
       console.error('Delete error:', error);
@@ -234,7 +217,7 @@ const DocumentsPage = () => {
               <div className="flex flex-col items-center">
                 {doc.mimeType?.startsWith('image/') ? (
                   <img 
-                    src={`${doc.fileUrl}?token=${localStorage.getItem('token')}`} 
+                    src={doc.fileUrl} 
                     alt={doc.filename}
                     className="w-full h-32 object-cover rounded-lg mb-3"
                     onError={(e) => { e.target.style.display = 'none'; }}

@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import { FaArrowLeft, FaFilePdf, FaEye, FaDownload } from 'react-icons/fa';
-
-const API_URL = 'https://legalvault-jm2n.onrender.com';
+import api from '../../utils/api';
 
 const PolicyDetails = () => {
   const { clientId, policyId } = useParams();
@@ -14,10 +12,7 @@ const PolicyDetails = () => {
   useEffect(() => {
     const fetchPolicy = async () => {
       try {
-        const token = localStorage.getItem('token');
-        const response = await axios.get(`${API_URL}/api/policies/${policyId}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const response = await api.get(`/api/policies/${policyId}`);
         setPolicy(response.data);
       } catch (error) {
         console.error('❌ Error fetching policy:', error);
@@ -30,16 +25,13 @@ const PolicyDetails = () => {
 
   const viewPDF = (pdfUrl) => {
     if (!pdfUrl) return;
-    const token = localStorage.getItem('token');
-    window.open(`${pdfUrl}?token=${token}`, '_blank');
+    window.open(pdfUrl, '_blank');
   };
 
   const downloadPDF = async (pdfUrl) => {
     if (!pdfUrl) return;
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(pdfUrl, {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await api.get(pdfUrl, {
         responseType: 'blob'
       });
       const blob = new Blob([response.data]);
@@ -52,7 +44,7 @@ const PolicyDetails = () => {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      console.error('Download error:', error);
+      console.error('❌ Download error:', error);
       alert('Failed to download PDF');
     }
   };

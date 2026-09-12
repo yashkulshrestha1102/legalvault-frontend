@@ -1,42 +1,28 @@
-import React, { createContext, useState, useContext } from 'react';
-import axios from 'axios';
+// src/context/AuthContext.jsx
+import { createContext, useState, useContext } from 'react';
+import api from '../utils/api';
 
-// 1. Context Create Karo
+// ✅ STEP 1: Context CREATE karo (YEH LINE MISSING THI)
 const AuthContext = createContext();
 
-// 2. AuthProvider Component
+// ✅ STEP 2: Provider Component
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
-    // ✅ Page refresh par localStorage se user load karo
     const savedUser = localStorage.getItem('user');
     return savedUser ? JSON.parse(savedUser) : null;
   });
-  const [authToken, setAuthToken] = useState(localStorage.getItem('token') || null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const API_URL = 'https://legalvault-jm2n.onrender.com';
-  console.log('API_URL:', API_URL);
-
-  // Login Function
   const login = async (email, password) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.post(`${API_URL}/api/auth/login`, {
-        email,
-        password
-      });
+      const response = await api.post('/api/auth/login', { email, password });
+      const { user } = response.data;
       
-      const { token, user } = response.data;
-      console.log('✅ Login response - User:', user);
-      console.log('📁 Folder Permissions:', user?.folderPermissions);
-      
-      // ✅ Token aur user dono localStorage mein save karo
-      localStorage.setItem('token', token);
+      // ✅ Only store user, NOT token (token is in HTTP-only cookie)
       localStorage.setItem('user', JSON.stringify(user));
-      
-      setAuthToken(token);
       setUser(user);
       return { success: true };
     } catch (error) {
@@ -48,22 +34,23 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Logout Function
-  const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user'); // ✅ User bhi hatao
-    setAuthToken(null);
+  const logout = async () => {
+    try {
+      await api.post('/api/auth/logout');
+    } catch (e) {
+      console.error('Logout error:', e);
+    }
+    localStorage.removeItem('user');
     setUser(null);
   };
 
   const value = {
     user,
-    authToken,
     loading,
     error,
     login,
     logout,
-    isAuthenticated: !!user && !!authToken
+    isAuthenticated: !!user,
   };
 
   return (
@@ -73,7 +60,7 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-// 3. Custom Hook (useAuth)
+// ✅ STEP 3: Custom Hook (Optional)
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
@@ -82,5 +69,5 @@ export const useAuth = () => {
   return context;
 };
 
-// 4. Default Export
+// ✅ STEP 4: Default Export (CRITICAL for ProtectedRoute)
 export default AuthContext;

@@ -2,18 +2,45 @@ const Brevo = require('@getbrevo/brevo');
 
 let apiInstance = null;
 
-// ✅ Initialize Brevo API - v5 compatible
 if (process.env.BREVO_API_KEY) {
   try {
-    // ✅ v5 syntax
-    const defaultClient = Brevo.ApiClient.instance;
-    defaultClient.authentications['api-key'].apiKey = process.env.BREVO_API_KEY;
-    apiInstance = new Brevo.TransactionalEmailsApi();
-    console.log('✅ Brevo API initialized (v5)');
+    // ✅ Brevo v5/v6 SDK - new syntax
+    const brevo = require('@getbrevo/brevo');
+    
+    // Try different initialization methods based on SDK version
+    if (brevo.TransactionalEmailsApi) {
+      // New SDK
+      const apiInstanceLocal = new brevo.TransactionalEmailsApi();
+      
+      if (apiInstanceLocal.setApiKey) {
+        apiInstanceLocal.setApiKey(
+          brevo.TransactionalEmailsApiApiKeys?.apiKey || 'api-key',
+          process.env.BREVO_API_KEY
+        );
+        apiInstance = apiInstanceLocal;
+        console.log('✅ Brevo API initialized (new SDK)');
+      }
+    } else if (brevo.ApiClient) {
+      // Old SDK
+      const defaultClient = brevo.ApiClient.instance;
+      if (defaultClient?.authentications?.['api-key']) {
+        defaultClient.authentications['api-key'].apiKey = process.env.BREVO_API_KEY;
+        apiInstance = new brevo.TransactionalEmailsApi();
+        console.log('✅ Brevo API initialized (old SDK)');
+      }
+    } else {
+      console.log('⚠️ Brevo SDK version not recognized - emails will use fallback');
+    }
   } catch (error) {
-    console.error('❌ Brevo API init error:', error.message);
+    console.error('⚠️ Brevo API init error (non-critical):', error.message);
+    console.log('📧 Email fallback mode: Emails will be logged to console only');
+    // ⚠️ Don't crash - emails will use fallback
   }
+} else {
+  console.log('⚠️ BREVO_API_KEY not set - email fallback mode active');
 }
+
+
 
 const sendPasswordResetEmail = async (email, resetToken) => {
   const resetLink = `https://legalvault.businezexcellence.com/reset-password?token=${resetToken}`;

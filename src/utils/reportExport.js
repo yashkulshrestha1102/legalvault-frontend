@@ -2,7 +2,8 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
 
-const API_URL = 'https://legalvault-jm2n.onrender.com';
+import api from '../utils/api';
+const response = await api.get('/api/clients');
 
 // ✅ Fetch clients from backend
 const fetchClients = async () => {

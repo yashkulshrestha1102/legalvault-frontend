@@ -1,10 +1,8 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../../utils/api';
 import { FaEye, FaEdit, FaTrash } from 'react-icons/fa';
 import AddGSTModal from '../../components/modals/AddGSTModal';
-
-const API_URL = 'https://legalvault-jm2n.onrender.com';
 
 const GSTPage = ({ clientId }) => {
   const navigate = useNavigate();
@@ -16,15 +14,12 @@ const GSTPage = ({ clientId }) => {
 
   const fetchGST = async () => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token || !clientId) {
+      if (!clientId) {
         setLoading(false);
         return;
       }
 
-      const response = await axios.get(`${API_URL}/api/gst/client/${clientId}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      const response = await api.get(`/api/gst/client/${clientId}`);
       setGstRecords(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error('❌ Error fetching GST:', error);
@@ -40,8 +35,7 @@ const GSTPage = ({ clientId }) => {
 
   const saveGST = async (data) => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token || !clientId) {
+      if (!clientId) {
         alert('Please login again');
         return;
       }
@@ -49,13 +43,9 @@ const GSTPage = ({ clientId }) => {
       const payload = { ...data, clientId };
 
       if (editData) {
-        await axios.put(`${API_URL}/api/gst/${editData._id}`, payload, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
+        await api.put(`/api/gst/${editData._id}`, payload);
       } else {
-        await axios.post(`${API_URL}/api/gst`, payload, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
+        await api.post('/api/gst', payload);
       }
 
       fetchGST();
@@ -71,10 +61,7 @@ const GSTPage = ({ clientId }) => {
   const deleteGST = async (id) => {
     if (!window.confirm('Delete this GST record?')) return;
     try {
-      const token = localStorage.getItem('token');
-      await axios.delete(`${API_URL}/api/gst/${id}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+      await api.delete(`/api/gst/${id}`);
       fetchGST();
       alert('✅ GST record deleted!');
     } catch (error) {
@@ -85,18 +72,16 @@ const GSTPage = ({ clientId }) => {
 
   const viewPDF = (pdfUrl) => {
     if (!pdfUrl) return;
-    const token = localStorage.getItem('token');
-    window.open(`${pdfUrl}?token=${token}`, '_blank');
+    window.open(pdfUrl, '_blank');
   };
 
   const downloadPDF = async (pdfUrl) => {
     if (!pdfUrl) return;
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(pdfUrl, {
-        headers: { 'Authorization': `Bearer ${token}` },
+      const response = await api.get(pdfUrl, {
         responseType: 'blob'
       });
+
       const blob = new Blob([response.data]);
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
