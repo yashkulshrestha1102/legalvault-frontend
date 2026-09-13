@@ -1,16 +1,14 @@
 import { useEffect, useState, useContext } from "react";
-import {
-  FaBell,
-  FaSearch,
-  FaBars,
-} from "react-icons/fa";
+import { FaBell, FaSearch, FaBars } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 
 import { SidebarContext } from "../context/SidebarContext";
+import AuthContext from "../context/AuthContext";
 
 function Navbar() {
   const navigate = useNavigate();
   const { toggleMobileSidebar } = useContext(SidebarContext);
+  const { logout } = useContext(AuthContext);  // ✅ Import logout
 
   const [searchTerm, setSearchTerm] = useState("");
   const [showMenu, setShowMenu] = useState(false);
@@ -24,7 +22,6 @@ function Navbar() {
     if (savedUser) {
       try {
         const parsedUser = JSON.parse(savedUser);
-        console.log('👤 Navbar - User loaded:', parsedUser);
         setUser(parsedUser);
       } catch (e) {
         console.error('Error parsing user:', e);
@@ -33,9 +30,7 @@ function Navbar() {
   }, []);
 
   useEffect(() => {
-    const notifications = JSON.parse(
-      localStorage.getItem("notifications")
-    ) || [];
+    const notifications = JSON.parse(localStorage.getItem("notifications")) || [];
     setNotificationCount(notifications.length);
 
     const timer = setInterval(() => {
@@ -45,10 +40,16 @@ function Navbar() {
     return () => clearInterval(timer);
   }, []);
 
-  // ✅ Role display
   const getRoleDisplay = (role) => {
     if (!role) return 'User';
     return role.charAt(0).toUpperCase() + role.slice(1);
+  };
+
+  // ✅ Proper logout
+  const handleLogout = async () => {
+    setShowMenu(false);
+    await logout();  // Backend call → cookie clear
+    navigate("/login");
   };
 
   return (
@@ -143,11 +144,7 @@ function Navbar() {
                 Settings
               </button>
               <button
-                onClick={() => {
-                  localStorage.removeItem('token');
-                  localStorage.removeItem('user');
-                  navigate("/login");
-                }}
+                onClick={handleLogout}  // ✅ Proper logout
                 className="w-full text-left px-5 py-4 text-red-400 hover:bg-white/10 transition"
               >
                 Logout
