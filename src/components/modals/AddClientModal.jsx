@@ -36,7 +36,8 @@ export default function AddClientModal({
     { id: 'gst', label: 'GST' },
     { id: 'income-tax', label: 'Income Tax' },
     { id: 'financials', label: 'Financials' },
-    { id: 'documents', label: '📁 Client Repository' }
+    { id: 'documents', label: '📁 Client Repository' },
+    { id: 'client-folder', label: '🗂️ Client Folder' } 
   ];
 
   // ✅ Fetch users for assignment

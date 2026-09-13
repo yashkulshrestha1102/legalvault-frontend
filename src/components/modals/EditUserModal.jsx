@@ -10,7 +10,8 @@ const ALL_FOLDERS = [
   { id: 'gst', label: 'GST' },
   { id: 'income-tax', label: 'Income Tax' },
   { id: 'financials', label: 'Financials' },
-  { id: 'documents', label: '📁 Client Repository' } // ✅ ADDED
+  { id: 'documents', label: '📁 Client Repository' },
+  { id: 'client-folder', label: '🗂️ Client Folder' } 
 ];
 
 export default function EditUserModal({ open, onClose, onSave, user }) {

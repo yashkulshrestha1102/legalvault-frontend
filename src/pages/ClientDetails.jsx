@@ -6,6 +6,8 @@ import AuthContext from '../context/AuthContext';
 import AddRegistrationModal from "../components/modals/AddRegistrationModal";
 import AddContractModal from "../components/modals/AddContractModal";
 
+import CustomFoldersPage from "./folders/CustomFoldersPage";
+
 import DocumentsPage from "./folders/DocumentsPage";
 import PoliciesPage from "./folders/PoliciesPage";
 import GSTPage from "./folders/GSTPage";
@@ -587,7 +589,8 @@ function ClientDetails() {
     { label: "GST", value: "gst", id: "gst" },
     { label: "Income Tax", value: "incomeTax", id: "income-tax" },
     { label: "Financials", value: "financials", id: "financials" },
-    { label: "📁 Client Repository", value: "documents", id: "documents" }
+    { label: "📁 Client Repository", value: "documents", id: "documents" },
+    { label: "🗂️ Client Folder", value: "clientFolder", id: "client-folder" }
   ];
 
   // ✅ FIX: Ab ye function allFolders ko safely access kar sakta hai
@@ -880,6 +883,7 @@ function ClientDetails() {
         {selectedFolder === "corporateSecretariat" && <CorporateSecretariatPage clientId={actualId} />}
         {selectedFolder === "financials" && <FinancialsPage clientId={actualId} />}
         {selectedFolder === "documents" && <DocumentsPage clientId={actualId} />}
+        {selectedFolder === "clientFolder" && (<CustomFoldersPage clientId={actualId} clientName={client.name} />)}
       </div>
 
       <AddRegistrationModal
