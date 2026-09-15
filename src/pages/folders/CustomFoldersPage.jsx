@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   FaFolderPlus, FaUpload, FaFileDownload, FaTrash, FaEdit,
   FaSearch, FaFilePdf, FaFileImage, FaFileWord, FaFileExcel, FaFileAlt,
-  FaFolder, FaArrowLeft, FaEye
+  FaFolder, FaEye, FaFileArchive, FaFileCode
 } from 'react-icons/fa';
 import api from '../../utils/api';
 import FolderTree from '../../components/folders/FolderTree';
@@ -11,7 +11,30 @@ import BulkUploadModal from '../../components/folders/BulkUploadModal';
 import FilePreviewModal from '../../components/folders/FilePreviewModal';
 import RenameModal from '../../components/folders/RenameModal';
 
-const getFileIcon = (type) => {
+// ═══════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════
+
+// ✅ Updated: XML/JSON/ZIP icons
+const getFileIcon = (type, mimeType, filename) => {
+  const mime = (mimeType || '').toLowerCase();
+  const ext = (filename || '').toLowerCase().split('.').pop();
+
+  // ✅ XML / JSON — code icon
+  if (mime.includes('xml') || mime.includes('json') || ['xml', 'json'].includes(ext)) {
+    return <FaFileCode className="text-purple-400 text-4xl" />;
+  }
+
+  // ✅ ZIP / Archive
+  if (
+    mime.includes('zip') ||
+    mime.includes('compressed') ||
+    mime.includes('rar') ||
+    ['zip', 'rar', '7z'].includes(ext)
+  ) {
+    return <FaFileArchive className="text-yellow-400 text-4xl" />;
+  }
+
   switch (type) {
     case 'pdf': return <FaFilePdf className="text-red-400 text-4xl" />;
     case 'image': return <FaFileImage className="text-cyan-400 text-4xl" />;
@@ -29,6 +52,10 @@ const formatSize = (bytes) => {
   return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
 };
 
+// ═══════════════════════════════════════════
+// MAIN COMPONENT
+// ═══════════════════════════════════════════
+
 export default function CustomFoldersPage({ clientId, clientName }) {
   const [folders, setFolders] = useState([]);
   const [files, setFiles] = useState([]);
@@ -37,12 +64,14 @@ export default function CustomFoldersPage({ clientId, clientName }) {
   const [filesLoading, setFilesLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState(null);
+  const [zipDownloading, setZipDownloading] = useState(false);
+  const [zipProgress, setZipProgress] = useState(0);
 
   // Modals
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [previewFile, setPreviewFile] = useState(null);
-  const [renamingItem, setRenamingItem] = useState(null); // { type: 'folder'|'file', item }
+  const [renamingItem, setRenamingItem] = useState(null);
 
   // ✅ Fetch folders
   const fetchFolders = useCallback(async () => {
@@ -50,12 +79,10 @@ export default function CustomFoldersPage({ clientId, clientName }) {
       setLoading(true);
       const res = await api.get(`/api/custom-folders/client/${clientId}`);
       setFolders(res.data);
-      // Auto-select root folder
       const root = res.data.find(f => f.isRoot);
       if (root && !selectedFolder) {
         setSelectedFolder(root);
       } else if (selectedFolder) {
-        // Refresh selected folder reference
         const refreshed = res.data.find(f => f._id === selectedFolder._id);
         if (refreshed) setSelectedFolder(refreshed);
       }
@@ -93,7 +120,6 @@ export default function CustomFoldersPage({ clientId, clientName }) {
   // ✅ Create folder
   const handleCreateFolder = async (name) => {
     const parentId = selectedFolder?._id || null;
-    // Agar selected folder itself is a child, use it as parent
     await api.post('/api/custom-folders', {
       name,
       clientId,
@@ -118,7 +144,6 @@ export default function CustomFoldersPage({ clientId, clientName }) {
 
     try {
       await api.delete(`/api/custom-folders/${folder._id}`);
-      // If deleted folder was selected, switch to root
       if (selectedFolder?._id === folder._id) {
         const root = folders.find(f => f.isRoot);
         if (root) setSelectedFolder(root);
@@ -146,13 +171,38 @@ export default function CustomFoldersPage({ clientId, clientName }) {
     }
   };
 
-  // ✅ ZIP download
+  // ═══════════════════════════════════════════
+  // ZIP DOWNLOAD — Fixed with 10 min timeout + progress
+  // ═══════════════════════════════════════════
   const handleDownloadZip = async () => {
     if (!selectedFolder) return;
+    if (zipDownloading) return;
+
     try {
-      const res = await api.get(`/api/custom-files/download-folder/${selectedFolder._id}`, {
-        responseType: 'blob'
-      });
+      setZipDownloading(true);
+      setZipProgress(0);
+
+      const res = await api.get(
+        `/api/custom-files/download-folder/${selectedFolder._id}`,
+        {
+          responseType: 'blob',
+          timeout: 600000, // ✅ 10 minutes
+          onDownloadProgress: (progressEvent) => {
+            if (progressEvent.total) {
+              const percent = Math.round(
+                (progressEvent.loaded * 100) / progressEvent.total
+              );
+              setZipProgress(percent);
+            } else {
+              // Total not available — show loading
+              const mbLoaded = (progressEvent.loaded / 1024 / 1024).toFixed(1);
+              setZipProgress(`~${mbLoaded} MB downloaded`);
+            }
+          },
+        }
+      );
+
+      // ✅ Create download
       const blob = new Blob([res.data], { type: 'application/zip' });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -161,10 +211,32 @@ export default function CustomFoldersPage({ clientId, clientName }) {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+
+      // ✅ Cleanup after 60s
+      setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+
+      setZipProgress(100);
+      setTimeout(() => setZipProgress(0), 1500);
     } catch (err) {
-      console.error('ZIP download error:', err);
-      alert('Failed to download ZIP');
+      console.error('❌ ZIP download error:', err);
+
+      let errorMsg = 'Failed to download ZIP';
+      if (err.code === 'ECONNABORTED') {
+        errorMsg = '❌ Timeout: ZIP is too large. Try downloading subfolders separately.';
+      } else if (err.response?.status === 404) {
+        errorMsg = '❌ Folder not found';
+      } else if (err.response?.status === 403) {
+        errorMsg = '❌ Access denied';
+      } else if (err.response?.status === 500) {
+        errorMsg = '❌ Server error during ZIP creation';
+      } else if (err.message) {
+        errorMsg = `❌ ${err.message}`;
+      }
+
+      alert(errorMsg);
+      setZipProgress(0);
+    } finally {
+      setZipDownloading(false);
     }
   };
 
@@ -234,14 +306,36 @@ export default function CustomFoldersPage({ clientId, clientName }) {
           {selectedFolder && (
             <button
               onClick={handleDownloadZip}
-              className="glass-card px-4 py-2 text-green-400 text-sm hover:scale-105 transition flex items-center gap-2"
+              disabled={zipDownloading}
+              className={`glass-card px-4 py-2 text-green-400 text-sm transition flex items-center gap-2 ${
+                zipDownloading ? 'opacity-75 cursor-wait' : 'hover:scale-105'
+              }`}
               title="Download folder as ZIP"
             >
-              <FaFileDownload /> ZIP
+              <FaFileDownload />
+              {zipDownloading
+                ? `ZIP ${typeof zipProgress === 'number' ? zipProgress + '%' : zipProgress}`
+                : 'ZIP'}
             </button>
           )}
         </div>
       </div>
+
+      {/* ZIP download progress bar */}
+      {zipDownloading && (
+        <div className="mb-4 glass-card p-3">
+          <div className="flex justify-between text-xs text-gray-300 mb-1">
+            <span>📦 Preparing ZIP...</span>
+            <span>{typeof zipProgress === 'number' ? `${zipProgress}%` : zipProgress}</span>
+          </div>
+          <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-cyan-400 to-green-500 transition-all"
+              style={{ width: typeof zipProgress === 'number' ? `${zipProgress}%` : '100%' }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Main Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-5">
@@ -371,7 +465,7 @@ export default function CustomFoldersPage({ clientId, clientName }) {
                       onClick={() => setPreviewFile(file)}
                     >
                       <div className="flex justify-center py-3">
-                        {getFileIcon(file.fileType)}
+                        {getFileIcon(file.fileType, file.mimeType, file.filename)}
                       </div>
                       <p
                         className="text-sm font-medium text-center truncate"
