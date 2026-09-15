@@ -13,6 +13,15 @@ const api = axios.create({
   },
 });
 
+
+const uploadApi = axios.create({
+  baseURL: API_URL,
+  timeout: 600000,  // 10 min
+  withCredentials: true,
+  maxContentLength: Infinity,      // ✅ No limit
+  maxBodyLength: Infinity,         // ✅ No limit
+});
+
 // ✅ Request interceptor - Legacy token support (but cookies are primary)
 api.interceptors.request.use(
   (config) => {

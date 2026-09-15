@@ -19,6 +19,7 @@
     "helmet": "^8.3.0",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",
+    "jszip": "^3.10.2",
     "lucide-react": "^1.28.0",
     "morgan": "^1.11.0",
     "multer-gridfs-storage": "^5.0.2",
