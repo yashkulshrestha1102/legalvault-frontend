@@ -35,7 +35,6 @@ const isJsonFile = (file) => {
   return ext === 'json';
 };
 
-// ✅ ZIP detection
 const isZipFile = (file) => {
   if (!file) return false;
   const mime = (file.mimeType || '').toLowerCase();
@@ -78,6 +77,32 @@ const formatSize = (bytes) => {
   return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
 };
 
+// ✅ NEW: Resolve file URL (R2, GridFS, or relative)
+const resolveFileUrl = (file) => {
+  if (!file) return null;
+
+  // 1. Explicit url field (R2 or GridFS URL from backend)
+  if (file.url && typeof file.url === 'string' && file.url.trim() !== '') {
+    return file.url;
+  }
+
+  // 2. R2 key — construct URL
+  if (file.r2Key) {
+    const R2_PUBLIC_URL = 'https://pub-a440a9cec38545b78be985a8675f5198.r2.dev';
+    // If r2Key already has http, use as-is (rare)
+    if (file.r2Key.startsWith('http')) return file.r2Key;
+    return `${R2_PUBLIC_URL}/${file.r2Key}`;
+  }
+
+  // 3. GridFS fileId — relative API path
+  if (file.fileId) {
+    return `/api/custom-files/file/${file.fileId}`;
+  }
+
+  // 4. No URL available
+  return null;
+};
+
 // ═══════════════════════════════════════════
 // MAIN COMPONENT
 // ═══════════════════════════════════════════
@@ -90,11 +115,11 @@ export default function FilePreviewModal({ open, onClose, file }) {
   const [viewMode, setViewMode] = useState('formatted');
   const [copied, setCopied] = useState(false);
 
-  // ✅ ZIP-specific state
-  const [zipContents, setZipContents] = useState(null);   // { name, files: [...] }
+  // ZIP-specific state
+  const [zipContents, setZipContents] = useState(null);
   const [zipLoading, setZipLoading] = useState(false);
   const [zipError, setZipError] = useState(null);
-  const [selectedZipFile, setSelectedZipFile] = useState(null);  // File content from inside zip
+  const [selectedZipFile, setSelectedZipFile] = useState(null);
   const [zipFileContent, setZipFileContent] = useState(null);
 
   useEffect(() => {
@@ -118,11 +143,21 @@ export default function FilePreviewModal({ open, onClose, file }) {
       setLoading(true);
       setError(null);
 
+      // ✅ Resolve URL with fallback logic
+      const url = resolveFileUrl(file);
+
+      if (!url) {
+        if (!revoked) {
+          setError('File URL not available. The file may have been deleted or is missing from storage.');
+          setLoading(false);
+        }
+        return;
+      }
+
       try {
-        const url = file.url || `/api/custom-files/file/${file.fileId}`;
         const response = await api.get(url, { responseType: 'blob' });
 
-        // ✅ ZIP FILE HANDLING
+        // ZIP FILE HANDLING
         if (isZipFile(file)) {
           setZipLoading(true);
           try {
@@ -152,12 +187,12 @@ export default function FilePreviewModal({ open, onClose, file }) {
             if (!revoked) setZipLoading(false);
           }
         }
-        // ✅ TEXT FILES (XML/JSON/TXT)
+        // TEXT FILES (XML/JSON/TXT)
         else if (isTextLike(file)) {
           const text = await response.data.text();
           if (!revoked) setTextContent(text);
         }
-        // ✅ BINARY (PDF/IMAGE)
+        // BINARY (PDF/IMAGE)
         else {
           const blob = new Blob([response.data], { type: file.mimeType });
           createdUrl = window.URL.createObjectURL(blob);
@@ -165,7 +200,15 @@ export default function FilePreviewModal({ open, onClose, file }) {
         }
       } catch (err) {
         console.error('Preview error:', err);
-        if (!revoked) setError('Failed to load preview');
+        if (!revoked) {
+          if (err.response?.status === 404) {
+            setError('File not found on server. It may have been deleted.');
+          } else if (err.response?.status === 400) {
+            setError('Invalid file reference. Please re-upload this file.');
+          } else {
+            setError('Failed to load preview. Try downloading the file.');
+          }
+        }
       } finally {
         if (!revoked) setLoading(false);
       }
@@ -192,7 +235,6 @@ export default function FilePreviewModal({ open, onClose, file }) {
       const content = await zipFile.zipEntry.async('blob');
       const zipFileName = zipFile.name.toLowerCase();
 
-      // ✅ Text-like inside ZIP
       if (
         zipFileName.endsWith('.xml') ||
         zipFileName.endsWith('.json') ||
@@ -204,7 +246,6 @@ export default function FilePreviewModal({ open, onClose, file }) {
         const text = await content.text();
         setZipFileContent({ type: 'text', content: text });
       }
-      // ✅ Images inside ZIP
       else if (
         zipFileName.endsWith('.jpg') ||
         zipFileName.endsWith('.jpeg') ||
@@ -215,7 +256,6 @@ export default function FilePreviewModal({ open, onClose, file }) {
         const url = window.URL.createObjectURL(content);
         setZipFileContent({ type: 'image', url });
       }
-      // ❌ Binary (can't preview)
       else {
         setZipFileContent({ type: 'unknown' });
       }
@@ -243,14 +283,23 @@ export default function FilePreviewModal({ open, onClose, file }) {
     }
   };
 
+  // ✅ FIXED: Download with null check
   const handleDownload = async () => {
     if (!file) return;
+
+    const url = resolveFileUrl(file);
+
+    if (!url) {
+      alert('File URL not available. Cannot download.');
+      return;
+    }
+
     try {
-      const url = file.url || `/api/custom-files/file/${file.fileId}`;
       const response = await api.get(url, {
         responseType: 'blob',
         params: { download: 1 }
       });
+
       const blob = new Blob([response.data]);
       const downloadUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -262,7 +311,11 @@ export default function FilePreviewModal({ open, onClose, file }) {
       window.URL.revokeObjectURL(downloadUrl);
     } catch (err) {
       console.error('Download error:', err);
-      alert('Failed to download');
+      if (err.response?.status === 404) {
+        alert('File not found. It may have been deleted.');
+      } else {
+        alert('Failed to download file. Please try again.');
+      }
     }
   };
 
@@ -491,9 +544,7 @@ export default function FilePreviewModal({ open, onClose, file }) {
               </div>
             </div>
           ) : (
-            // ═══════════════════════════════════════════
-            // NON-ZIP FILES (existing preview)
-            // ═══════════════════════════════════════════
+            // NON-ZIP FILES
             <div className="flex-1 overflow-auto flex items-center justify-center h-full">
               {loading ? (
                 <div className="text-gray-400 py-20 flex flex-col items-center gap-3">
@@ -501,13 +552,19 @@ export default function FilePreviewModal({ open, onClose, file }) {
                   <p>Loading preview...</p>
                 </div>
               ) : error ? (
-                <div className="text-red-400 py-20 text-center">
+                <div className="text-red-400 py-20 text-center max-w-md px-4">
                   <p className="text-lg mb-2">❌ {error}</p>
                   <button
                     onClick={handleDownload}
                     className="glass-card px-6 py-3 mt-4 text-green-400 hover:scale-105 transition"
                   >
-                    <FaDownload className="inline mr-2" /> Download to view
+                    <FaDownload className="inline mr-2" /> Try Download
+                  </button>
+                  <button
+                    onClick={onClose}
+                    className="glass-card px-6 py-3 mt-4 ml-2 text-gray-300 hover:scale-105 transition"
+                  >
+                    Close
                   </button>
                 </div>
               ) : file.fileType === 'image' && blobUrl ? (
