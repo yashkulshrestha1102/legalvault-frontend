@@ -22,11 +22,19 @@ const uploadApi = axios.create({
   maxBodyLength: Infinity,         // ✅ No limit
 });
 
-// ✅ Request interceptor - Legacy token support (but cookies are primary)
+// ✅ Request interceptor - Legacy token support + R2 URL handling
 api.interceptors.request.use(
   (config) => {
-    // ✅ Cookie automatically sent via withCredentials
-    // Legacy: check localStorage as fallback (for backwards compat)
+    // ✅ R2 URLs ke liye withCredentials: false (CORS fix)
+    const url = config.url || '';
+    if (url.includes('r2.dev') || url.includes('R2_PUBLIC_URL')) {
+      config.withCredentials = false;
+      // R2 doesn't need auth headers
+      delete config.headers.Authorization;
+      return config;
+    }
+
+    // ✅ Backend APIs ke liye cookies + legacy token
     const token = localStorage.getItem('token');
     if (token && !config.headers.Authorization) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -60,9 +68,7 @@ api.interceptors.response.use(
         window.location.href = '/login';
       }
     }
-    // ✅ For all other 401s (documents, pdfs, clients, etc.)
-    // → Just reject, do NOT logout
-    // → UI can show a friendly error
+    // ✅ For all other 401s → Just reject, do NOT logout
 
     return Promise.reject(error);
   }
