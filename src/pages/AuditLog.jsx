@@ -2,7 +2,6 @@ import React, { useState, useEffect, useContext } from 'react';
 import MainLayout from '../layouts/MainLayout';
 import AuthContext from '../context/AuthContext';
 import { FaUndo, FaInfoCircle, FaSearch, FaFilePdf, FaUser, FaBuilding } from 'react-icons/fa';
-
 import api from '../utils/api';
 
 function AuditLog() {
@@ -15,28 +14,40 @@ function AuditLog() {
   const [selectedLog, setSelectedLog] = useState(null);
   const [showDetails, setShowDetails] = useState(false);
 
+  // ═══════════════════════════════════════════
+  // ✅ FETCH LOGS
+  // ═══════════════════════════════════════════
   const fetchLogs = async () => {
     try {
-      const token = localStorage.getItem('token');
       const params = {
         limit: pagination.limit,
-        skip: (pagination.page - 1) * pagination.limit
+        skip: (pagination.page - 1) * pagination.limit,
       };
       if (filter.action) params.action = filter.action;
       if (filter.entity) params.entity = filter.entity;
       if (filter.search) params.search = filter.search;
-      setLogs(response.data.logs);
-      setPagination(prev => ({ ...prev, total: response.data.pagination.total }));
+
+      const response = await api.get('/api/audit', { params });
+
+      setLogs(response.data.logs || []);
+      setPagination((prev) => ({
+        ...prev,
+        total: response.data.pagination?.total || 0,
+      }));
     } catch (error) {
       console.error('Error fetching logs:', error);
+      setLogs([]);
     } finally {
       setLoading(false);
     }
   };
 
+  // ═══════════════════════════════════════════
+  // ✅ FETCH STATS
+  // ═══════════════════════════════════════════
   const fetchStats = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const response = await api.get('/api/audit/stats');
       setStats(response.data);
     } catch (error) {
       console.error('Error fetching stats:', error);
@@ -46,6 +57,7 @@ function AuditLog() {
   useEffect(() => {
     fetchLogs();
     fetchStats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pagination.page, filter]);
 
   const getActionColor = (action) => {
@@ -56,7 +68,8 @@ function AuditLog() {
       LOGIN: 'bg-blue-500/20 text-blue-400 border-blue-400/20',
       LOGOUT: 'bg-gray-500/20 text-gray-400 border-gray-400/20',
       VIEW: 'bg-cyan-500/20 text-cyan-400 border-cyan-400/20',
-      ROLLBACK: 'bg-purple-500/20 text-purple-400 border-purple-400/20'
+      ROLLBACK: 'bg-purple-500/20 text-purple-400 border-purple-400/20',
+      UPLOAD: 'bg-indigo-500/20 text-indigo-400 border-indigo-400/20',
     };
     return colors[action] || 'bg-gray-500/20 text-gray-400';
   };
@@ -65,18 +78,18 @@ function AuditLog() {
     const icons = {
       CLIENT: <FaBuilding className="inline mr-1" />,
       USER: <FaUser className="inline mr-1" />,
-      DOCUMENT: <FaFilePdf className="inline mr-1" />
+      DOCUMENT: <FaFilePdf className="inline mr-1" />,
     };
     return icons[entity] || null;
   };
 
+  // ═══════════════════════════════════════════
+  // ✅ ROLLBACK
+  // ═══════════════════════════════════════════
   const handleRollback = async (logId) => {
     if (!window.confirm('Are you sure you want to rollback this action? This cannot be undone.')) return;
     try {
-      const token = localStorage.getItem('token');
-      await api.post(`${API_URL}/api/audit/${logId}/rollback`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.post(`/api/audit/${logId}/rollback`);
       alert('✅ Rollback successful!');
       fetchLogs();
       fetchStats();
@@ -110,29 +123,23 @@ function AuditLog() {
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
             <div className="glass-card p-4">
               <p className="text-gray-400 text-sm">Total Actions</p>
-              <h2 className="text-2xl font-bold">{stats.totalActions}</h2>
+              <h2 className="text-2xl font-bold">{stats.totalActions || 0}</h2>
             </div>
             <div className="glass-card p-4">
               <p className="text-gray-400 text-sm">Today</p>
-              <h2 className="text-2xl font-bold">{stats.todayActions}</h2>
+              <h2 className="text-2xl font-bold">{stats.todayActions || 0}</h2>
             </div>
             <div className="glass-card p-4">
               <p className="text-gray-400 text-sm">Most Action</p>
-              <h5 className="vfont-bold ">
-                {stats.actionsByType?.[0]?._id || 'N/A'}
-              </h5>
+              <h5 className="font-bold">{stats.actionsByType?.[0]?._id || 'N/A'}</h5>
             </div>
             <div className="glass-card p-4">
               <p className="text-gray-400 text-sm">Most Entity</p>
-              <h5 className="font-bold ">
-                {stats.actionsByEntity?.[0]?._id || 'N/A'}
-              </h5>
+              <h5 className="font-bold">{stats.actionsByEntity?.[0]?._id || 'N/A'}</h5>
             </div>
             <div className="glass-card p-4">
               <p className="text-gray-400 text-sm">Top Client</p>
-              <h5 className="font-bold ">
-                {stats.topClients?.[0]?.name || 'N/A'}
-              </h5>
+              <h5 className="font-bold">{stats.topClients?.[0]?.name || 'N/A'}</h5>
             </div>
           </div>
         )}
@@ -141,7 +148,7 @@ function AuditLog() {
         <div className="glass-card p-4 mb-6 flex flex-wrap gap-4">
           <select
             value={filter.action}
-            onChange={(e) => setFilter(prev => ({ ...prev, action: e.target.value, page: 1 }))}
+            onChange={(e) => setFilter((prev) => ({ ...prev, action: e.target.value }))}
             className="glass-card px-4 py-2 bg-transparent outline-none"
           >
             <option value="">All Actions</option>
@@ -155,15 +162,22 @@ function AuditLog() {
 
           <select
             value={filter.entity}
-            onChange={(e) => setFilter(prev => ({ ...prev, entity: e.target.value, page: 1 }))}
+            onChange={(e) => setFilter((prev) => ({ ...prev, entity: e.target.value }))}
             className="glass-card px-4 py-2 bg-transparent outline-none"
           >
             <option value="">All Entities</option>
             <option value="CLIENT">Client</option>
             <option value="REGISTRATION">Registration</option>
             <option value="CONTRACT">Contract</option>
+            <option value="POLICY">Policy</option>
+            <option value="GST">GST</option>
+            <option value="INCOME_TAX">Income Tax</option>
+            <option value="HR">HR</option>
+            <option value="CORPORATE_SECRETARIAT">Corporate Secretariat</option>
+            <option value="FINANCIAL">Financial</option>
             <option value="USER">User</option>
             <option value="DOCUMENT">Document</option>
+            <option value="FOLDER">Folder</option>
           </select>
 
           <div className="flex-1 min-w-[200px]">
@@ -173,7 +187,7 @@ function AuditLog() {
                 type="text"
                 placeholder="Search by name, client, user..."
                 value={filter.search}
-                onChange={(e) => setFilter(prev => ({ ...prev, search: e.target.value, page: 1 }))}
+                onChange={(e) => setFilter((prev) => ({ ...prev, search: e.target.value }))}
                 className="bg-transparent outline-none w-full text-white"
               />
             </div>
@@ -211,15 +225,22 @@ function AuditLog() {
                   </tr>
                 ) : (
                   logs.map((log) => (
-                    <tr key={log._id} className="border-b border-white/5 hover:bg-white/5 transition">
+                    <tr
+                      key={log._id}
+                      className="border-b border-white/5 hover:bg-white/5 transition"
+                    >
                       <td className="p-3">
                         <div>
-                          <p className="font-semibold text-sm">{log.user.name}</p>
-                          <p className="text-xs text-gray-400">{log.user.email}</p>
+                          <p className="font-semibold text-sm">{log.user?.name || 'Unknown'}</p>
+                          <p className="text-xs text-gray-400">{log.user?.email || '-'}</p>
                         </div>
                       </td>
                       <td className="p-3">
-                        <span className={`px-3 py-1 rounded-full text-xs border ${getActionColor(log.action)}`}>
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs border ${getActionColor(
+                            log.action
+                          )}`}
+                        >
                           {log.action}
                           {log.rollbacked && ' 🔄'}
                         </span>
@@ -265,15 +286,17 @@ function AuditLog() {
                           >
                             <FaInfoCircle />
                           </button>
-                          {!log.rollbacked && log.action !== 'LOGIN' && log.action !== 'LOGOUT' && (
-                            <button
-                              onClick={() => handleRollback(log._id)}
-                              className="text-purple-400 hover:scale-110 transition"
-                              title="Rollback"
-                            >
-                              <FaUndo />
-                            </button>
-                          )}
+                          {!log.rollbacked &&
+                            log.action !== 'LOGIN' &&
+                            log.action !== 'LOGOUT' && (
+                              <button
+                                onClick={() => handleRollback(log._id)}
+                                className="text-purple-400 hover:scale-110 transition"
+                                title="Rollback"
+                              >
+                                <FaUndo />
+                              </button>
+                            )}
                         </div>
                       </td>
                     </tr>
@@ -287,18 +310,20 @@ function AuditLog() {
           {pagination.total > pagination.limit && (
             <div className="flex justify-between items-center mt-4">
               <p className="text-sm text-gray-400">
-                Showing {((pagination.page - 1) * pagination.limit) + 1} - {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total}
+                Showing {(pagination.page - 1) * pagination.limit + 1} -{' '}
+                {Math.min(pagination.page * pagination.limit, pagination.total)} of{' '}
+                {pagination.total}
               </p>
               <div className="flex gap-2">
                 <button
-                  onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
+                  onClick={() => setPagination((prev) => ({ ...prev, page: prev.page - 1 }))}
                   disabled={pagination.page === 1}
                   className="glass-card px-4 py-2 disabled:opacity-50"
                 >
                   Previous
                 </button>
                 <button
-                  onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
+                  onClick={() => setPagination((prev) => ({ ...prev, page: prev.page + 1 }))}
                   disabled={pagination.page >= Math.ceil(pagination.total / pagination.limit)}
                   className="glass-card px-4 py-2 disabled:opacity-50"
                 >
@@ -316,24 +341,33 @@ function AuditLog() {
           <div className="glass w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-2xl font-bold">📋 Log Details</h2>
-              <button onClick={() => setShowDetails(false)} className="glass-card px-4 py-2 text-sm">Close</button>
+              <button
+                onClick={() => setShowDetails(false)}
+                className="glass-card px-4 py-2 text-sm"
+              >
+                Close
+              </button>
             </div>
-            
+
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div className="glass-card p-3">
                   <p className="text-gray-400 text-xs">User</p>
-                  <p className="font-semibold">{selectedLog.user.name}</p>
-                  <p className="text-sm text-gray-400">{selectedLog.user.email}</p>
+                  <p className="font-semibold">{selectedLog.user?.name || 'Unknown'}</p>
+                  <p className="text-sm text-gray-400">{selectedLog.user?.email || '-'}</p>
                 </div>
                 <div className="glass-card p-3">
                   <p className="text-gray-400 text-xs">Action</p>
-                  <p className={`font-semibold ${getActionColor(selectedLog.action)} inline-block px-3 py-1 rounded-full text-xs`}>
+                  <p
+                    className={`font-semibold ${getActionColor(
+                      selectedLog.action
+                    )} inline-block px-3 py-1 rounded-full text-xs`}
+                  >
                     {selectedLog.action}
                   </p>
                 </div>
               </div>
-              
+
               <div className="glass-card p-3">
                 <p className="text-gray-400 text-xs">Entity</p>
                 <p className="font-semibold">{selectedLog.entity}</p>
@@ -351,7 +385,9 @@ function AuditLog() {
                 <div className="glass-card p-3">
                   <p className="text-gray-400 text-xs">Document</p>
                   <p className="font-semibold">{selectedLog.documentInfo.filename}</p>
-                  <p className="text-sm text-gray-400">Type: {selectedLog.documentInfo.fileType}</p>
+                  <p className="text-sm text-gray-400">
+                    Type: {selectedLog.documentInfo.fileType}
+                  </p>
                 </div>
               )}
 
@@ -364,11 +400,11 @@ function AuditLog() {
                         <span className="text-yellow-400">{field}</span>
                         <span className="text-gray-400">: </span>
                         <span className="text-green-400">
-                          {selectedLog.changes.after?.[field] || 'N/A'}
+                          {String(selectedLog.changes.after?.[field] || 'N/A')}
                         </span>
                         <span className="text-gray-400"> → </span>
                         <span className="text-red-400">
-                          {selectedLog.changes.before?.[field] || 'N/A'}
+                          {String(selectedLog.changes.before?.[field] || 'N/A')}
                         </span>
                       </div>
                     ))}

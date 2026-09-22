@@ -140,6 +140,19 @@ function Clients() {
     }
   };
 
+  // ✅ Helper: Get unique users (deduplicate by userId)
+  const getUniqueUsers = (userPermissions) => {
+    if (!Array.isArray(userPermissions)) return [];
+    return userPermissions.filter(
+      (perm, i, self) =>
+        i ===
+        self.findIndex(
+          (t) =>
+            String(t.userId?._id || t.userId) === String(perm.userId?._id || perm.userId)
+        )
+    );
+  };
+
   const clientsList = Array.isArray(clients) ? clients : [];
   const activeClients = clientsList.filter(client => client?.status === "Active").length;
 
@@ -182,17 +195,20 @@ function Clients() {
         />
         <div className="overflow-x-auto">
           <table className="min-w-[900px] w-full">
+            {/* ✅ TABLE HEADER */}
             <thead className="bg-white/5">
               <tr className="border-b border-white/10">
-                <th className="p-3 text-left">Name</th>
-                <th className="p-3 text-left">Company</th>
-                <th className="p-3 text-left">Email</th>
-                <th className="p-3 text-left">Phone</th>
-                <th className="p-3 text-left">Status</th>
-                {isAdmin && <th className="p-3 text-left">Assigned To</th>}
-                <th className="p-3 text-left">Actions</th>
+                <th className="p-3 text-left w-[180px]">Name</th>
+                <th className="p-3 text-left w-[160px]">Company</th>
+                <th className="p-3 text-left w-[220px]">Email</th>
+                <th className="p-3 text-left w-[130px]">Phone</th>
+                <th className="p-3 text-left w-[100px]">Status</th>
+                {isAdmin && <th className="p-3 text-left w-[220px]">Assigned To</th>}
+                <th className="p-3 text-left w-[120px]">Actions</th>
               </tr>
             </thead>
+
+            {/* ✅ TABLE BODY */}
             <tbody>
               {clientsList.length === 0 ? (
                 <tr>
@@ -205,90 +221,136 @@ function Clients() {
                   .filter((client) =>
                     client?.name?.toLowerCase().includes(searchTerm.toLowerCase())
                   )
-                  .map((client, index) => (
-                    <tr key={client._id || client.id || `client-${index}`} className="border-b border-white/10 hover:bg-white/5">
-                      <td className="p-3">
-                        <button
-                          onClick={() => navigate(`/client/${client._id || client.id}`)}
-                          className="hover:text-cyan-300 transition font-medium"
-                        >
-                          {client.name}
-                        </button>
-                      </td>
-                      <td className="p-2">{client.company}</td>
-                      <td className="p-2">{client.email}</td>
-                      <td className="p-2">{client.phone}</td>
-                      <td className="p-2">
-                        <span
-                          className={`px-3 py-1 rounded-full text-sm ${
-                            client.status === "Active"
-                              ? "bg-green-500/20 text-green-400 border border-green-400/20"
-                              : "bg-red-500/20 text-red-400 border border-red-400/20"
-                          }`}
-                        >
-                          {client.status}
-                        </span>
-                      </td>
-                      {isAdmin && (
-                        <td className="p-3">
-                          {client.userPermissions && client.userPermissions.length > 0 ? (
-                            <div className="flex flex-wrap gap-1">
-                              {client.userPermissions
-                                .filter((perm, i, self) =>
-                                  i === self.findIndex((t) =>
-                                    String(t.userId?._id || t.userId) === String(perm.userId?._id || perm.userId)
-                                  )
-                                )
-                                .map((perm, i) => {
-                                  const userId = perm.userId?._id || perm.userId;
-                                  const userName = perm.userId?.name || 'Unknown';
-                                  return (
-                                    <div key={`${userId}-${i}`} className="flex items-center gap-0.5">
-                                      <span className="px-2 py-1 bg-cyan-500/20 text-cyan-100 rounded-full text-xs">
-                                        {userName}
-                                      </span>
-                                      <button
-                                        onClick={() => handleUnassign(client._id, userId, userName)}
-                                        className="text-red-400 hover:text-red-300 transition text-xs ml-0.5"
-                                        title={`Remove ${userName} from this client`}
-                                      >
-                                        ✕
-                                      </button>
-                                    </div>
-                                  );
-                                })}
-                            </div>
-                          ) : (
-                            <span className="text-gray-500 text-sm">Unassigned</span>
-                          )}
-                        </td>
-                      )}
-                      <td className="p-3">
-                        <div className="flex gap-4">
-                          <FaEye
-                            className="cursor-pointer text-cyan-400 hover:scale-125 transition-all"
+                  .map((client, index) => {
+                    const uniqueUsers = getUniqueUsers(client.userPermissions);
+                    const visibleUsers = uniqueUsers.slice(0, 3);
+                    const hiddenCount = uniqueUsers.length - visibleUsers.length;
+
+                    return (
+                      <tr
+                        key={client._id || client.id || `client-${index}`}
+                        className="border-b border-white/10 hover:bg-white/5"
+                      >
+                        {/* ✅ NAME */}
+                        <td className="p-3 max-w-[180px]">
+                          <button
                             onClick={() => navigate(`/client/${client._id || client.id}`)}
-                          />
-                          {isAdmin && (
-                            <>
-                              <FaEdit
-                                className="cursor-pointer text-yellow-400 hover:scale-125 transition-all"
-                                onClick={() => {
-                                  setEditIndex(index);
-                                  setEditData(client);
-                                  setOpenModal(true);
-                                }}
-                              />
-                              <FaTrash
-                                className="cursor-pointer text-red-500 hover:scale-125 transition-all"
-                                onClick={() => deleteClient(index)}
-                              />
-                            </>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+                            className="hover:text-cyan-300 transition font-medium truncate block max-w-full text-left"
+                            title={client.name || 'Unknown'}
+                          >
+                            {client.name || 'Unknown'}
+                          </button>
+                        </td>
+
+                        {/* ✅ COMPANY */}
+                        <td className="p-3 max-w-[160px]">
+                          <span
+                            className="block truncate text-sm"
+                            title={client.company || '-'}
+                          >
+                            {client.company || '-'}
+                          </span>
+                        </td>
+
+                        {/* ✅ EMAIL */}
+                        <td className="p-3 max-w-[220px]">
+                          <span
+                            className="block truncate text-sm"
+                            title={client.email || '-'}
+                          >
+                            {client.email || '-'}
+                          </span>
+                        </td>
+
+                        {/* ✅ PHONE */}
+                        <td className="p-3 max-w-[130px]">
+                          <span
+                            className="block truncate text-sm"
+                            title={client.phone || '-'}
+                          >
+                            {client.phone || '-'}
+                          </span>
+                        </td>
+
+                        {/* ✅ STATUS */}
+                        <td className="p-3">
+                          <span
+                            className={`px-3 py-1 rounded-full text-xs whitespace-nowrap ${
+                              client.status === 'Active'
+                                ? 'bg-green-500/20 text-green-400 border border-green-400/20'
+                                : 'bg-red-500/20 text-red-400 border border-red-400/20'
+                            }`}
+                          >
+                            {client.status || 'Active'}
+                          </span>
+                        </td>
+
+                       {/* ✅ ASSIGNED TO — Show ALL users with × buttons */}
+{isAdmin && (
+  <td className="p-3">
+    {uniqueUsers.length > 0 ? (
+      <div
+        className="flex flex-col gap-1 items-start max-h-[140px] overflow-y-auto pr-1"
+        style={{ scrollbarWidth: 'thin' }}
+      >
+        {uniqueUsers.map((perm, i) => {
+          const userId = perm.userId?._id || perm.userId;
+          const userName = perm.userId?.name || 'Unknown';
+          const folderCount = perm.folderPermissions?.length || 0;
+
+          return (
+            <div
+              key={`${userId}-${i}`}
+              className="assigned-user-tag"
+              title={`${userName} (${folderCount} folders)`}
+            >
+              <span className="user-name">{userName}</span>
+              <button
+                onClick={() =>
+                  handleUnassign(client._id, userId, userName)
+                }
+                className="remove-btn"
+                title={`Remove ${userName}`}
+              >
+                ✕
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    ) : (
+      <span className="text-gray-500 text-xs">Unassigned</span>
+    )}
+  </td>
+)}
+                        {/* ✅ ACTIONS */}
+                        <td className="p-3">
+                          <div className="flex gap-3 flex-shrink-0">
+                            <FaEye
+                              className="cursor-pointer text-cyan-400 hover:scale-125 transition-all"
+                              onClick={() => navigate(`/client/${client._id || client.id}`)}
+                            />
+                            {isAdmin && (
+                              <>
+                                <FaEdit
+                                  className="cursor-pointer text-yellow-400 hover:scale-125 transition-all"
+                                  onClick={() => {
+                                    setEditIndex(index);
+                                    setEditData(client);
+                                    setOpenModal(true);
+                                  }}
+                                />
+                                <FaTrash
+                                  className="cursor-pointer text-red-500 hover:scale-125 transition-all"
+                                  onClick={() => deleteClient(index)}
+                                />
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
               )}
             </tbody>
           </table>

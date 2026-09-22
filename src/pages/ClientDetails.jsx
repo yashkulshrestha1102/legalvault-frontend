@@ -7,7 +7,6 @@ import AddRegistrationModal from "../components/modals/AddRegistrationModal";
 import AddContractModal from "../components/modals/AddContractModal";
 
 import CustomFoldersPage from "./folders/CustomFoldersPage";
-
 import DocumentsPage from "./folders/DocumentsPage";
 import PoliciesPage from "./folders/PoliciesPage";
 import GSTPage from "./folders/GSTPage";
@@ -110,17 +109,13 @@ function ClientDetails() {
         console.error('❌ Client ID is undefined!');
         return;
       }
-      console.log('📋 Fetching registrations for client ID:', actualId);
-
       const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(actualId);
       if (!isValidObjectId) {
-        console.warn('⚠️ Invalid ObjectId, skipping registrations fetch');
         setRegistrations([]);
         return;
       }
 
       const response = await api.get(`/api/registrations/client/${actualId}`);
-      console.log('✅ Registrations fetched:', response.data);
       setRegistrations(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error('❌ Error fetching registrations:', error.response?.data || error.message);
@@ -130,17 +125,13 @@ function ClientDetails() {
 
   const fetchContracts = async () => {
     try {
-      console.log('📋 Fetching contracts for client ID:', actualId);
-
       const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(actualId);
       if (!isValidObjectId) {
-        console.warn('⚠️ Invalid ObjectId, skipping contracts fetch');
         setContracts([]);
         return;
       }
 
       const response = await api.get(`/api/contracts/client/${actualId}`);
-      console.log('✅ Contracts fetched:', response.data);
       setContracts(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error('❌ Error fetching contracts:', error.response?.data || error.message);
@@ -150,21 +141,14 @@ function ClientDetails() {
 
   const fetchDocuments = async () => {
     try {
-      if (!actualId) {
-        console.error('❌ Client ID is undefined!');
-        return;
-      }
-      console.log('📋 Fetching documents for client ID:', actualId);
-
+      if (!actualId) return;
       const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(actualId);
       if (!isValidObjectId) {
-        console.warn('⚠️ Invalid ObjectId, skipping documents fetch');
         setDocuments([]);
         return;
       }
 
       const response = await api.get(`/api/documents/client/${actualId}`);
-      console.log('✅ Documents fetched:', response.data);
       setDocuments(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error('❌ Error fetching documents:', error.response?.data || error.message);
@@ -174,8 +158,6 @@ function ClientDetails() {
 
   useEffect(() => {
     if (actualId) {
-      console.log('🔄 Loading data for client ID:', actualId);
-
       const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(actualId);
 
       if (isValidObjectId) {
@@ -184,7 +166,6 @@ function ClientDetails() {
         fetchContracts();
         fetchDocuments();
       } else {
-        console.warn('⚠️ Invalid ObjectId, attempting to load from localStorage only.');
         const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
         const foundClient = savedClients.find(c =>
           String(c.id) === String(actualId) || String(c._id) === String(actualId)
@@ -198,7 +179,6 @@ function ClientDetails() {
         setLoading(false);
       }
     } else {
-      console.error('❌ No client ID available');
       setLoading(false);
     }
   }, [actualId]);
@@ -210,11 +190,9 @@ function ClientDetails() {
     }
 
     try {
-      const response = await api.put(`/api/documents/${docId}/rename`, {
+      await api.put(`/api/documents/${docId}/rename`, {
         newName: newName.trim()
       });
-
-      console.log('✅ Document renamed:', response.data);
       fetchDocuments();
       setRenamingId(null);
       setNewFileName('');
@@ -257,11 +235,8 @@ function ClientDetails() {
 
       setUploadingDocs(true);
       const response = await api.post('/api/documents/upload', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
+        headers: { 'Content-Type': 'multipart/form-data' }
       });
-      console.log('✅ Documents uploaded:', response.data);
       fetchDocuments();
       setSelectedFiles([]);
 
@@ -275,7 +250,6 @@ function ClientDetails() {
     }
   };
 
-  // ✅ FIXED: Blob-based view for documents (dynamic content type)
   const viewDocument = async (docUrl) => {
     if (!docUrl) return;
     try {
@@ -293,10 +267,7 @@ function ClientDetails() {
 
   const downloadDocument = async (docUrl, filename) => {
     try {
-      const response = await api.get(docUrl, {
-        responseType: 'blob'
-      });
-
+      const response = await api.get(docUrl, { responseType: 'blob' });
       const blob = new Blob([response.data]);
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -329,11 +300,8 @@ function ClientDetails() {
       formData.append('pdf', file);
 
       const response = await api.post('/api/pdfs/pdf', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
+        headers: { 'Content-Type': 'multipart/form-data' }
       });
-      console.log('✅ PDF uploaded:', response.data);
       return response.data.url;
     } catch (error) {
       console.error('❌ PDF upload error:', error.response?.data || error.message);
@@ -341,7 +309,6 @@ function ClientDetails() {
     }
   };
 
-  // ✅ FIXED: Blob-based view for PDFs (cookie auth)
   const viewPDF = async (pdfUrl) => {
     if (!pdfUrl) return;
     try {
@@ -381,7 +348,6 @@ function ClientDetails() {
       const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(actualId);
 
       if (!isValidObjectId) {
-        console.log('⚠️ Invalid ObjectId, trying to sync client to backend...');
         const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
         const localClient = savedClients.find(c => String(c.id) === String(actualId) || String(c._id) === String(actualId));
 
@@ -393,7 +359,6 @@ function ClientDetails() {
 
             if (existingClient) {
               validClientId = existingClient._id;
-              console.log('✅ Client already exists in backend, using ID:', validClientId);
               const updatedClients = savedClients.map(c =>
                 String(c.id) === String(actualId) || String(c._id) === String(actualId)
                   ? { ...c, _id: validClientId }
@@ -409,7 +374,6 @@ function ClientDetails() {
                 phone: localClient.phone || '0000000000',
                 status: localClient.status || 'Active'
               });
-              console.log('✅ Client synced to backend:', createResponse.data);
               validClientId = createResponse.data._id;
               const updatedClients = savedClients.map(c =>
                 String(c.id) === String(actualId) || String(c._id) === String(actualId)
@@ -422,30 +386,24 @@ function ClientDetails() {
           } catch (syncError) {
             console.error('❌ Sync error:', syncError.response?.data || syncError.message);
             const errorMsg = syncError.response?.data?.message || 'Unknown error';
-            alert(`❌ Cannot sync client: ${errorMsg}\nPlease add this client again from the Clients page.`);
+            alert(`❌ Cannot sync client: ${errorMsg}`);
             return;
           }
         } else {
-          alert('❌ Client not found in local storage. Please add the client again from the Clients page.');
+          alert('❌ Client not found in local storage.');
           return;
         }
       }
 
-      const data = {
-        ...registrationData,
-        clientId: validClientId
-      };
-
+      const data = { ...registrationData, clientId: validClientId };
       if (registrationData.pdfs && registrationData.pdfs.length > 0) {
         data.pdfs = registrationData.pdfs;
       }
 
       if (editRegistration) {
-        const response = await api.put(`/api/registrations/${editRegistration._id}`, data);
-        console.log('✅ Registration updated:', response.data);
+        await api.put(`/api/registrations/${editRegistration._id}`, data);
       } else {
-        const response = await api.post('/api/registrations', data);
-        console.log('✅ Registration created:', response.data);
+        await api.post('/api/registrations', data);
       }
 
       fetchRegistrations();
@@ -476,7 +434,6 @@ function ClientDetails() {
       const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(actualId);
 
       if (!isValidObjectId) {
-        console.log('⚠️ Invalid ObjectId, trying to sync client to backend...');
         const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
         const localClient = savedClients.find(c => String(c.id) === String(actualId) || String(c._id) === String(actualId));
 
@@ -488,7 +445,6 @@ function ClientDetails() {
 
             if (existingClient) {
               validClientId = existingClient._id;
-              console.log('✅ Client already exists in backend, using ID:', validClientId);
               const updatedClients = savedClients.map(c =>
                 String(c.id) === String(actualId) || String(c._id) === String(actualId)
                   ? { ...c, _id: validClientId }
@@ -504,7 +460,6 @@ function ClientDetails() {
                 phone: localClient.phone || '0000000000',
                 status: localClient.status || 'Active'
               });
-              console.log('✅ Client synced to backend:', createResponse.data);
               validClientId = createResponse.data._id;
               const updatedClients = savedClients.map(c =>
                 String(c.id) === String(actualId) || String(c._id) === String(actualId)
@@ -517,27 +472,24 @@ function ClientDetails() {
           } catch (syncError) {
             console.error('❌ Sync error:', syncError.response?.data || syncError.message);
             const errorMsg = syncError.response?.data?.message || 'Unknown error';
-            alert(`❌ Cannot sync client: ${errorMsg}\nPlease add this client again from the Clients page.`);
+            alert(`❌ Cannot sync client: ${errorMsg}`);
             return;
           }
         } else {
-          alert('❌ Client not found in local storage. Please add the client again from the Clients page.');
+          alert('❌ Client not found in local storage.');
           return;
         }
       }
 
       const data = { ...contractData, clientId: validClientId };
-
       if (contractData.pdfs && contractData.pdfs.length > 0) {
         data.pdfs = contractData.pdfs;
       }
 
       if (editContract) {
-        const response = await api.put(`/api/contracts/${editContract._id}`, data);
-        console.log('✅ Contract updated:', response.data);
+        await api.put(`/api/contracts/${editContract._id}`, data);
       } else {
-        const response = await api.post('/api/contracts', data);
-        console.log('✅ Contract created:', response.data);
+        await api.post('/api/contracts', data);
       }
 
       fetchContracts();
@@ -579,7 +531,6 @@ function ClientDetails() {
     setOpenContractModal(true);
   };
 
-  // ✅ FIX: allFolders PEHLE declare karo (TDZ error fix)
   const allFolders = [
     { label: "Registrations / Certifications", value: "registrations", id: "registrations" },
     { label: "Contracts", value: "contracts", id: "contracts" },
@@ -593,61 +544,57 @@ function ClientDetails() {
     { label: "🗂️ Client Folder", value: "clientFolder", id: "client-folder" }
   ];
 
-  // ✅ FIX: Ab ye function allFolders ko safely access kar sakta hai
   const getUserFolderPermissions = () => {
-    if (!user) {
-      console.log('⚠️ No user found');
-      return [];
-    }
+    if (!user) return [];
 
-    // ✅ Admin has access to all folders
     if (user.role === 'admin') {
-      console.log('✅ Admin - all folders accessible');
       return allFolders.map(f => f.id);
     }
 
-    // ✅ Priority 1: Client-level permissions (per-client override)
     let clientLevelPerms = [];
     if (client && client.userPermissions && Array.isArray(client.userPermissions)) {
       const userPerm = client.userPermissions.find(p => {
         const userId = p.userId?._id || p.userId;
         return String(userId) === String(user.id);
       });
-
       if (userPerm && Array.isArray(userPerm.folderPermissions)) {
         clientLevelPerms = userPerm.folderPermissions;
       }
     }
 
-    // ✅ Priority 2: User-level permissions (global fallback)
     let userLevelPerms = [];
     if (user.folderPermissions && Array.isArray(user.folderPermissions)) {
       userLevelPerms = user.folderPermissions;
     }
 
-    // ✅ Merge both (client-level + user-level)
-    const mergedPermissions = [...new Set([...clientLevelPerms, ...userLevelPerms])];
-
-    console.log('🔍 Client-level perms:', clientLevelPerms);
-    console.log('🔍 User-level perms:', userLevelPerms);
-    console.log('✅ Merged permissions:', mergedPermissions);
-
-    return mergedPermissions;
+    return [...new Set([...clientLevelPerms, ...userLevelPerms])];
   };
 
-  // ✅ Ab function call karo (allFolders already defined hai)
   const userFolderPermissions = getUserFolderPermissions();
   const role = user?.role || 'user';
 
-  // ✅ accessibleFolders calculate karo
   const accessibleFolders = allFolders.filter(f => {
-    if (role === 'admin') {
-      return true;
-    }
-
-    const hasAccess = userFolderPermissions.includes(f.id);
-    return hasAccess;
+    if (role === 'admin') return true;
+    return userFolderPermissions.includes(f.id);
   });
+
+  // ═══════════════════════════════════════════
+  // ✅ DEDUPLICATE ASSIGNED USERS
+  // ═══════════════════════════════════════════
+  const getUniqueAssignedUsers = () => {
+    if (!client?.userPermissions || !Array.isArray(client.userPermissions)) {
+      return [];
+    }
+    return client.userPermissions.filter(
+      (p, index, self) =>
+        index ===
+        self.findIndex(
+          (t) =>
+            String(t.userId?._id || t.userId) ===
+            String(p.userId?._id || p.userId)
+        )
+    );
+  };
 
   if (loading) {
     return (
@@ -672,71 +619,138 @@ function ClientDetails() {
     );
   }
 
+  const uniqueAssignedUsers = getUniqueAssignedUsers();
+
   return (
     <MainLayout key={refreshKey}>
       <div className="space-y-6">
-        <div className="glass p-6">
-          <h1 className="text-3xl font-bold mb-4">{client.name}</h1>
-          <div className="grid md:grid-cols-5 gap-4">
-            <div className="glass-card p-4">
-              <p className="text-gray-100 text-sm">Contact Person</p>
-              <h3 className="font-semibold mt-1">{client.contactPerson || "-"}</h3>
+        {/* ═══════════════════════════════════════════
+            ✅ CLIENT INFO SECTION — Fixed UI
+            ═══════════════════════════════════════════ */}
+        <div className="glass p-4 sm:p-6">
+          {/* Client Name — truncate with tooltip */}
+          <h1
+            className="text-2xl sm:text-3xl font-bold mb-4 truncate"
+            title={client.name}
+          >
+            {client.name}
+          </h1>
+
+          {/* Info Cards — Responsive Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+            {/* Contact Person */}
+            <div className="glass-card p-3 sm:p-4 min-w-0">
+              <p className="text-gray-100 text-xs sm:text-sm mb-1 truncate">
+                Contact Person
+              </p>
+              <h3
+                className="font-semibold truncate text-sm sm:text-base"
+                title={client.contactPerson || '-'}
+              >
+                {client.contactPerson || "-"}
+              </h3>
             </div>
-            <div className="glass-card p-4">
-              <p className="text-gray-100 text-sm">Email</p>
-              <h6 className="text-sm font-semibold mt-1">{client.email}</h6>
+
+            {/* Email */}
+            <div className="glass-card p-3 sm:p-4 min-w-0">
+              <p className="text-gray-100 text-xs sm:text-sm mb-1 truncate">
+                Email
+              </p>
+              <h6
+                className="text-xs sm:text-sm font-semibold truncate"
+                title={client.email || '-'}
+              >
+                {client.email || "-"}
+              </h6>
             </div>
-            <div className="glass-card p-4">
-              <p className="text-gray-100 text-sm">Mobile</p>
-              <h3 className="font-semibold mt-1">{client.phone}</h3>
+
+            {/* Mobile */}
+            <div className="glass-card p-3 sm:p-4 min-w-0">
+              <p className="text-gray-100 text-xs sm:text-sm mb-1 truncate">
+                Mobile
+              </p>
+              <h3
+                className="font-semibold truncate text-sm sm:text-base"
+                title={client.phone || '-'}
+              >
+                {client.phone || "-"}
+              </h3>
             </div>
-            <div className="glass-card p-4">
-              <p className="text-gray-100 text-sm">Onboarding Date</p>
-              <h3 className="font-semibold mt-1">{client.onboardingDate || "-"}</h3>
+
+            {/* Onboarding Date */}
+            <div className="glass-card p-3 sm:p-4 min-w-0">
+              <p className="text-gray-100 text-xs sm:text-sm mb-1 truncate">
+                Onboarding Date
+              </p>
+              <h3 className="font-semibold truncate text-sm sm:text-base">
+                {client.onboardingDate || "-"}
+              </h3>
             </div>
-            <div className="glass-card p-4">
-              <p className="text-gray-100 text-sm">Status</p>
-              <h3 className="font-semibold mt-1">{client.status}</h3>
+
+            {/* Status */}
+            <div className="glass-card p-3 sm:p-4 min-w-0">
+              <p className="text-gray-100 text-xs sm:text-sm mb-1 truncate">
+                Status
+              </p>
+              <span
+                className={`inline-block px-3 py-1 rounded-full text-xs whitespace-nowrap ${
+                  client.status === 'Active'
+                    ? 'bg-green-500/20 text-green-400 border border-green-400/20'
+                    : 'bg-red-500/20 text-red-400 border border-red-400/20'
+                }`}
+              >
+                {client.status || 'Active'}
+              </span>
             </div>
           </div>
 
-          {role === 'admin' && client.userPermissions && client.userPermissions.length > 0 && (
-            <div className="mt-4 glass-card p-3">
-              <p className="text-gray-100 text-sm">Assigned Users:</p>
-              <div className="flex flex-wrap gap-3 mt-1">
-                {client.userPermissions
-                  .filter((p, index, self) =>
-                    index === self.findIndex((t) =>
-                      String(t.userId?._id || t.userId) === String(p.userId?._id || p.userId)
-                    )
-                  )
-                  .map((p) => (
-                    <div
-                      key={`perm-${p.userId?._id || p.userId}`}
-                      className="px-3 py-1 bg-cyan-500/20 text-cyan-100 rounded-full text-sm flex items-center gap-2"
-                    >
-                      <span>{p.userId?.name || 'Unknown'}</span>
-                      <span className="text-xs bg-cyan-500/30 px-1.5 py-0.5 rounded">
-                        {p.folderPermissions?.length || 0} folders
-                      </span>
-                    </div>
-                  ))
-                }
+          {/* ✅ Assigned Users — Fixed Overflow */}
+          {role === 'admin' && uniqueAssignedUsers.length > 0 && (
+            <div className="mt-4 glass-card p-3 sm:p-4">
+              <div className="flex justify-between items-center mb-2">
+                <p className="text-gray-100 text-sm font-medium">
+                  Assigned Users
+                </p>
+                <span className="text-xs text-gray-400">
+                  {uniqueAssignedUsers.length} user{uniqueAssignedUsers.length > 1 ? 's' : ''}
+                </span>
+              </div>
+
+              <div className="flex flex-wrap gap-2 max-h-[120px] overflow-y-auto pr-1">
+                {uniqueAssignedUsers.map((p) => (
+                  <div
+                    key={`perm-${p.userId?._id || p.userId}`}
+                    className="px-3 py-1.5 bg-cyan-500/20 text-cyan-100 rounded-full text-xs flex items-center gap-2 max-w-[240px]"
+                    title={`${p.userId?.name || 'Unknown'} — ${p.folderPermissions?.length || 0} folders`}
+                  >
+                    <span className="truncate font-medium">
+                      {p.userId?.name || 'Unknown'}
+                    </span>
+                    <span className="text-[10px] bg-cyan-500/30 px-1.5 py-0.5 rounded whitespace-nowrap flex-shrink-0">
+                      {p.folderPermissions?.length || 0} folders
+                    </span>
+                  </div>
+                ))}
               </div>
             </div>
           )}
         </div>
 
+        {/* ═══════════════════════════════════════════
+            FOLDER TILES
+            ═══════════════════════════════════════════ */}
         {accessibleFolders.length > 0 ? (
-          <div className="grid md:grid-cols-4 gap-5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 sm:gap-5">
             {accessibleFolders.map((folder) => (
               <div
                 key={folder.value}
                 onClick={() => setSelectedFolder(folder.value)}
-                className="glass-card p-6 cursor-pointer hover:scale-105 transition-all duration-300"
+                className="glass-card p-4 sm:p-6 cursor-pointer hover:scale-105 transition-all duration-300 min-w-0"
               >
-                <div className="text-5xl mb-4">📁</div>
-                <h3 className="font-semibold">{folder.label}</h3>
+                <div className="text-4xl sm:text-5xl mb-3 sm:mb-4">📁</div>
+                <h3 className="font-semibold text-sm sm:text-base truncate" title={folder.label}>
+                  {folder.label}
+                </h3>
               </div>
             ))}
           </div>
@@ -748,24 +762,30 @@ function ClientDetails() {
           </div>
         )}
 
+        {/* ═══════════════════════════════════════════
+            REGISTRATIONS
+            ═══════════════════════════════════════════ */}
         {selectedFolder === "registrations" && (
-          <div className="glass p-6">
+          <div className="glass p-4 sm:p-6">
             <div className="flex justify-between items-center mb-6">
-              <button onClick={() => { setEditRegistration(null); setOpenModal(true); }} className="glass-card px-5 py-3 blue-glow">
+              <button
+                onClick={() => { setEditRegistration(null); setOpenModal(true); }}
+                className="glass-card px-5 py-3 blue-glow"
+              >
                 + Add Registration
               </button>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full min-w-[900px]">
                 <thead>
                   <tr className="border-b border-white/10">
-                    <th className="p-4 text-left">Type</th>
-                    <th className="p-4 text-left">Registration Name</th>
-                    <th className="p-4 text-left">Start Date</th>
-                    <th className="p-4 text-left">End Date</th>
-                    <th className="p-4 text-left">Status</th>
-                    <th className="p-4 text-left">PDF</th>
-                    <th className="p-4 text-left">Actions</th>
+                    <th className="p-3 text-left text-sm w-[140px]">Type</th>
+                    <th className="p-3 text-left text-sm w-[200px]">Registration Name</th>
+                    <th className="p-3 text-left text-sm w-[110px]">Start Date</th>
+                    <th className="p-3 text-left text-sm w-[110px]">End Date</th>
+                    <th className="p-3 text-left text-sm w-[110px]">Status</th>
+                    <th className="p-3 text-left text-sm w-[140px]">PDF</th>
+                    <th className="p-3 text-left text-sm w-[180px]">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -777,33 +797,43 @@ function ClientDetails() {
                     </tr>
                   ) : (
                     registrations.map((item, index) => (
-                      <tr key={`reg-${item._id || item.id || index}`}>
-                        <td className="p-4">{item.category}</td>
-                        <td className="p-4">{item.registrationName}</td>
-                        <td className="p-4">{item.startDate}</td>
-                        <td className="p-4">{item.endDate}</td>
-                        <td className="p-4">
+                      <tr key={`reg-${item._id || item.id || index}`} className="border-b border-white/5 hover:bg-white/5">
+                        <td className="p-3 max-w-[140px]">
+                          <span className="block truncate text-sm" title={item.category}>
+                            {item.category || '-'}
+                          </span>
+                        </td>
+                        <td className="p-3 max-w-[200px]">
+                          <span className="block truncate text-sm font-medium" title={item.registrationName}>
+                            {item.registrationName || '-'}
+                          </span>
+                        </td>
+                        <td className="p-3 text-sm whitespace-nowrap">{item.startDate || '-'}</td>
+                        <td className="p-3 text-sm whitespace-nowrap">{item.endDate || '-'}</td>
+                        <td className="p-3">
                           {getDaysLeft(item.endDate) <= 0 ? (
-                            <span className="text-red-400">Expired</span>
+                            <span className="text-red-400 text-xs whitespace-nowrap">Expired</span>
                           ) : getDaysLeft(item.endDate) <= 30 ? (
-                            <span className="text-yellow-400">Expiring Soon</span>
+                            <span className="text-yellow-400 text-xs whitespace-nowrap">Expiring Soon</span>
                           ) : (
-                            <span className="text-green-400">Valid</span>
+                            <span className="text-green-400 text-xs whitespace-nowrap">Valid</span>
                           )}
                         </td>
-                        <td className="p-4">
+                        <td className="p-3">
                           {item.pdfs && item.pdfs.length > 0 ? (
-                            <div className="flex gap-2">
-                              <button onClick={() => viewPDF(item.pdfs[0])} className="text-cyan-400 hover:underline text-sm">📄 View</button>
-                              <button onClick={() => downloadPDF(item.pdfs[0])} className="text-green-400 hover:underline text-sm">⬇️ Download</button>
+                            <div className="flex gap-2 flex-shrink-0">
+                              <button onClick={() => viewPDF(item.pdfs[0])} className="text-cyan-400 hover:underline text-xs whitespace-nowrap">📄 View</button>
+                              <button onClick={() => downloadPDF(item.pdfs[0])} className="text-green-400 hover:underline text-xs whitespace-nowrap">⬇️ Download</button>
                             </div>
-                          ) : "-"}
+                          ) : (
+                            <span className="text-xs text-gray-500">-</span>
+                          )}
                         </td>
-                        <td className="p-4">
-                          <div className="flex gap-3">
-                            <button onClick={() => navigate(`/clients/${actualId}/registration/${item._id || item.id}`)} className="text-cyan-400">View</button>
-                            <button onClick={() => handleEdit(item)} className="text-yellow-400">Edit</button>
-                            <button onClick={() => deleteRegistration(item._id || item.id)} className="text-red-400">Delete</button>
+                        <td className="p-3">
+                          <div className="flex gap-2 flex-shrink-0">
+                            <button onClick={() => navigate(`/clients/${actualId}/registration/${item._id || item.id}`)} className="text-cyan-400 text-xs whitespace-nowrap">View</button>
+                            <button onClick={() => handleEdit(item)} className="text-yellow-400 text-xs whitespace-nowrap">Edit</button>
+                            <button onClick={() => deleteRegistration(item._id || item.id)} className="text-red-400 text-xs whitespace-nowrap">Delete</button>
                           </div>
                         </td>
                       </tr>
@@ -815,25 +845,31 @@ function ClientDetails() {
           </div>
         )}
 
+        {/* ═══════════════════════════════════════════
+            CONTRACTS
+            ═══════════════════════════════════════════ */}
         {selectedFolder === "contracts" && (
-          <div className="glass p-6">
+          <div className="glass p-4 sm:p-6">
             <div className="flex justify-between items-center mb-6">
-              <button onClick={() => { setEditContract(null); setOpenContractModal(true); }} className="glass-card px-5 py-3 blue-glow">
+              <button
+                onClick={() => { setEditContract(null); setOpenContractModal(true); }}
+                className="glass-card px-5 py-3 blue-glow"
+              >
                 + Add Contract
               </button>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full min-w-[1100px]">
                 <thead>
                   <tr className="border-b border-white/10">
-                    <th className="p-4 text-left">Type</th>
-                    <th className="p-4 text-left">Contract Name</th>
-                    <th className="p-4 text-left">First Party</th>
-                    <th className="p-4 text-left">Second Party</th>
-                    <th className="p-4 text-left">Start Date</th>
-                    <th className="p-4 text-left">End Date</th>
-                    <th className="p-4 text-left">PDF</th>
-                    <th className="p-4 text-left">Actions</th>
+                    <th className="p-3 text-left text-sm w-[140px]">Type</th>
+                    <th className="p-3 text-left text-sm w-[160px]">Contract Name</th>
+                    <th className="p-3 text-left text-sm w-[140px]">First Party</th>
+                    <th className="p-3 text-left text-sm w-[140px]">Second Party</th>
+                    <th className="p-3 text-left text-sm w-[110px]">Start Date</th>
+                    <th className="p-3 text-left text-sm w-[110px]">End Date</th>
+                    <th className="p-3 text-left text-sm w-[140px]">PDF</th>
+                    <th className="p-3 text-left text-sm w-[180px]">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -845,26 +881,44 @@ function ClientDetails() {
                     </tr>
                   ) : (
                     contracts.map((item, index) => (
-                      <tr key={`contract-${item._id || item.id || index}`}>
-                        <td className="p-4">{item.contractType}</td>
-                        <td className="p-4">{item.contractName}</td>
-                        <td className="p-4">{item.firstParty}</td>
-                        <td className="p-4">{item.secondParty}</td>
-                        <td className="p-4">{item.startDate}</td>
-                        <td className="p-4">{item.endDate}</td>
-                        <td className="p-4">
-                          {item.pdfs && item.pdfs.length > 0 ? (
-                            <div className="flex gap-2">
-                              <button onClick={() => viewPDF(item.pdfs[0])} className="text-cyan-400 hover:underline text-sm">📄 View</button>
-                              <button onClick={() => downloadPDF(item.pdfs[0])} className="text-green-400 hover:underline text-sm">⬇️ Download</button>
-                            </div>
-                          ) : "-"}
+                      <tr key={`contract-${item._id || item.id || index}`} className="border-b border-white/5 hover:bg-white/5">
+                        <td className="p-3 max-w-[140px]">
+                          <span className="block truncate text-sm" title={item.contractType}>
+                            {item.contractType || '-'}
+                          </span>
                         </td>
-                        <td className="p-4">
-                          <div className="flex gap-3">
-                            <button className="text-cyan-400" onClick={() => navigate(`/clients/${actualId}/contract/${item._id || item.id}`)}>View</button>
-                            <button onClick={() => handleEditContract(item)} className="text-yellow-400">Edit</button>
-                            <button onClick={() => deleteContract(item._id || item.id)} className="text-red-400">Delete</button>
+                        <td className="p-3 max-w-[160px]">
+                          <span className="block truncate text-sm font-medium" title={item.contractName}>
+                            {item.contractName || '-'}
+                          </span>
+                        </td>
+                        <td className="p-3 max-w-[140px]">
+                          <span className="block truncate text-sm" title={item.firstParty}>
+                            {item.firstParty || '-'}
+                          </span>
+                        </td>
+                        <td className="p-3 max-w-[140px]">
+                          <span className="block truncate text-sm" title={item.secondParty}>
+                            {item.secondParty || '-'}
+                          </span>
+                        </td>
+                        <td className="p-3 text-sm whitespace-nowrap">{item.startDate || '-'}</td>
+                        <td className="p-3 text-sm whitespace-nowrap">{item.endDate || '-'}</td>
+                        <td className="p-3">
+                          {item.pdfs && item.pdfs.length > 0 ? (
+                            <div className="flex gap-2 flex-shrink-0">
+                              <button onClick={() => viewPDF(item.pdfs[0])} className="text-cyan-400 hover:underline text-xs whitespace-nowrap">📄 View</button>
+                              <button onClick={() => downloadPDF(item.pdfs[0])} className="text-green-400 hover:underline text-xs whitespace-nowrap">⬇️ Download</button>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-gray-500">-</span>
+                          )}
+                        </td>
+                        <td className="p-3">
+                          <div className="flex gap-2 flex-shrink-0">
+                            <button className="text-cyan-400 text-xs whitespace-nowrap" onClick={() => navigate(`/clients/${actualId}/contract/${item._id || item.id}`)}>View</button>
+                            <button onClick={() => handleEditContract(item)} className="text-yellow-400 text-xs whitespace-nowrap">Edit</button>
+                            <button onClick={() => deleteContract(item._id || item.id)} className="text-red-400 text-xs whitespace-nowrap">Delete</button>
                           </div>
                         </td>
                       </tr>
