@@ -77,8 +77,14 @@ export const AuthProvider = ({ children }) => {
       }
 
       // ✅ Safe to save
-      localStorage.setItem('user', JSON.stringify(userData));
-      setUser(userData);
+      // ✅ Token को localStorage में भी save करो (cookie fallback)
+if (response.data?.token) {
+  localStorage.setItem('token', response.data.token);
+  console.log('🔑 Token saved for fallback');
+}
+
+localStorage.setItem('user', JSON.stringify(userData));
+setUser(userData);
 
       return { success: true };
 
