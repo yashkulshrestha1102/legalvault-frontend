@@ -2,12 +2,12 @@ import MainLayout from "../layouts/MainLayout";
 import { FaEye, FaEdit, FaTrash } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect, useContext } from "react";
-import api, { cachedGet, invalidateCache } from "../utils/api"; // ✅ Already good
+import api, { cachedGet, invalidateCache } from "../utils/api";
 import AuthContext from "../context/AuthContext";
 import AddClientModal from "../components/modals/AddClientModal";
 import { addNotification } from "../utils/notifications";
 import { addActivity } from "../utils/activityLogger";
-import { exportClientsPDF, exportClientsExcel } from "../utils/reportExport";
+// ✅ REMOVED: Static import of reportExport (lazy load below)
 
 function Clients() {
   const navigate = useNavigate();
@@ -17,7 +17,7 @@ function Clients() {
   const [openModal, setOpenModal] = useState(false);
   const [clients, setClients] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [editData, setEditData] = useState(null); // ✅ FIXED: editIndex हटाया (unused)
+  const [editData, setEditData] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const fetchClients = async () => {
@@ -46,12 +46,34 @@ function Clients() {
     fetchClients();
   }, []);
 
-  // ✅ FIXED: cache invalidate add
+  // ═══════════════════════════════════════════
+  // ✅ LAZY EXPORT HANDLERS (Bundle optimization)
+  // ═══════════════════════════════════════════
+  const handleExportPDF = async () => {
+    try {
+      const { exportClientsPDF } = await import("../utils/reportExport");
+      await exportClientsPDF();
+    } catch (error) {
+      console.error("PDF export error:", error);
+      alert("Failed to load PDF exporter");
+    }
+  };
+
+  const handleExportExcel = async () => {
+    try {
+      const { exportClientsExcel } = await import("../utils/reportExport");
+      await exportClientsExcel();
+    } catch (error) {
+      console.error("Excel export error:", error);
+      alert("Failed to load Excel exporter");
+    }
+  };
+
+  // ✅ cache invalidate + fresh client data
   const handleUnassign = async (clientId, userId, userName) => {
     if (!window.confirm(`Remove "${userName}" from this client?`)) return;
 
     try {
-      // ✅ FIXED: cache skip करके fresh client data लो
       const clientResponse = await api.get(`/api/clients/${clientId}`, {
         skipCache: true,
       });
@@ -66,7 +88,7 @@ function Clients() {
         userPermissions: updatedPermissions,
       });
 
-      invalidateCache("/api/clients"); // ✅ Cache clear
+      invalidateCache("/api/clients");
 
       addNotification(`User "${userName}" unassigned from ${client.name}`);
       addActivity(`User Unassigned from Client`);
@@ -81,13 +103,13 @@ function Clients() {
     }
   };
 
-  // ✅ FIXED: cache invalidate add
+  // ✅ cache invalidate
   const addClient = async (newClient) => {
     try {
       const response = await api.post("/api/clients", newClient);
       console.log("✅ Client added:", response.data);
 
-      invalidateCache("/api/clients"); // ✅ Cache clear
+      invalidateCache("/api/clients");
 
       addNotification(`Client Added: ${newClient.name}`);
       addActivity(`Client Added`);
@@ -105,9 +127,8 @@ function Clients() {
     }
   };
 
-  // ✅ FIXED: cache invalidate add
-  const deleteClient = async (indexToDelete) => {
-    const client = clients[indexToDelete];
+  // ✅ FIXED: Index की जगह Client object pass करो — safe delete
+  const deleteClient = async (client) => {
     const clientId = client?._id || client?.id;
     const clientName = client?.name || "Unknown";
 
@@ -122,7 +143,7 @@ function Clients() {
       await api.delete(`/api/clients/${clientId}`);
       console.log("✅ Client deleted");
 
-      invalidateCache("/api/clients"); // ✅ Cache clear
+      invalidateCache("/api/clients");
 
       addNotification(`Client Deleted: ${clientName}`);
       addActivity(`Client Deleted`);
@@ -133,7 +154,7 @@ function Clients() {
     }
   };
 
-  // ✅ FIXED: cache invalidate add
+  // ✅ cache invalidate
   const updateClient = async (updatedClient) => {
     try {
       const clientId = updatedClient._id || updatedClient.id;
@@ -146,7 +167,7 @@ function Clients() {
       const response = await api.put(`/api/clients/${clientId}`, updatedClient);
       console.log("✅ Client updated:", response.data);
 
-      invalidateCache("/api/clients"); // ✅ Cache clear
+      invalidateCache("/api/clients");
 
       addNotification(`Client Updated: ${updatedClient.name}`);
       addActivity(`Client Updated`);
@@ -163,7 +184,7 @@ function Clients() {
     }
   };
 
-  // ✅ Helper: Get unique users (deduplicate by userId)
+  // ✅ Helper: deduplicate users
   const getUniqueUsers = (userPermissions) => {
     if (!Array.isArray(userPermissions)) return [];
     return userPermissions.filter(
@@ -182,7 +203,7 @@ function Clients() {
     (client) => client?.status === "Active"
   ).length;
 
-  // ✅ FIXED: Skeleton loader (Step 3 का preview)
+  // ✅ Skeleton loader
   if (loading) {
     return (
       <MainLayout>
@@ -215,14 +236,15 @@ function Clients() {
       <div className="glass relative overflow-hidden p-4 md:p-6 mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <h1 className="text-3xl font-bold">Clients</h1>
         <div className="flex flex-wrap gap-2 w-full md:w-auto">
+          {/* ✅ LAZY: dynamic import on click */}
           <button
-            onClick={exportClientsPDF}
+            onClick={handleExportPDF}
             className="glass-card px-4 py-3 text-sm flex-1 md:flex-none hover:scale-105 transition-all"
           >
             Export PDF
           </button>
           <button
-            onClick={exportClientsExcel}
+            onClick={handleExportExcel}
             className="glass-card px-4 py-3 text-sm flex-1 md:flex-none hover:scale-105 transition-all"
           >
             Export Excel
@@ -279,12 +301,13 @@ function Clients() {
                   .filter((client) =>
                     client?.name?.toLowerCase().includes(searchTerm.toLowerCase())
                   )
-                  .map((client, index) => {
+                  .map((client) => {
                     const uniqueUsers = getUniqueUsers(client.userPermissions);
+                    const clientKey = client._id || client.id;
 
                     return (
                       <tr
-                        key={client._id || client.id || `client-${index}`}
+                        key={clientKey}
                         className="border-b border-white/10 hover:bg-white/5"
                       >
                         <td className="p-3 max-w-[180px]">
@@ -400,13 +423,14 @@ function Clients() {
                                 <FaEdit
                                   className="cursor-pointer text-yellow-400 hover:scale-125 transition-all"
                                   onClick={() => {
-                                    setEditData(client); // ✅ FIXED: editIndex हटाया
+                                    setEditData(client);
                                     setOpenModal(true);
                                   }}
                                 />
+                                {/* ✅ FIXED: index की जगह client object pass करो */}
                                 <FaTrash
                                   className="cursor-pointer text-red-500 hover:scale-125 transition-all"
-                                  onClick={() => deleteClient(index)}
+                                  onClick={() => deleteClient(client)}
                                 />
                               </>
                             )}

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../../utils/api';
+import api, { cachedGet, invalidateCache } from '../../utils/api'; // ✅ FIXED
 import { FaEye, FaEdit, FaTrash } from 'react-icons/fa';
 import AddGSTModal from '../../components/modals/AddGSTModal';
 
@@ -12,6 +12,7 @@ const GSTPage = ({ clientId }) => {
   const [editData, setEditData] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
 
+  // ✅ FIXED: cachedGet use किया
   const fetchGST = async () => {
     try {
       if (!clientId) {
@@ -19,7 +20,7 @@ const GSTPage = ({ clientId }) => {
         return;
       }
 
-      const response = await api.get(`/api/gst/client/${clientId}`);
+      const response = await cachedGet(`/api/gst/client/${clientId}`);
       setGstRecords(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error('❌ Error fetching GST:', error);
@@ -33,6 +34,7 @@ const GSTPage = ({ clientId }) => {
     if (clientId) fetchGST();
   }, [clientId]);
 
+  // ✅ FIXED: invalidateCache add किया
   const saveGST = async (data) => {
     try {
       if (!clientId) {
@@ -48,6 +50,7 @@ const GSTPage = ({ clientId }) => {
         await api.post('/api/gst', payload);
       }
 
+      invalidateCache(`/api/gst/client/${clientId}`); // ✅ Cache clear
       fetchGST();
       setOpenModal(false);
       setEditData(null);
@@ -58,10 +61,12 @@ const GSTPage = ({ clientId }) => {
     }
   };
 
+  // ✅ FIXED: invalidateCache add किया
   const deleteGST = async (id) => {
     if (!window.confirm('Delete this GST record?')) return;
     try {
       await api.delete(`/api/gst/${id}`);
+      invalidateCache(`/api/gst/client/${clientId}`); // ✅ Cache clear
       fetchGST();
       alert('✅ GST record deleted!');
     } catch (error) {

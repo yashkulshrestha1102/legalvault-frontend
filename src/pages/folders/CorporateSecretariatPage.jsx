@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../../utils/api';
+import api, { cachedGet, invalidateCache } from '../../utils/api'; // ✅ FIXED
 import { FaEye, FaEdit, FaTrash } from 'react-icons/fa';
 import AddCorporateSecretariatModal from '../../components/modals/AddCorporateSecretariatModal';
 
@@ -12,6 +12,7 @@ const CorporateSecretariatPage = ({ clientId }) => {
   const [editData, setEditData] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
 
+  // ✅ FIXED: cachedGet use किया
   const fetchRecords = async () => {
     try {
       if (!clientId) {
@@ -19,7 +20,7 @@ const CorporateSecretariatPage = ({ clientId }) => {
         return;
       }
 
-      const response = await api.get(`/api/corporate-secretariat/client/${clientId}`);
+      const response = await cachedGet(`/api/corporate-secretariat/client/${clientId}`);
       setRecords(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error('❌ Error fetching Corporate Secretariat:', error);
@@ -33,6 +34,7 @@ const CorporateSecretariatPage = ({ clientId }) => {
     if (clientId) fetchRecords();
   }, [clientId]);
 
+  // ✅ FIXED: invalidateCache add किया
   const saveRecord = async (data) => {
     try {
       if (!clientId) {
@@ -48,6 +50,7 @@ const CorporateSecretariatPage = ({ clientId }) => {
         await api.post('/api/corporate-secretariat', payload);
       }
 
+      invalidateCache(`/api/corporate-secretariat/client/${clientId}`); // ✅ Cache clear
       fetchRecords();
       setOpenModal(false);
       setEditData(null);
@@ -58,10 +61,12 @@ const CorporateSecretariatPage = ({ clientId }) => {
     }
   };
 
+  // ✅ FIXED: invalidateCache add किया
   const deleteRecord = async (id) => {
     if (!window.confirm('Delete this record?')) return;
     try {
       await api.delete(`/api/corporate-secretariat/${id}`);
+      invalidateCache(`/api/corporate-secretariat/client/${clientId}`); // ✅ Cache clear
       fetchRecords();
       alert('✅ Record deleted!');
     } catch (error) {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../../utils/api';
+import api, { cachedGet, invalidateCache } from '../../utils/api'; // ✅ FIXED
 import { FaEye, FaEdit, FaTrash } from 'react-icons/fa';
 import AddHRModal from '../../components/modals/AddHRModal';
 
@@ -12,6 +12,7 @@ const HRPage = ({ clientId }) => {
   const [editData, setEditData] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
 
+  // ✅ FIXED: cachedGet use किया
   const fetchRecords = async () => {
     try {
       if (!clientId) {
@@ -19,7 +20,7 @@ const HRPage = ({ clientId }) => {
         return;
       }
 
-      const response = await api.get(`/api/hr/client/${clientId}`);
+      const response = await cachedGet(`/api/hr/client/${clientId}`);
       setRecords(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error('❌ Error fetching HR:', error);
@@ -33,6 +34,7 @@ const HRPage = ({ clientId }) => {
     if (clientId) fetchRecords();
   }, [clientId]);
 
+  // ✅ FIXED: invalidateCache add किया
   const saveRecord = async (data) => {
     try {
       if (!clientId) {
@@ -48,6 +50,7 @@ const HRPage = ({ clientId }) => {
         await api.post('/api/hr', payload);
       }
 
+      invalidateCache(`/api/hr/client/${clientId}`); // ✅ Cache clear
       fetchRecords();
       setOpenModal(false);
       setEditData(null);
@@ -58,10 +61,12 @@ const HRPage = ({ clientId }) => {
     }
   };
 
+  // ✅ FIXED: invalidateCache add किया
   const deleteRecord = async (id) => {
     if (!window.confirm('Delete this record?')) return;
     try {
       await api.delete(`/api/hr/${id}`);
+      invalidateCache(`/api/hr/client/${clientId}`); // ✅ Cache clear
       fetchRecords();
       alert('✅ Record deleted!');
     } catch (error) {

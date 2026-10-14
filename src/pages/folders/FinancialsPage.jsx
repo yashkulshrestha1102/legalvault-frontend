@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../../utils/api';
+import api, { cachedGet, invalidateCache } from '../../utils/api'; // ✅ FIXED
 import { FaEye, FaEdit, FaTrash } from 'react-icons/fa';
 import AddFinancialModal from '../../components/modals/AddFinancialModal';
 
@@ -12,6 +12,7 @@ const FinancialsPage = ({ clientId }) => {
   const [editData, setEditData] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
 
+  // ✅ FIXED: cachedGet use किया
   const fetchRecords = async () => {
     try {
       if (!clientId) {
@@ -19,7 +20,7 @@ const FinancialsPage = ({ clientId }) => {
         return;
       }
 
-      const response = await api.get(`/api/financials/client/${clientId}`);
+      const response = await cachedGet(`/api/financials/client/${clientId}`);
       setRecords(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error('❌ Error fetching Financials:', error);
@@ -33,6 +34,7 @@ const FinancialsPage = ({ clientId }) => {
     if (clientId) fetchRecords();
   }, [clientId]);
 
+  // ✅ FIXED: invalidateCache add किया
   const saveRecord = async (data) => {
     try {
       if (!clientId) {
@@ -48,6 +50,7 @@ const FinancialsPage = ({ clientId }) => {
         await api.post('/api/financials', payload);
       }
 
+      invalidateCache(`/api/financials/client/${clientId}`); // ✅ Cache clear
       fetchRecords();
       setOpenModal(false);
       setEditData(null);
@@ -58,10 +61,12 @@ const FinancialsPage = ({ clientId }) => {
     }
   };
 
+  // ✅ FIXED: invalidateCache add किया
   const deleteRecord = async (id) => {
     if (!window.confirm('Delete this record?')) return;
     try {
       await api.delete(`/api/financials/${id}`);
+      invalidateCache(`/api/financials/client/${clientId}`); // ✅ Cache clear
       fetchRecords();
       alert('✅ Record deleted!');
     } catch (error) {

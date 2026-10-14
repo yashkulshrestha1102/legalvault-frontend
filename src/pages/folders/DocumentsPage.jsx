@@ -1,19 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import api from '../../utils/api';
+import api, { cachedGet, invalidateCache } from '../../utils/api'; // ✅ FIXED
 
 const DocumentsPage = ({ clientId }) => {
-  // ✅ clientId prop se aa raha hai (ClientDetails se pass hota hai)
-
   const [documents, setDocuments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [uploadingDocs, setUploadingDocs] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [renamingId, setRenamingId] = useState(null);
   const [newFileName, setNewFileName] = useState('');
-  // ✅ NEW: Image blob URLs cache (cookie fix)
   const [imageUrls, setImageUrls] = useState({});
 
-  // ✅ Fetch documents
+  // ✅ FIXED: cachedGet use किया
   const fetchDocuments = async () => {
     try {
       if (!clientId) {
@@ -21,7 +18,7 @@ const DocumentsPage = ({ clientId }) => {
         return;
       }
 
-      const response = await api.get(`/api/documents/client/${clientId}`);
+      const response = await cachedGet(`/api/documents/client/${clientId}`);
       console.log('✅ Documents fetched:', response.data);
       setDocuments(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
@@ -36,41 +33,76 @@ const DocumentsPage = ({ clientId }) => {
     if (clientId) fetchDocuments();
   }, [clientId]);
 
-  // ✅ FIXED: Fetch image thumbnails with cookie auth
+  // ✅ FIXED: PARALLEL image loading (was sequential before)
   useEffect(() => {
-    const fetchImageUrls = async () => {
-      const newUrls = {};
+    if (documents.length === 0) return;
 
-      for (const doc of documents) {
-        // Only images
-        if (doc.mimeType?.startsWith('image/') && !imageUrls[doc._id]) {
-          try {
-            const response = await api.get(doc.fileUrl, { responseType: 'blob' });
-            newUrls[doc._id] = window.URL.createObjectURL(response.data);
-          } catch (error) {
-            console.error(`❌ Failed to load image for ${doc.filename}:`, error);
+    let cancelled = false;
+
+    const fetchImageUrls = async () => {
+      // Filter only images that we don't have yet
+      const imageDocs = documents.filter(
+        (doc) => doc.mimeType?.startsWith('image/') && !imageUrls[doc._id]
+      );
+
+      if (imageDocs.length === 0) return;
+
+      // ✅ सब parallel में fetch करो
+      const results = await Promise.allSettled(
+        imageDocs.map(async (doc) => {
+          const response = await api.get(doc.fileUrl, { responseType: 'blob' });
+          return {
+            id: doc._id,
+            url: window.URL.createObjectURL(response.data),
+          };
+        })
+      );
+
+      if (cancelled) {
+        // Cleanup URLs if component unmounted
+        results.forEach((r) => {
+          if (r.status === 'fulfilled') {
+            window.URL.revokeObjectURL(r.value.url);
           }
-        }
+        });
+        return;
       }
 
+      const newUrls = {};
+      results.forEach((r, idx) => {
+        if (r.status === 'fulfilled') {
+          newUrls[r.value.id] = r.value.url;
+        } else {
+          console.error(
+            `❌ Failed to load image for ${imageDocs[idx].filename}:`,
+            r.reason
+          );
+        }
+      });
+
       if (Object.keys(newUrls).length > 0) {
-        setImageUrls(prev => ({ ...prev, ...newUrls }));
+        setImageUrls((prev) => ({ ...prev, ...newUrls }));
       }
     };
 
-    if (documents.length > 0) {
-      fetchImageUrls();
-    }
+    fetchImageUrls();
 
-    // Cleanup on unmount
     return () => {
-      Object.values(imageUrls).forEach(url => {
-        if (url) window.URL.revokeObjectURL(url);
-      });
+      cancelled = true;
     };
   }, [documents]);
 
-  // ✅ Upload documents
+  // ✅ Cleanup all blob URLs on unmount only
+  useEffect(() => {
+    return () => {
+      Object.values(imageUrls).forEach((url) => {
+        if (url) window.URL.revokeObjectURL(url);
+      });
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ✅ FIXED: invalidateCache add किया
   const uploadDocuments = async (files) => {
     if (files.length === 0) {
       alert('Please select at least one file');
@@ -83,18 +115,22 @@ const DocumentsPage = ({ clientId }) => {
         formData.append('documents', file);
       }
       formData.append('clientId', clientId);
-      
+
       setUploadingDocs(true);
       const response = await api.post('/api/documents/upload', formData, {
         headers: {
-          'Content-Type': 'multipart/form-data'
-        }
+          'Content-Type': 'multipart/form-data',
+        },
       });
       console.log('✅ Documents uploaded:', response.data);
+
+      invalidateCache(`/api/documents/client/${clientId}`); // ✅ Cache clear
       fetchDocuments();
       setSelectedFiles([]);
-      
-      const fileCount = response.data.files ? response.data.files.length : (response.data.length || 0);
+
+      const fileCount = response.data.files
+        ? response.data.files.length
+        : response.data.length || 0;
       alert(`✅ ${fileCount} files uploaded successfully!`);
     } catch (error) {
       console.error('❌ Upload error:', error);
@@ -109,7 +145,7 @@ const DocumentsPage = ({ clientId }) => {
     }
   };
 
-  // ✅ Rename document
+  // ✅ FIXED: invalidateCache add किया
   const renameDocument = async (docId, newName) => {
     if (!newName || newName.trim() === '') {
       alert('Please enter a valid name');
@@ -118,10 +154,12 @@ const DocumentsPage = ({ clientId }) => {
 
     try {
       const response = await api.put(`/api/documents/${docId}/rename`, {
-        newName: newName.trim()
+        newName: newName.trim(),
       });
-      
+
       console.log('✅ Document renamed:', response.data);
+
+      invalidateCache(`/api/documents/client/${clientId}`); // ✅ Cache clear
       fetchDocuments();
       setRenamingId(null);
       setNewFileName('');
@@ -149,12 +187,13 @@ const DocumentsPage = ({ clientId }) => {
     }
   };
 
-  // ✅ FIXED: View document with blob (cookie auth + dynamic content type)
+  // ✅ Blob-based view (cookie auth)
   const viewDocument = async (docUrl) => {
     if (!docUrl) return;
     try {
       const response = await api.get(docUrl, { responseType: 'blob' });
-      const contentType = response.headers['content-type'] || 'application/octet-stream';
+      const contentType =
+        response.headers['content-type'] || 'application/octet-stream';
       const blob = new Blob([response.data], { type: contentType });
       const url = window.URL.createObjectURL(blob);
       window.open(url, '_blank');
@@ -165,12 +204,11 @@ const DocumentsPage = ({ clientId }) => {
     }
   };
 
-  // ✅ Download document (preserve filename)
   const downloadDocument = async (docUrl, filename) => {
     if (!docUrl) return;
     try {
       const response = await api.get(docUrl, {
-        responseType: 'blob'
+        responseType: 'blob',
       });
 
       const blob = new Blob([response.data]);
@@ -188,11 +226,13 @@ const DocumentsPage = ({ clientId }) => {
     }
   };
 
-  // ✅ Delete document
+  // ✅ FIXED: invalidateCache add किया
   const deleteDocument = async (docId) => {
     if (!window.confirm('Delete this document?')) return;
     try {
       await api.delete(`/api/documents/${docId}`);
+
+      invalidateCache(`/api/documents/client/${clientId}`); // ✅ Cache clear
       fetchDocuments();
     } catch (error) {
       console.error('Delete error:', error);
@@ -233,7 +273,9 @@ const DocumentsPage = ({ clientId }) => {
                 uploadingDocs ? 'opacity-50 cursor-not-allowed' : ''
               }`}
             >
-              {uploadingDocs ? '⏳ Uploading...' : `📤 Upload ${selectedFiles.length} files`}
+              {uploadingDocs
+                ? '⏳ Uploading...'
+                : `📤 Upload ${selectedFiles.length} files`}
             </button>
           )}
         </div>
@@ -259,26 +301,32 @@ const DocumentsPage = ({ clientId }) => {
           </div>
         ) : (
           documents.map((doc) => (
-            <div key={`doc-${doc._id}`} className="glass-card p-4 hover:scale-105 transition-all duration-300">
+            <div
+              key={`doc-${doc._id}`}
+              className="glass-card p-4 hover:scale-105 transition-all duration-300"
+            >
               <div className="flex flex-col items-center">
-                {/* ✅ FIXED: Image thumbnail using blob URL (cookie auth) */}
                 {doc.mimeType?.startsWith('image/') && imageUrls[doc._id] ? (
-                  <img 
-                    src={imageUrls[doc._id]} 
+                  <img
+                    src={imageUrls[doc._id]}
                     alt={doc.filename}
                     className="w-full h-32 object-cover rounded-lg mb-3"
-                    onError={(e) => { e.target.style.display = 'none'; }}
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                    }}
                   />
                 ) : (
                   <div className="w-full h-32 flex items-center justify-center bg-white/5 rounded-lg mb-3">
                     <span className="text-6xl">
-                      {doc.mimeType === 'application/pdf' ? '📄' : 
-                       doc.mimeType?.startsWith('image/') ? '🖼️' : '📎'}
+                      {doc.mimeType === 'application/pdf'
+                        ? '📄'
+                        : doc.mimeType?.startsWith('image/')
+                        ? '🖼️'
+                        : '📎'}
                     </span>
                   </div>
                 )}
 
-                {/* Editable File Name */}
                 {renamingId === doc._id ? (
                   <div className="w-full flex items-center gap-2 mb-1">
                     <input
@@ -293,7 +341,7 @@ const DocumentsPage = ({ clientId }) => {
                   </div>
                 ) : (
                   <div className="w-full flex items-center justify-center gap-2 mb-1">
-                    <p 
+                    <p
                       className="text-sm font-medium text-center truncate cursor-pointer hover:text-cyan-400 transition flex-1"
                       title="Double-click to rename"
                       onDoubleClick={() => startRename(doc)}
@@ -310,7 +358,9 @@ const DocumentsPage = ({ clientId }) => {
                   </div>
                 )}
 
-                <p className="text-xs text-gray-400">{(doc.fileSize / 1024).toFixed(1)} KB</p>
+                <p className="text-xs text-gray-400">
+                  {(doc.fileSize / 1024).toFixed(1)} KB
+                </p>
                 <div className="flex gap-2 mt-3 flex-wrap justify-center">
                   <button
                     onClick={() => viewDocument(doc.fileUrl)}

@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react'; // ✅ useRef add किया
 import {
   FaFolderPlus, FaUpload, FaFileDownload, FaTrash, FaEdit,
   FaSearch, FaFilePdf, FaFileImage, FaFileWord, FaFileExcel, FaFileAlt,
   FaFolder, FaEye, FaFileArchive, FaFileCode
 } from 'react-icons/fa';
-import api from '../../utils/api';
+import api, { cachedGet, invalidateCache } from '../../utils/api'; // ✅ FIXED
 import FolderTree from '../../components/folders/FolderTree';
 import CreateFolderModal from '../../components/folders/CreateFolderModal';
 import BulkUploadModal from '../../components/folders/BulkUploadModal';
@@ -15,17 +15,14 @@ import RenameModal from '../../components/folders/RenameModal';
 // HELPERS
 // ═══════════════════════════════════════════
 
-// ✅ Updated: XML/JSON/ZIP icons
 const getFileIcon = (type, mimeType, filename) => {
   const mime = (mimeType || '').toLowerCase();
   const ext = (filename || '').toLowerCase().split('.').pop();
 
-  // ✅ XML / JSON — code icon
   if (mime.includes('xml') || mime.includes('json') || ['xml', 'json'].includes(ext)) {
     return <FaFileCode className="text-purple-400 text-4xl" />;
   }
 
-  // ✅ ZIP / Archive
   if (
     mime.includes('zip') ||
     mime.includes('compressed') ||
@@ -73,16 +70,22 @@ export default function CustomFoldersPage({ clientId, clientName }) {
   const [previewFile, setPreviewFile] = useState(null);
   const [renamingItem, setRenamingItem] = useState(null);
 
-  // ✅ Fetch folders
+  // ✅ Search debounce timer
+  const searchTimerRef = useRef(null);
+
+  // ✅ FIXED: cachedGet + removed selectedFolder from deps
   const fetchFolders = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await api.get(`/api/custom-folders/client/${clientId}`);
+      const res = await cachedGet(`/api/custom-folders/client/${clientId}`);
       setFolders(res.data);
+
+      // Auto-select root folder if none selected
       const root = res.data.find(f => f.isRoot);
       if (root && !selectedFolder) {
         setSelectedFolder(root);
       } else if (selectedFolder) {
+        // Refresh selected folder object (in case renamed)
         const refreshed = res.data.find(f => f._id === selectedFolder._id);
         if (refreshed) setSelectedFolder(refreshed);
       }
@@ -91,19 +94,19 @@ export default function CustomFoldersPage({ clientId, clientName }) {
     } finally {
       setLoading(false);
     }
-  }, [clientId, selectedFolder?._id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clientId]); // ✅ सिर्फ clientId — selectedFolder हटाया
 
   useEffect(() => {
     if (clientId) fetchFolders();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clientId]);
+  }, [clientId, fetchFolders]);
 
-  // ✅ Fetch files of selected folder
+  // ✅ FIXED: cachedGet use किया
   const fetchFiles = useCallback(async () => {
     if (!selectedFolder?._id) return;
     try {
       setFilesLoading(true);
-      const res = await api.get(`/api/custom-files/folder/${selectedFolder._id}`);
+      const res = await cachedGet(`/api/custom-files/folder/${selectedFolder._id}`);
       setFiles(res.data);
     } catch (err) {
       console.error('❌ Files fetch error:', err);
@@ -117,7 +120,7 @@ export default function CustomFoldersPage({ clientId, clientName }) {
     fetchFiles();
   }, [fetchFiles]);
 
-  // ✅ Create folder
+  // ✅ FIXED: invalidateCache add किया
   const handleCreateFolder = async (name) => {
     const parentId = selectedFolder?._id || null;
     await api.post('/api/custom-folders', {
@@ -125,16 +128,20 @@ export default function CustomFoldersPage({ clientId, clientName }) {
       clientId,
       parentFolderId: parentId
     });
+
+    invalidateCache(`/api/custom-folders/client/${clientId}`); // ✅ Cache clear
     await fetchFolders();
   };
 
-  // ✅ Rename folder
+  // ✅ FIXED: invalidateCache add किया
   const handleRenameFolder = async (folderId, newName) => {
     await api.put(`/api/custom-folders/${folderId}/rename`, { name: newName });
+
+    invalidateCache(`/api/custom-folders/client/${clientId}`); // ✅ Cache clear
     await fetchFolders();
   };
 
-  // ✅ Delete folder
+  // ✅ FIXED: invalidateCache add किया
   const handleDeleteFolder = async (folder) => {
     if (folder.isRoot) {
       alert('Root folder cannot be deleted');
@@ -144,6 +151,11 @@ export default function CustomFoldersPage({ clientId, clientName }) {
 
     try {
       await api.delete(`/api/custom-folders/${folder._id}`);
+
+      // ✅ Both folders + files cache clear
+      invalidateCache(`/api/custom-folders/client/${clientId}`);
+      invalidateCache(`/api/custom-files/folder/`);
+
       if (selectedFolder?._id === folder._id) {
         const root = folders.find(f => f.isRoot);
         if (root) setSelectedFolder(root);
@@ -154,17 +166,21 @@ export default function CustomFoldersPage({ clientId, clientName }) {
     }
   };
 
-  // ✅ Rename file
+  // ✅ FIXED: invalidateCache add किया
   const handleRenameFile = async (fileId, newName) => {
     await api.put(`/api/custom-files/${fileId}/rename`, { newName });
+
+    invalidateCache(`/api/custom-files/folder/${selectedFolder?._id}`); // ✅ Cache clear
     await fetchFiles();
   };
 
-  // ✅ Delete file
+  // ✅ FIXED: invalidateCache add किया
   const handleDeleteFile = async (file) => {
     if (!window.confirm(`Delete "${file.filename}"?`)) return;
     try {
       await api.delete(`/api/custom-files/${file._id}`);
+
+      invalidateCache(`/api/custom-files/folder/${selectedFolder?._id}`); // ✅ Cache clear
       await fetchFiles();
     } catch (err) {
       alert('Failed to delete file');
@@ -172,7 +188,7 @@ export default function CustomFoldersPage({ clientId, clientName }) {
   };
 
   // ═══════════════════════════════════════════
-  // ZIP DOWNLOAD — Fixed with 10 min timeout + progress
+  // ZIP DOWNLOAD
   // ═══════════════════════════════════════════
   const handleDownloadZip = async () => {
     if (!selectedFolder) return;
@@ -186,7 +202,7 @@ export default function CustomFoldersPage({ clientId, clientName }) {
         `/api/custom-files/download-folder/${selectedFolder._id}`,
         {
           responseType: 'blob',
-          timeout: 600000, // ✅ 10 minutes
+          timeout: 600000,
           onDownloadProgress: (progressEvent) => {
             if (progressEvent.total) {
               const percent = Math.round(
@@ -194,7 +210,6 @@ export default function CustomFoldersPage({ clientId, clientName }) {
               );
               setZipProgress(percent);
             } else {
-              // Total not available — show loading
               const mbLoaded = (progressEvent.loaded / 1024 / 1024).toFixed(1);
               setZipProgress(`~${mbLoaded} MB downloaded`);
             }
@@ -202,7 +217,6 @@ export default function CustomFoldersPage({ clientId, clientName }) {
         }
       );
 
-      // ✅ Create download
       const blob = new Blob([res.data], { type: 'application/zip' });
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -212,7 +226,6 @@ export default function CustomFoldersPage({ clientId, clientName }) {
       link.click();
       document.body.removeChild(link);
 
-      // ✅ Cleanup after 60s
       setTimeout(() => window.URL.revokeObjectURL(url), 60000);
 
       setZipProgress(100);
@@ -240,22 +253,41 @@ export default function CustomFoldersPage({ clientId, clientName }) {
     }
   };
 
-  // ✅ Search
-  const handleSearch = async (q) => {
+  // ✅ FIXED: Debounced search — 300ms wait
+  const handleSearch = (q) => {
     setSearchTerm(q);
+
+    // Clear previous timer
+    if (searchTimerRef.current) {
+      clearTimeout(searchTimerRef.current);
+    }
+
     if (!q.trim()) {
       setSearchResults(null);
       return;
     }
-    try {
-      const res = await api.get(`/api/custom-files/search/${clientId}`, {
-        params: { q: q.trim() }
-      });
-      setSearchResults(res.data);
-    } catch (err) {
-      console.error('Search error:', err);
-    }
+
+    // ✅ Debounce — 300ms wait
+    searchTimerRef.current = setTimeout(async () => {
+      try {
+        const res = await api.get(`/api/custom-files/search/${clientId}`, {
+          params: { q: q.trim() },
+        });
+        setSearchResults(res.data);
+      } catch (err) {
+        console.error('Search error:', err);
+      }
+    }, 300);
   };
+
+  // ✅ Cleanup search timer on unmount
+  useEffect(() => {
+    return () => {
+      if (searchTimerRef.current) {
+        clearTimeout(searchTimerRef.current);
+      }
+    };
+  }, []);
 
   const displayFolders = searchResults
     ? searchResults.folders.filter(f => !f.isRoot)
@@ -362,7 +394,7 @@ export default function CustomFoldersPage({ clientId, clientName }) {
 
         {/* Content */}
         <div className="lg:col-span-3">
-          {/* Breadcrumb / Current folder */}
+          {/* Breadcrumb */}
           {selectedFolder && !searchResults && (
             <div className="flex items-center gap-2 mb-4 flex-wrap">
               <span className="text-sm text-gray-400">📂</span>
@@ -524,6 +556,9 @@ export default function CustomFoldersPage({ clientId, clientName }) {
         clientId={clientId}
         folderName={selectedFolder?.isRoot ? clientName : selectedFolder?.name}
         onUploaded={(data) => {
+          // ✅ Invalidate both folders + files cache
+          invalidateCache(`/api/custom-folders/client/${clientId}`);
+          invalidateCache(`/api/custom-files/folder/${selectedFolder?._id}`);
           fetchFiles();
           fetchFolders();
           alert(`✅ ${data.files?.length || 0} file(s) uploaded!`);

@@ -1,6 +1,6 @@
 ﻿import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../../utils/api';
+import api, { cachedGet, invalidateCache } from '../../utils/api'; // ✅ FIXED
 import { FaEye, FaEdit, FaTrash } from 'react-icons/fa';
 import AddPolicyModal from '../../components/modals/AddPolicyModal';
 
@@ -12,7 +12,7 @@ const PoliciesPage = ({ clientId }) => {
   const [editData, setEditData] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // ✅ Fetch policies
+  // ✅ FIXED: cachedGet use किया
   const fetchPolicies = async () => {
     try {
       if (!clientId) {
@@ -24,7 +24,7 @@ const PoliciesPage = ({ clientId }) => {
 
       console.log('📋 Fetching policies for client:', clientId);
 
-      const response = await api.get(`/api/policies/client/${clientId}`);
+      const response = await cachedGet(`/api/policies/client/${clientId}`);
       console.log('✅ Policies response:', response.data);
       setPolicies(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
@@ -48,7 +48,7 @@ const PoliciesPage = ({ clientId }) => {
     }
   }, [clientId]);
 
-  // ✅ Save policy (Create/Update)
+  // ✅ FIXED: invalidateCache add किया
   const savePolicy = async (data) => {
     try {
       if (!clientId) {
@@ -64,6 +64,7 @@ const PoliciesPage = ({ clientId }) => {
         await api.post('/api/policies', payload);
       }
 
+      invalidateCache(`/api/policies/client/${clientId}`); // ✅ Cache clear
       fetchPolicies();
       setOpenModal(false);
       setEditData(null);
@@ -74,11 +75,12 @@ const PoliciesPage = ({ clientId }) => {
     }
   };
 
-  // ✅ Delete policy
+  // ✅ FIXED: invalidateCache add किया
   const deletePolicy = async (id) => {
     if (!window.confirm('Delete this policy?')) return;
     try {
       await api.delete(`/api/policies/${id}`);
+      invalidateCache(`/api/policies/client/${clientId}`); // ✅ Cache clear
       fetchPolicies();
       alert('✅ Policy deleted!');
     } catch (error) {

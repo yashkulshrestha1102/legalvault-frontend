@@ -15,10 +15,10 @@ import {
 } from "react-icons/fa";
 import { useState, useEffect, useContext } from "react";
 import AuthContext from "../context/AuthContext";
-import api, { cachedGet, invalidateCache } from "../utils/api"; // ✅ FIXED: cachedGet + invalidateCache import
+import api, { cachedGet, invalidateCache } from "../utils/api";
 
 function Users() {
-  const { setUser, refreshUser } = useContext(AuthContext); // ✅ FIXED: currentUser unused हटाया
+  const { setUser, refreshUser } = useContext(AuthContext);
   const [openModal, setOpenModal] = useState(false);
   const [editModal, setEditModal] = useState(false);
   const [viewModal, setViewModal] = useState(false);
@@ -28,7 +28,7 @@ function Users() {
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
 
-  // ✅ FIXED: cachedGet use करो
+  // ✅ cachedGet use
   const fetchUsers = async () => {
     try {
       const response = await cachedGet("/api/users");
@@ -56,7 +56,7 @@ function Users() {
     fetchUsers();
   }, []);
 
-  // ✅ FIXED: cache invalidate add
+  // ✅ addUser — cache invalidate
   const addUser = async (newUser) => {
     try {
       await api.post("/api/users", newUser);
@@ -71,7 +71,7 @@ function Users() {
     }
   };
 
-  // ✅ FIXED: cache invalidate add
+  // ✅ updateUser — cache invalidate + auth/me invalidate (NEW FIX)
   const updateUser = async (updatedUser) => {
     const userId = updatedUser._id || updatedUser.id;
     if (!userId) {
@@ -87,6 +87,8 @@ function Users() {
       console.log("✅ User updated:", response.data);
 
       invalidateCache("/api/users"); // ✅ Cache clear
+      invalidateCache("/api/auth/me"); // ✅ NEW: current user data refresh
+
       fetchUsers();
 
       // Check if the updated user is the currently logged-in user
@@ -118,7 +120,7 @@ function Users() {
     }
   };
 
-  // ✅ FIXED: selectedIndex की जगह selectedUser use करो (safe delete)
+  // ✅ deleteUser — cache invalidate
   const deleteUser = async () => {
     try {
       const userId = selectedUser?._id || selectedUser?.id;
@@ -150,7 +152,7 @@ function Users() {
     (u) => u.role === "Admin" || u.role === "admin"
   ).length;
 
-  // ✅ FIXED: Skeleton loader (Step 3 का preview)
+  // ✅ Skeleton loader
   if (loading) {
     return (
       <MainLayout>
@@ -309,7 +311,7 @@ function Users() {
                           </button>
                           <button
                             onClick={() => {
-                              setSelectedUser(user); // ✅ FIXED: selectedIndex हटाया
+                              setSelectedUser(user);
                               setDeleteModal(true);
                             }}
                             className="glass-card p-3 text-red-400"
