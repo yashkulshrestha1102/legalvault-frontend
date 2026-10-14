@@ -1,47 +1,120 @@
-import { useEffect, useState } from 'react';
-import { FaTimes, FaDownload, FaCopy, FaCheck, FaFileArchive, FaFolder, FaFile } from 'react-icons/fa';
+import { useEffect, useState, useRef } from 'react';
+import {
+  FaTimes, FaDownload, FaCopy, FaCheck, FaFileArchive, FaFolder, FaFile,
+  FaFilePdf, FaFileImage, FaFileWord, FaFileExcel, FaFilePowerpoint, FaFileCode, FaFileAlt
+} from 'react-icons/fa';
 import JSZip from 'jszip';
+import * as XLSX from 'xlsx';
+import mammoth from 'mammoth';
 import api from '../../utils/api';
 
 // ═══════════════════════════════════════════
-// HELPERS
+// HELPERS — File type detection (FIXED)
 // ═══════════════════════════════════════════
 
+const getExt = (filename) => (filename || '').toLowerCase().split('.').pop() || '';
+
+// ✅ FIXED: Word/Excel/PPT files को TEXT न समझो
 const isTextLike = (file) => {
   if (!file) return false;
-  if (file.fileType === 'text') return true;
+  const ext = getExt(file.filename);
   const mime = (file.mimeType || '').toLowerCase();
+
+  // ✅ fileType from backend (most reliable)
+  if (file.fileType === 'text') return true;
+  if (file.fileType === 'xml' || file.fileType === 'json') return true;
+
+  // ❌ Office files NEVER text
+  if (['word', 'excel', 'pptx', 'pdf', 'image'].includes(file.fileType)) return false;
+  if (mime.includes('wordprocessingml')) return false;
+  if (mime.includes('spreadsheetml')) return false;
+  if (mime.includes('presentationml')) return false;
+  if (mime.includes('officedocument')) return false;
+
+  // ✅ Text MIME
   if (mime.startsWith('text/')) return true;
-  if (mime.includes('xml')) return true;
-  if (mime.includes('json')) return true;
-  const ext = (file.filename || '').toLowerCase().split('.').pop();
-  const textExts = ['xml', 'json', 'txt', 'csv', 'log', 'md', 'html', 'htm', 'css', 'js', 'ts', 'env'];
+  if (mime === 'application/json') return true;
+  if (mime === 'application/xml' || mime === 'text/xml' || mime === 'application/x-xml') return true;
+
+  // ✅ Extensions
+  const textExts = ['txt', 'csv', 'log', 'md', 'html', 'htm', 'css', 'js', 'jsx', 'ts', 'tsx', 'py', 'java', 'sql', 'env', 'yaml', 'yml'];
   return textExts.includes(ext);
 };
 
 const isXmlFile = (file) => {
   if (!file) return false;
   const mime = (file.mimeType || '').toLowerCase();
-  if (mime.includes('xml')) return true;
-  const ext = (file.filename || '').toLowerCase().split('.').pop();
-  return ext === 'xml';
+  if (mime.includes('wordprocessingml') || mime.includes('officedocument')) return false;
+  if (mime === 'application/xml' || mime === 'text/xml' || mime === 'application/x-xml') return true;
+  return getExt(file.filename) === 'xml';
 };
 
 const isJsonFile = (file) => {
   if (!file) return false;
   const mime = (file.mimeType || '').toLowerCase();
-  if (mime.includes('json')) return true;
-  const ext = (file.filename || '').toLowerCase().split('.').pop();
-  return ext === 'json';
+  if (mime.includes('officedocument')) return false;
+  if (mime === 'application/json') return true;
+  return getExt(file.filename) === 'json';
+};
+
+const isWordFile = (file) => {
+  if (!file) return false;
+  const ext = getExt(file.filename);
+  const mime = (file.mimeType || '').toLowerCase();
+  return (
+    file.fileType === 'word' ||
+    mime.includes('word') ||
+    mime.includes('wordprocessingml') ||
+    ['doc', 'docx'].includes(ext)
+  );
+};
+
+const isExcelFile = (file) => {
+  if (!file) return false;
+  const ext = getExt(file.filename);
+  const mime = (file.mimeType || '').toLowerCase();
+  return (
+    file.fileType === 'excel' ||
+    mime.includes('excel') ||
+    mime.includes('spreadsheet') ||
+    ['xls', 'xlsx'].includes(ext)
+  );
+};
+
+const isPptFile = (file) => {
+  if (!file) return false;
+  const ext = getExt(file.filename);
+  const mime = (file.mimeType || '').toLowerCase();
+  return (
+    file.fileType === 'pptx' ||
+    file.fileType === 'ppt' ||
+    mime.includes('powerpoint') ||
+    mime.includes('presentationml') ||
+    ['ppt', 'pptx'].includes(ext)
+  );
 };
 
 const isZipFile = (file) => {
   if (!file) return false;
   const mime = (file.mimeType || '').toLowerCase();
-  if (mime.includes('zip') || mime.includes('compressed') || mime.includes('rar')) return true;
-  const ext = (file.filename || '').toLowerCase().split('.').pop();
-  return ['zip', 'rar', '7z'].includes(ext);
+  const ext = getExt(file.filename);
+  return (
+    file.fileType === 'zip' ||
+    mime.includes('zip') ||
+    mime.includes('compressed') ||
+    ['zip'].includes(ext)
+  );
 };
+
+const isCsvFile = (file) => {
+  if (!file) return false;
+  const mime = (file.mimeType || '').toLowerCase();
+  return mime === 'text/csv' || getExt(file.filename) === 'csv';
+};
+
+// ═══════════════════════════════════════════
+// FORMATTERS
+// ═══════════════════════════════════════════
 
 const formatXml = (xml) => {
   try {
@@ -77,29 +150,15 @@ const formatSize = (bytes) => {
   return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
 };
 
-// ✅ NEW: Resolve file URL (R2, GridFS, or relative)
 const resolveFileUrl = (file) => {
   if (!file) return null;
-
-  // 1. Explicit url field (R2 or GridFS URL from backend)
-  if (file.url && typeof file.url === 'string' && file.url.trim() !== '') {
-    return file.url;
-  }
-
-  // 2. R2 key — construct URL
+  if (file.url && typeof file.url === 'string' && file.url.trim() !== '') return file.url;
   if (file.r2Key) {
     const R2_PUBLIC_URL = 'https://pub-a440a9cec38545b78be985a8675f5198.r2.dev';
-    // If r2Key already has http, use as-is (rare)
     if (file.r2Key.startsWith('http')) return file.r2Key;
     return `${R2_PUBLIC_URL}/${file.r2Key}`;
   }
-
-  // 3. GridFS fileId — relative API path
-  if (file.fileId) {
-    return `/api/custom-files/file/${file.fileId}`;
-  }
-
-  // 4. No URL available
+  if (file.fileId) return `/api/custom-files/file/${file.fileId}`;
   return null;
 };
 
@@ -109,23 +168,36 @@ const resolveFileUrl = (file) => {
 
 export default function FilePreviewModal({ open, onClose, file }) {
   const [blobUrl, setBlobUrl] = useState(null);
+  const [blob, setBlob] = useState(null);         // NEW: raw blob for word/excel processing
   const [textContent, setTextContent] = useState(null);
+  const [wordHtml, setWordHtml] = useState(null); // NEW: Word → HTML
+  const [excelData, setExcelData] = useState(null); // NEW: Excel sheet data
+  const [activeSheet, setActiveSheet] = useState(0); // NEW: active sheet index
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [viewMode, setViewMode] = useState('formatted');
   const [copied, setCopied] = useState(false);
 
-  // ZIP-specific state
+  // ZIP state
   const [zipContents, setZipContents] = useState(null);
   const [zipLoading, setZipLoading] = useState(false);
   const [zipError, setZipError] = useState(null);
   const [selectedZipFile, setSelectedZipFile] = useState(null);
   const [zipFileContent, setZipFileContent] = useState(null);
 
+  const wordContainerRef = useRef(null);
+
+  // ═══════════════════════════════════════════
+  // RESET ON OPEN/CLOSE
+  // ═══════════════════════════════════════════
   useEffect(() => {
     if (!open || !file) {
       setBlobUrl(null);
+      setBlob(null);
       setTextContent(null);
+      setWordHtml(null);
+      setExcelData(null);
+      setActiveSheet(0);
       setError(null);
       setViewMode('formatted');
       setCopied(false);
@@ -143,27 +215,29 @@ export default function FilePreviewModal({ open, onClose, file }) {
       setLoading(true);
       setError(null);
 
-      // ✅ Resolve URL with fallback logic
       const url = resolveFileUrl(file);
-
       if (!url) {
         if (!revoked) {
-          setError('File URL not available. The file may have been deleted or is missing from storage.');
+          setError('File URL not available. The file may have been deleted.');
           setLoading(false);
         }
         return;
       }
 
       try {
+        // ✅ Get the blob
         const response = await api.get(url, { responseType: 'blob' });
+        const rawBlob = response.data;
+        if (!revoked) setBlob(rawBlob);
 
-        // ZIP FILE HANDLING
+        // ═══════════════════════════════════════════
+        // 1. ZIP FILE
+        // ═══════════════════════════════════════════
         if (isZipFile(file)) {
           setZipLoading(true);
           try {
-            const zip = await JSZip.loadAsync(response.data);
+            const zip = await JSZip.loadAsync(rawBlob);
             const files = [];
-
             zip.forEach((relativePath, zipEntry) => {
               files.push({
                 name: relativePath,
@@ -172,13 +246,8 @@ export default function FilePreviewModal({ open, onClose, file }) {
                 zipEntry,
               });
             });
-
             if (!revoked) {
-              setZipContents({
-                name: file.filename,
-                files: files,
-                zipInstance: zip,
-              });
+              setZipContents({ name: file.filename, files, zipInstance: zip });
             }
           } catch (zipErr) {
             console.error('ZIP parse error:', zipErr);
@@ -186,18 +255,65 @@ export default function FilePreviewModal({ open, onClose, file }) {
           } finally {
             if (!revoked) setZipLoading(false);
           }
+          return;
         }
-        // TEXT FILES (XML/JSON/TXT)
-        else if (isTextLike(file)) {
-          const text = await response.data.text();
+
+        // ═══════════════════════════════════════════
+        // 2. WORD FILE — mammoth.js → HTML
+        // ═══════════════════════════════════════════
+        if (isWordFile(file)) {
+          try {
+            const arrayBuffer = await rawBlob.arrayBuffer();
+            const result = await mammoth.convertToHtml({ arrayBuffer });
+            if (!revoked) setWordHtml(result.value || '<p>Empty document</p>');
+          } catch (wordErr) {
+            console.error('Word preview error:', wordErr);
+            if (!revoked) setError('Failed to parse Word document. Try downloading.');
+          }
+          return;
+        }
+
+        // ═══════════════════════════════════════════
+        // 3. EXCEL FILE — xlsx → table
+        // ═══════════════════════════════════════════
+        if (isExcelFile(file)) {
+          try {
+            const arrayBuffer = await rawBlob.arrayBuffer();
+            const workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
+            if (!revoked) setExcelData(workbook);
+          } catch (xlsErr) {
+            console.error('Excel preview error:', xlsErr);
+            if (!revoked) setError('Failed to parse Excel file. Try downloading.');
+          }
+          return;
+        }
+
+        // ═══════════════════════════════════════════
+        // 4. POWERPOINT — Not directly supported
+        // ═══════════════════════════════════════════
+        if (isPptFile(file)) {
+          // Keep blob — user can download
+          const url = window.URL.createObjectURL(rawBlob);
+          createdUrl = url;
+          if (!revoked) setBlobUrl(url);
+          return;
+        }
+
+        // ═══════════════════════════════════════════
+        // 5. TEXT FILES (XML / JSON / TXT / CSV / Code)
+        // ═══════════════════════════════════════════
+        if (isTextLike(file)) {
+          const text = await rawBlob.text();
           if (!revoked) setTextContent(text);
+          return;
         }
-        // BINARY (PDF/IMAGE)
-        else {
-          const blob = new Blob([response.data], { type: file.mimeType });
-          createdUrl = window.URL.createObjectURL(blob);
-          if (!revoked) setBlobUrl(createdUrl);
-        }
+
+        // ═══════════════════════════════════════════
+        // 6. BINARY (PDF / Image)
+        // ═══════════════════════════════════════════
+        const blobObj = new Blob([rawBlob], { type: file.mimeType });
+        createdUrl = window.URL.createObjectURL(blobObj);
+        if (!revoked) setBlobUrl(createdUrl);
       } catch (err) {
         console.error('Preview error:', err);
         if (!revoked) {
@@ -218,16 +334,15 @@ export default function FilePreviewModal({ open, onClose, file }) {
 
     return () => {
       revoked = true;
-      if (createdUrl) {
-        setTimeout(() => window.URL.revokeObjectURL(createdUrl), 100);
-      }
+      if (createdUrl) setTimeout(() => window.URL.revokeObjectURL(createdUrl), 100);
     };
   }, [open, file]);
 
-  // ✅ Extract & preview a file from ZIP
+  // ═══════════════════════════════════════════
+  // ZIP File Click Handler
+  // ═══════════════════════════════════════════
   const handleZipFileClick = async (zipFile) => {
     if (zipFile.isDir) return;
-
     try {
       setSelectedZipFile(zipFile);
       setZipFileContent(null);
@@ -245,8 +360,7 @@ export default function FilePreviewModal({ open, onClose, file }) {
       ) {
         const text = await content.text();
         setZipFileContent({ type: 'text', content: text });
-      }
-      else if (
+      } else if (
         zipFileName.endsWith('.jpg') ||
         zipFileName.endsWith('.jpeg') ||
         zipFileName.endsWith('.png') ||
@@ -255,8 +369,7 @@ export default function FilePreviewModal({ open, onClose, file }) {
       ) {
         const url = window.URL.createObjectURL(content);
         setZipFileContent({ type: 'image', url });
-      }
-      else {
+      } else {
         setZipFileContent({ type: 'unknown' });
       }
     } catch (err) {
@@ -265,7 +378,6 @@ export default function FilePreviewModal({ open, onClose, file }) {
     }
   };
 
-  // ✅ Download a file from ZIP
   const handleZipFileDownload = async (zipFile) => {
     try {
       const blob = await zipFile.zipEntry.async('blob');
@@ -283,25 +395,20 @@ export default function FilePreviewModal({ open, onClose, file }) {
     }
   };
 
-  // ✅ FIXED: Download with null check
+  // ═══════════════════════════════════════════
+  // Download Handler
+  // ═══════════════════════════════════════════
   const handleDownload = async () => {
     if (!file) return;
-
     const url = resolveFileUrl(file);
-
     if (!url) {
       alert('File URL not available. Cannot download.');
       return;
     }
-
     try {
-      const response = await api.get(url, {
-        responseType: 'blob',
-        params: { download: 1 }
-      });
-
-      const blob = new Blob([response.data]);
-      const downloadUrl = window.URL.createObjectURL(blob);
+      const response = await api.get(url, { responseType: 'blob', params: { download: 1 } });
+      const blobObj = new Blob([response.data]);
+      const downloadUrl = window.URL.createObjectURL(blobObj);
       const link = document.createElement('a');
       link.href = downloadUrl;
       link.download = file.filename || 'download';
@@ -311,18 +418,22 @@ export default function FilePreviewModal({ open, onClose, file }) {
       window.URL.revokeObjectURL(downloadUrl);
     } catch (err) {
       console.error('Download error:', err);
-      if (err.response?.status === 404) {
-        alert('File not found. It may have been deleted.');
-      } else {
-        alert('Failed to download file. Please try again.');
-      }
+      alert(err.response?.status === 404
+        ? 'File not found. It may have been deleted.'
+        : 'Failed to download file. Please try again.');
     }
   };
 
+  // ═══════════════════════════════════════════
+  // Copy Handler
+  // ═══════════════════════════════════════════
   const handleCopy = async () => {
-    if (!textContent) return;
+    const content =
+      textContent ||
+      (wordHtml ? wordHtml.replace(/<[^>]+>/g, '') : null);
+    if (!content) return;
     try {
-      await navigator.clipboard.writeText(textContent);
+      await navigator.clipboard.writeText(content);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
@@ -330,76 +441,95 @@ export default function FilePreviewModal({ open, onClose, file }) {
     }
   };
 
+  // ═══════════════════════════════════════════
+  // RENDER
+  // ═══════════════════════════════════════════
   if (!open || !file) return null;
 
   const isXml = isXmlFile(file);
   const isJson = isJsonFile(file);
   const isFormattable = isXml || isJson;
   const isZip = isZipFile(file);
+  const isWord = isWordFile(file);
+  const isExcel = isExcelFile(file);
+  const isPpt = isPptFile(file);
+  const isCsv = isCsvFile(file);
 
   const displayedContent = textContent
     ? viewMode === 'formatted'
-      ? isXml
-        ? formatXml(textContent)
-        : isJson
-        ? formatJson(textContent)
-        : textContent
+      ? isXml ? formatXml(textContent) : isJson ? formatJson(textContent) : textContent
       : textContent
     : null;
+
+  // ✅ File Icon in header
+  const FileIcon = () => {
+    if (isZip) return <FaFileArchive className="text-yellow-400 text-2xl flex-shrink-0" />;
+    if (isWord) return <FaFileWord className="text-blue-400 text-2xl flex-shrink-0" />;
+    if (isExcel) return <FaFileExcel className="text-green-400 text-2xl flex-shrink-0" />;
+    if (isPpt) return <FaFilePowerpoint className="text-orange-400 text-2xl flex-shrink-0" />;
+    if (file.fileType === 'pdf') return <FaFilePdf className="text-red-400 text-2xl flex-shrink-0" />;
+    if (file.fileType === 'image') return <FaFileImage className="text-cyan-400 text-2xl flex-shrink-0" />;
+    if (isXml || isJson) return <FaFileCode className="text-purple-400 text-2xl flex-shrink-0" />;
+    return <FaFileAlt className="text-gray-400 text-2xl flex-shrink-0" />;
+  };
 
   return (
     <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
       <div className="glass w-full max-w-6xl max-h-[92vh] rounded-2xl overflow-hidden flex flex-col">
-        {/* Header */}
-        <div className="flex justify-between items-center p-4 border-b border-white/10">
+
+        {/* ═══════════════════════════════════════════
+            HEADER
+            ═══════════════════════════════════════════ */}
+        <div className="flex justify-between items-center p-4 border-b border-white/10 gap-3">
           <div className="min-w-0 flex-1 flex items-center gap-3">
-            {isZip && <FaFileArchive className="text-yellow-400 text-2xl flex-shrink-0" />}
+            <FileIcon />
             <div className="min-w-0">
               <h3 className="text-lg font-bold truncate">{file.filename}</h3>
-              <p className="text-xs text-gray-400">
-                {file.fileType?.toUpperCase()} • {file.mimeType} •{' '}
-                {file.fileSize ? formatSize(file.fileSize) : ''}
+              <p className="text-xs text-gray-400 truncate">
+                {file.fileType?.toUpperCase()} • {formatSize(file.fileSize)}
                 {isZip && zipContents && ` • ${zipContents.files.length} files inside`}
+                {isExcel && excelData && ` • ${excelData.SheetNames.length} sheets`}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2 flex-shrink-0">
+            {/* Format toggle for XML/JSON */}
             {isFormattable && textContent && (
               <>
                 <div className="flex glass-card rounded-lg overflow-hidden">
                   <button
                     onClick={() => setViewMode('formatted')}
-                    className={`px-3 py-2 text-xs transition ${
-                      viewMode === 'formatted'
-                        ? 'bg-cyan-500/30 text-cyan-300'
-                        : 'text-gray-400 hover:text-white'
-                    }`}
+                    className={`px-3 py-2 text-xs transition ${viewMode === 'formatted' ? 'bg-cyan-500/30 text-cyan-300' : 'text-gray-400 hover:text-white'}`}
                   >
                     🌳 Formatted
                   </button>
                   <button
                     onClick={() => setViewMode('raw')}
-                    className={`px-3 py-2 text-xs transition ${
-                      viewMode === 'raw'
-                        ? 'bg-cyan-500/30 text-cyan-300'
-                        : 'text-gray-400 hover:text-white'
-                    }`}
+                    className={`px-3 py-2 text-xs transition ${viewMode === 'raw' ? 'bg-cyan-500/30 text-cyan-300' : 'text-gray-400 hover:text-white'}`}
                   >
                     📄 Raw
                   </button>
                 </div>
-
                 <button
                   onClick={handleCopy}
-                  className={`glass-card px-3 py-2 text-xs transition flex items-center gap-1 ${
-                    copied ? 'text-green-400' : 'text-yellow-400 hover:scale-105'
-                  }`}
+                  className={`glass-card px-3 py-2 text-xs transition flex items-center gap-1 ${copied ? 'text-green-400' : 'text-yellow-400 hover:scale-105'}`}
                 >
                   {copied ? <FaCheck /> : <FaCopy />}
                   {copied ? 'Copied!' : 'Copy'}
                 </button>
               </>
+            )}
+
+            {/* Copy for Word */}
+            {isWord && wordHtml && (
+              <button
+                onClick={handleCopy}
+                className={`glass-card px-3 py-2 text-xs transition flex items-center gap-1 ${copied ? 'text-green-400' : 'text-yellow-400 hover:scale-105'}`}
+              >
+                {copied ? <FaCheck /> : <FaCopy />}
+                {copied ? 'Copied!' : 'Copy Text'}
+              </button>
             )}
 
             <button
@@ -418,12 +548,13 @@ export default function FilePreviewModal({ open, onClose, file }) {
           </div>
         </div>
 
-        {/* Body */}
+        {/* ═══════════════════════════════════════════
+            BODY
+            ═══════════════════════════════════════════ */}
         <div className="flex-1 overflow-hidden bg-black/40">
-          {/* ZIP VIEW */}
           {isZip ? (
+            /* ZIP VIEW */
             <div className="flex h-full">
-              {/* ZIP file list */}
               <div className="w-1/2 border-r border-white/10 overflow-y-auto p-4">
                 {zipLoading ? (
                   <div className="text-gray-400 text-center py-10">
@@ -433,10 +564,7 @@ export default function FilePreviewModal({ open, onClose, file }) {
                 ) : zipError ? (
                   <div className="text-red-400 text-center py-10">
                     ❌ {zipError}
-                    <button
-                      onClick={handleDownload}
-                      className="glass-card px-4 py-2 mt-4 text-green-400 block mx-auto"
-                    >
+                    <button onClick={handleDownload} className="glass-card px-4 py-2 mt-4 text-green-400 block mx-auto">
                       Download ZIP
                     </button>
                   </div>
@@ -451,27 +579,15 @@ export default function FilePreviewModal({ open, onClose, file }) {
                           key={i}
                           onClick={() => handleZipFileClick(f)}
                           className={`flex items-center gap-2 p-2 rounded cursor-pointer transition ${
-                            selectedZipFile?.name === f.name
-                              ? 'bg-cyan-500/20 text-cyan-100'
-                              : 'hover:bg-white/5 text-gray-300'
+                            selectedZipFile?.name === f.name ? 'bg-cyan-500/20 text-cyan-100' : 'hover:bg-white/5 text-gray-300'
                           }`}
                         >
-                          {f.isDir ? (
-                            <FaFolder className="text-yellow-500 flex-shrink-0" />
-                          ) : (
-                            <FaFile className="text-gray-400 flex-shrink-0" />
-                          )}
-                          <span className="text-sm truncate flex-1" title={f.name}>
-                            {f.name}
-                          </span>
+                          {f.isDir ? <FaFolder className="text-yellow-500 flex-shrink-0" /> : <FaFile className="text-gray-400 flex-shrink-0" />}
+                          <span className="text-sm truncate flex-1" title={f.name}>{f.name}</span>
                           {!f.isDir && (
                             <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleZipFileDownload(f);
-                              }}
+                              onClick={(e) => { e.stopPropagation(); handleZipFileDownload(f); }}
                               className="text-green-400 hover:text-green-300 text-xs opacity-60 hover:opacity-100"
-                              title="Extract this file"
                             >
                               <FaDownload size={10} />
                             </button>
@@ -485,7 +601,6 @@ export default function FilePreviewModal({ open, onClose, file }) {
                 )}
               </div>
 
-              {/* File preview area */}
               <div className="w-1/2 overflow-auto p-4">
                 {!selectedZipFile ? (
                   <div className="flex flex-col items-center justify-center h-full text-gray-400">
@@ -520,23 +635,14 @@ export default function FilePreviewModal({ open, onClose, file }) {
                     </pre>
                   </div>
                 ) : zipFileContent.type === 'image' ? (
-                  <img
-                    src={zipFileContent.url}
-                    alt={selectedZipFile.name}
-                    className="max-w-full max-h-full object-contain mx-auto"
-                  />
+                  <img src={zipFileContent.url} alt={selectedZipFile.name} className="max-w-full max-h-full object-contain mx-auto" />
                 ) : zipFileContent.type === 'error' ? (
-                  <div className="text-red-400 text-center py-10">
-                    ❌ {zipFileContent.message}
-                  </div>
+                  <div className="text-red-400 text-center py-10">❌ {zipFileContent.message}</div>
                 ) : (
                   <div className="text-center py-10">
                     <FaFile className="text-4xl text-gray-500 mx-auto mb-3" />
                     <p className="text-gray-400 text-sm mb-3">Preview not available</p>
-                    <button
-                      onClick={() => handleZipFileDownload(selectedZipFile)}
-                      className="glass-card px-4 py-2 text-green-400 text-sm"
-                    >
+                    <button onClick={() => handleZipFileDownload(selectedZipFile)} className="glass-card px-4 py-2 text-green-400 text-sm">
                       <FaDownload className="inline mr-2" /> Extract file
                     </button>
                   </div>
@@ -544,8 +650,9 @@ export default function FilePreviewModal({ open, onClose, file }) {
               </div>
             </div>
           ) : (
-            // NON-ZIP FILES
+            /* NON-ZIP VIEW */
             <div className="flex-1 overflow-auto flex items-center justify-center h-full">
+
               {loading ? (
                 <div className="text-gray-400 py-20 flex flex-col items-center gap-3">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-400"></div>
@@ -554,54 +661,108 @@ export default function FilePreviewModal({ open, onClose, file }) {
               ) : error ? (
                 <div className="text-red-400 py-20 text-center max-w-md px-4">
                   <p className="text-lg mb-2">❌ {error}</p>
-                  <button
-                    onClick={handleDownload}
-                    className="glass-card px-6 py-3 mt-4 text-green-400 hover:scale-105 transition"
-                  >
-                    <FaDownload className="inline mr-2" /> Try Download
-                  </button>
-                  <button
-                    onClick={onClose}
-                    className="glass-card px-6 py-3 mt-4 ml-2 text-gray-300 hover:scale-105 transition"
-                  >
-                    Close
+                  <button onClick={handleDownload} className="glass-card px-6 py-3 mt-4 text-green-400 hover:scale-105 transition">
+                    <FaDownload className="inline mr-2" /> Download File
                   </button>
                 </div>
               ) : file.fileType === 'image' && blobUrl ? (
-                <img
-                  src={blobUrl}
-                  alt={file.filename}
-                  className="max-w-full max-h-full object-contain"
-                />
+                /* IMAGE */
+                <img src={blobUrl} alt={file.filename} className="max-w-full max-h-full object-contain" />
               ) : file.fileType === 'pdf' && blobUrl ? (
-                <iframe
-                  src={blobUrl}
-                  title={file.filename}
-                  className="w-full h-[75vh] bg-white"
-                />
+                /* PDF */
+                <iframe src={blobUrl} title={file.filename} className="w-full h-[75vh] bg-white" />
+              ) : isWord && wordHtml ? (
+                /* WORD — mammoth HTML */
+                <div className="w-full h-full overflow-auto p-8 bg-white">
+                  <div
+                    className="max-w-4xl mx-auto prose prose-slate"
+                    dangerouslySetInnerHTML={{ __html: wordHtml }}
+                  />
+                </div>
+              ) : isExcel && excelData ? (
+                /* EXCEL — table with sheet tabs */
+                <div className="w-full h-full flex flex-col">
+                  {/* Sheet Tabs */}
+                  {excelData.SheetNames.length > 1 && (
+                    <div className="flex gap-2 p-3 border-b border-white/10 overflow-x-auto">
+                      {excelData.SheetNames.map((name, i) => (
+                        <button
+                          key={name}
+                          onClick={() => setActiveSheet(i)}
+                          className={`px-4 py-2 text-sm rounded transition whitespace-nowrap ${
+                            activeSheet === i
+                              ? 'bg-cyan-500/30 text-cyan-300 border border-cyan-400/40'
+                              : 'glass-card text-gray-400 hover:text-white'
+                          }`}
+                        >
+                          {name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Sheet Table */}
+                  <div className="flex-1 overflow-auto p-4">
+                    <table className="min-w-full text-sm">
+                      <tbody>
+                        {XLSX.utils
+                          .sheet_to_json(excelData.Sheets[excelData.SheetNames[activeSheet]], {
+                            header: 1,
+                            defval: '',
+                          })
+                          .map((row, i) => (
+                            <tr key={i} className={i === 0 ? 'bg-cyan-500/10 font-semibold' : 'border-b border-white/5'}>
+                              <td className="px-3 py-2 text-gray-500 text-xs border-r border-white/10">{i + 1}</td>
+                              {row.map((cell, j) => (
+                                <td key={j} className="px-3 py-2 text-gray-100 border-r border-white/5 whitespace-nowrap">
+                                  {String(cell ?? '')}
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ) : isPpt && blobUrl ? (
+                /* POWERPOINT — Download prompt + Google Viewer */
+                <div className="text-center py-20 max-w-md px-4">
+                  <div className="text-6xl mb-4">📊</div>
+                  <p className="text-lg font-semibold text-white mb-2">PowerPoint Presentation</p>
+                  <p className="text-gray-400 text-sm mb-6">{file.filename}</p>
+                  <p className="text-gray-500 text-xs mb-6">
+                    In-browser preview not available. Download or open in Google Viewer.
+                  </p>
+                  <div className="flex gap-3 justify-center flex-wrap">
+                    <button onClick={handleDownload} className="glass-card px-6 py-3 text-green-400 hover:scale-105 transition flex items-center gap-2">
+                      <FaDownload /> Download
+                    </button>
+                    {file.url && (
+                      <a
+                        href={`https://docs.google.com/viewer?url=${encodeURIComponent(file.url)}&embedded=true`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="glass-card px-6 py-3 text-cyan-400 hover:scale-105 transition"
+                      >
+                        Open in Google Viewer
+                      </a>
+                    )}
+                  </div>
+                </div>
               ) : textContent !== null ? (
+                /* TEXT / CODE / CSV / XML / JSON */
                 <div className="w-full h-full overflow-auto">
-                  <pre
-                    className={`text-xs font-mono whitespace-pre-wrap p-6 ${
-                      isXml || isJson ? 'text-cyan-100' : 'text-white text-sm'
-                    }`}
-                  >
+                  <pre className={`text-xs font-mono whitespace-pre-wrap p-6 ${isXml || isJson ? 'text-cyan-100' : 'text-white text-sm'}`}>
                     {displayedContent}
                   </pre>
                 </div>
               ) : (
-                <div className="text-center py-20">
+                /* FALLBACK */
+                <div className="text-center py-20 max-w-md px-4">
                   <div className="text-6xl mb-4">📎</div>
-                  <p className="text-gray-400 mb-2">
-                    Preview not available for this file type
-                  </p>
-                  <p className="text-xs text-gray-500 mb-4">
-                    {file.filename} • {file.mimeType}
-                  </p>
-                  <button
-                    onClick={handleDownload}
-                    className="glass-card px-6 py-3 text-green-400 hover:scale-105 transition"
-                  >
+                  <p className="text-lg font-semibold text-white mb-2">Preview not available</p>
+                  <p className="text-xs text-gray-500 mb-6">{file.filename} • {file.mimeType}</p>
+                  <button onClick={handleDownload} className="glass-card px-6 py-3 text-green-400 hover:scale-105 transition">
                     <FaDownload className="inline mr-2" /> Download to view
                   </button>
                 </div>
@@ -610,12 +771,11 @@ export default function FilePreviewModal({ open, onClose, file }) {
           )}
         </div>
 
-        {/* Footer */}
+        {/* FOOTER */}
         {textContent && (isXml || isJson) && (
           <div className="px-4 py-2 border-t border-white/10 bg-black/20 flex justify-between items-center text-xs text-gray-400">
             <span>
-              {isXml ? '📄 XML Document' : '📄 JSON Document'} •{' '}
-              {textContent.length.toLocaleString()} characters
+              {isXml ? '📄 XML Document' : '📄 JSON Document'} • {textContent.length.toLocaleString()} characters
             </span>
             <span className="text-cyan-400/70">
               View: {viewMode === 'formatted' ? 'Formatted' : 'Raw'}
