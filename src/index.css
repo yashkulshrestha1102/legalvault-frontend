@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
 
 /* ===================================
    BACKGROUND - CSS SE CONTROL
@@ -243,4 +245,86 @@ select option:checked {
   font-weight: 600;
   white-space: nowrap;
   flex-shrink: 0;
+}
+
+
+
+/* ═══════════════════════════════════════════
+   WORD DOCUMENT PREVIEW STYLES
+   ═══════════════════════════════════════════ */
+
+.word-preview-content {
+  color: #1e293b !important;
+  font-family: Calibri, Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.word-preview-content * {
+  color: #1e293b !important;
+}
+
+.word-preview-content h1 {
+  font-size: 2em;
+  font-weight: bold;
+  margin: 1em 0 0.5em;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 0.3em;
+}
+
+.word-preview-content h2 {
+  font-size: 1.5em;
+  font-weight: bold;
+  margin: 0.9em 0 0.5em;
+}
+
+.word-preview-content h3 {
+  font-size: 1.25em;
+  font-weight: bold;
+  margin: 0.8em 0 0.4em;
+}
+
+.word-preview-content p {
+  margin: 0.6em 0;
+}
+
+.word-preview-content strong {
+  font-weight: 700;
+}
+
+.word-preview-content ul,
+.word-preview-content ol {
+  margin: 0.6em 0;
+  padding-left: 1.5em;
+}
+
+.word-preview-content ul {
+  list-style-type: disc;
+}
+
+.word-preview-content ol {
+  list-style-type: decimal;
+}
+
+.word-preview-content table {
+  border-collapse: collapse;
+  margin: 1em 0;
+  width: 100%;
+}
+
+.word-preview-content table td,
+.word-preview-content table th {
+  border: 1px solid #cbd5e1;
+  padding: 8px 12px;
+}
+
+.word-preview-content table th {
+  background-color: #f1f5f9;
+  font-weight: 600;
+}
+
+.word-preview-content img {
+  max-width: 100%;
+  height: auto;
+  margin: 1em 0;
 }

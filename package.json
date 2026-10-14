@@ -13,6 +13,7 @@
     "@getbrevo/brevo": "^6.0.2",
     "@google/generative-ai": "^0.24.1",
     "@hookform/resolvers": "^5.4.0",
+    "@tailwindcss/typography": "^0.5.20",
     "axios": "^1.18.1",
     "compression": "^1.8.1",
     "docx-preview": "^0.4.1",
