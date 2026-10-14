@@ -14,28 +14,38 @@ import {
   FaUserCheck,
 } from "react-icons/fa";
 import { useState, useEffect, useContext } from "react";
-import AuthContext from '../context/AuthContext';
-import api from '../utils/api';
+import AuthContext from "../context/AuthContext";
+import api, { cachedGet, invalidateCache } from "../utils/api"; // ✅ FIXED: cachedGet + invalidateCache import
 
 function Users() {
-  const { user: currentUser, setUser, refreshUser } = useContext(AuthContext);
+  const { setUser, refreshUser } = useContext(AuthContext); // ✅ FIXED: currentUser unused हटाया
   const [openModal, setOpenModal] = useState(false);
   const [editModal, setEditModal] = useState(false);
   const [viewModal, setViewModal] = useState(false);
   const [deleteModal, setDeleteModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
-  const [selectedIndex, setSelectedIndex] = useState(null);
   const [users, setUsers] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
 
+  // ✅ FIXED: cachedGet use करो
   const fetchUsers = async () => {
     try {
-      const response = await api.get('/api/users');
-      console.log('👥 Users fetched:', response.data.length);
-      setUsers(response.data);
+      const response = await cachedGet("/api/users");
+      const data = response.data;
+
+      let usersData = [];
+      if (Array.isArray(data)) {
+        usersData = data;
+      } else if (data && typeof data === "object") {
+        if (Array.isArray(data.users)) usersData = data.users;
+        else if (Array.isArray(data.data)) usersData = data.data;
+      }
+
+      console.log("👥 Users fetched:", usersData.length);
+      setUsers(Array.isArray(usersData) ? usersData : []);
     } catch (error) {
-      console.error('❌ Error fetching users:', error);
+      console.error("❌ Error fetching users:", error);
       setUsers([]);
     } finally {
       setLoading(false);
@@ -46,86 +56,117 @@ function Users() {
     fetchUsers();
   }, []);
 
+  // ✅ FIXED: cache invalidate add
   const addUser = async (newUser) => {
     try {
-      await api.post('/api/users', newUser);
+      await api.post("/api/users", newUser);
+      invalidateCache("/api/users"); // ✅ Cache clear
       fetchUsers();
     } catch (error) {
-      console.error('❌ Error adding user:', error);
-      alert('Failed to add user: ' + (error.response?.data?.message || error.message));
+      console.error("❌ Error adding user:", error);
+      alert(
+        "Failed to add user: " +
+          (error.response?.data?.message || error.message)
+      );
     }
   };
 
+  // ✅ FIXED: cache invalidate add
   const updateUser = async (updatedUser) => {
     const userId = updatedUser._id || updatedUser.id;
     if (!userId) {
-      console.error('❌ Cannot update user: No ID found', updatedUser);
-      alert('Error: User ID not found');
+      console.error("❌ Cannot update user: No ID found", updatedUser);
+      alert("Error: User ID not found");
       return;
     }
 
     try {
-      console.log('📤 Updating user with ID:', userId);
-      
+      console.log("📤 Updating user with ID:", userId);
+
       const response = await api.put(`/api/users/${userId}`, updatedUser);
-      
-      console.log('✅ User updated:', response.data);
+      console.log("✅ User updated:", response.data);
+
+      invalidateCache("/api/users"); // ✅ Cache clear
       fetchUsers();
 
       // Check if the updated user is the currently logged-in user
-      const currentUserData = JSON.parse(localStorage.getItem('user'));
-      if (currentUserData && (currentUserData.id === userId || currentUserData._id === userId)) {
-        console.log('🔄 Current user updated, refreshing...');
-        
-        localStorage.setItem('user', JSON.stringify(response.data));
-        
+      const currentUserData = JSON.parse(localStorage.getItem("user"));
+      if (
+        currentUserData &&
+        (currentUserData.id === userId || currentUserData._id === userId)
+      ) {
+        console.log("🔄 Current user updated, refreshing...");
+
+        localStorage.setItem("user", JSON.stringify(response.data));
+
         if (refreshUser) {
           await refreshUser();
         } else if (setUser) {
           setUser(response.data);
         }
-        
-        alert('Your permissions have been updated. Please refresh the page for changes to take effect.');
+
+        alert(
+          "Your permissions have been updated. Please refresh the page for changes to take effect."
+        );
       }
-      
     } catch (error) {
-      console.error('❌ Error updating user:', error);
-      alert('Failed to update user: ' + (error.response?.data?.message || error.message));
+      console.error("❌ Error updating user:", error);
+      alert(
+        "Failed to update user: " +
+          (error.response?.data?.message || error.message)
+      );
     }
   };
 
+  // ✅ FIXED: selectedIndex की जगह selectedUser use करो (safe delete)
   const deleteUser = async () => {
     try {
-      const user = users[selectedIndex];
-      const userId = user?._id || user?.id;
-      
+      const userId = selectedUser?._id || selectedUser?.id;
+
       if (!userId) {
-        console.error('❌ Cannot delete user: No ID found');
-        alert('Error: User ID not found');
+        console.error("❌ Cannot delete user: No ID found");
+        alert("Error: User ID not found");
         return;
       }
-      
+
       await api.delete(`/api/users/${userId}`);
+      invalidateCache("/api/users"); // ✅ Cache clear
       fetchUsers();
     } catch (error) {
-      console.error('❌ Error deleting user:', error);
-      alert('Failed to delete user: ' + (error.response?.data?.message || error.message));
+      console.error("❌ Error deleting user:", error);
+      alert(
+        "Failed to delete user: " +
+          (error.response?.data?.message || error.message)
+      );
     } finally {
       setDeleteModal(false);
       setSelectedUser(null);
-      setSelectedIndex(null);
     }
   };
 
   const totalUsers = users.length;
   const activeUsers = users.filter((u) => u.status === "Active").length;
-  const adminUsers = users.filter((u) => u.role === "Admin" || u.role === "admin").length;
+  const adminUsers = users.filter(
+    (u) => u.role === "Admin" || u.role === "admin"
+  ).length;
 
+  // ✅ FIXED: Skeleton loader (Step 3 का preview)
   if (loading) {
     return (
       <MainLayout>
-        <div className="flex justify-center items-center h-64">
-          <div className="text-xl">Loading Users...</div>
+        <div className="animate-pulse">
+          <div className="h-10 bg-white/5 rounded-lg w-64 mb-8"></div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="glass-card p-6 h-32"></div>
+            ))}
+          </div>
+          <div className="glass p-6">
+            <div className="h-12 bg-white/5 rounded-lg mb-6"></div>
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="h-16 bg-white/5 rounded-lg mb-3"></div>
+            ))}
+          </div>
         </div>
       </MainLayout>
     );
@@ -203,38 +244,48 @@ function Users() {
                     user.name?.toLowerCase().includes(searchTerm.toLowerCase())
                   )
                   .map((user, index) => (
-                    <tr key={getRowKey(user, index)} className="border-b border-white/5 hover:bg-white/5 transition-all duration-300">
+                    <tr
+                      key={getRowKey(user, index)}
+                      className="border-b border-white/5 hover:bg-white/5 transition-all duration-300"
+                    >
                       <td className="p-4">
                         <div className="flex items-center gap-3">
                           <div className="w-12 h-12 rounded-full glass-card flex items-center justify-center">
-                            {user.role === "Admin" || user.role === "admin" ? <FaUserShield /> : <FaUserTie />}
+                            {user.role === "Admin" || user.role === "admin" ? (
+                              <FaUserShield />
+                            ) : (
+                              <FaUserTie />
+                            )}
                           </div>
                           <div>
                             <h4 className="font-semibold">{user.name}</h4>
-                            <p className="text-xs text-slate-400">{user.phone || 'N/A'}</p>
+                            <p className="text-xs text-slate-400">
+                              {user.phone || "N/A"}
+                            </p>
                           </div>
                         </div>
                       </td>
                       <td className="p-4">{user.email}</td>
-                      <td className="p-4">{user.department || 'General'}</td>
-                      <td className="p-4">{user.role || 'User'}</td>
+                      <td className="p-4">{user.department || "General"}</td>
+                      <td className="p-4">{user.role || "User"}</td>
                       <td className="p-4">
                         <span
                           className={`
                             px-4 py-2 rounded-full text-sm
-                            ${user.status === "Active"
-                              ? "bg-green-500/20 text-green-400"
-                              : "bg-red-500/20 text-red-400"
+                            ${
+                              user.status === "Active"
+                                ? "bg-green-500/20 text-green-400"
+                                : "bg-red-500/20 text-red-400"
                             }
                           `}
                         >
-                          {user.status || 'Active'}
+                          {user.status || "Active"}
                         </span>
                       </td>
                       <td className="p-4">
-                        {user.createdAt 
-                          ? new Date(user.createdAt).toLocaleDateString() 
-                          : 'N/A'}
+                        {user.createdAt
+                          ? new Date(user.createdAt).toLocaleDateString()
+                          : "N/A"}
                       </td>
                       <td className="p-4">
                         <div className="flex gap-2">
@@ -258,8 +309,7 @@ function Users() {
                           </button>
                           <button
                             onClick={() => {
-                              setSelectedUser(user);
-                              setSelectedIndex(index);
+                              setSelectedUser(user); // ✅ FIXED: selectedIndex हटाया
                               setDeleteModal(true);
                             }}
                             className="glass-card p-3 text-red-400"
@@ -300,7 +350,6 @@ function Users() {
         onClose={() => {
           setDeleteModal(false);
           setSelectedUser(null);
-          setSelectedIndex(null);
         }}
         onConfirm={deleteUser}
       />
