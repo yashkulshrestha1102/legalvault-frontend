@@ -38,6 +38,9 @@ function ClientDetails() {
   const [renamingId, setRenamingId] = useState(null);
   const [newFileName, setNewFileName] = useState('');
 
+  // ═══════════════════════════════════════════
+  // ✅ FETCH CLIENT — setLoading removed
+  // ═══════════════════════════════════════════
   const fetchClient = async () => {
     try {
       console.log('📥 Fetching client with ID:', actualId);
@@ -98,11 +101,13 @@ function ClientDetails() {
       } else {
         setClient(null);
       }
-    } finally {
-      setLoading(false);
     }
+    // ✅ setLoading(false) हटाया — यह अब Promise.allSettled handle करेगा
   };
 
+  // ═══════════════════════════════════════════
+  // ✅ FETCH REGISTRATIONS — setLoading removed
+  // ═══════════════════════════════════════════
   const fetchRegistrations = async () => {
     try {
       if (!actualId) {
@@ -123,6 +128,9 @@ function ClientDetails() {
     }
   };
 
+  // ═══════════════════════════════════════════
+  // ✅ FETCH CONTRACTS — setLoading removed
+  // ═══════════════════════════════════════════
   const fetchContracts = async () => {
     try {
       const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(actualId);
@@ -139,6 +147,9 @@ function ClientDetails() {
     }
   };
 
+  // ═══════════════════════════════════════════
+  // ✅ FETCH DOCUMENTS — setLoading removed
+  // ═══════════════════════════════════════════
   const fetchDocuments = async () => {
     try {
       if (!actualId) return;
@@ -156,33 +167,46 @@ function ClientDetails() {
     }
   };
 
+  // ═══════════════════════════════════════════
+  // ✅ MAIN EFFECT — PARALLEL API CALLS (FAST!)
+  // ═══════════════════════════════════════════
   useEffect(() => {
-    if (actualId) {
-      const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(actualId);
+    if (!actualId) {
+      setLoading(false);
+      return;
+    }
 
-      if (isValidObjectId) {
-        fetchClient();
-        fetchRegistrations();
-        fetchContracts();
-        fetchDocuments();
-      } else {
-        const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
-        const foundClient = savedClients.find(c =>
-          String(c.id) === String(actualId) || String(c._id) === String(actualId)
-        );
-        if (foundClient) {
-          setClient({ ...foundClient });
-          setRefreshKey(prev => prev + 1);
-        } else {
-          setClient(null);
-        }
+    const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(actualId);
+
+    if (isValidObjectId) {
+      // ✅ सब API calls PARALLEL — 1.5s instead of 6s
+      Promise.allSettled([
+        fetchClient(),
+        fetchRegistrations(),
+        fetchContracts(),
+        fetchDocuments(),
+      ]).finally(() => {
         setLoading(false);
-      }
+      });
     } else {
+      // localStorage fallback (invalid ObjectId)
+      const savedClients = JSON.parse(localStorage.getItem("clients")) || [];
+      const foundClient = savedClients.find(c =>
+        String(c.id) === String(actualId) || String(c._id) === String(actualId)
+      );
+      if (foundClient) {
+        setClient({ ...foundClient });
+        setRefreshKey(prev => prev + 1);
+      } else {
+        setClient(null);
+      }
       setLoading(false);
     }
   }, [actualId]);
 
+  // ═══════════════════════════════════════════
+  // DOCUMENT ACTIONS
+  // ═══════════════════════════════════════════
   const renameDocument = async (docId, newName) => {
     if (!newName || newName.trim() === '') {
       alert('Please enter a valid name');
@@ -342,6 +366,9 @@ function ClientDetails() {
     }
   };
 
+  // ═══════════════════════════════════════════
+  // SAVE REGISTRATION
+  // ═══════════════════════════════════════════
   const saveRegistration = async (registrationData) => {
     try {
       let validClientId = actualId;
@@ -428,6 +455,9 @@ function ClientDetails() {
     }
   };
 
+  // ═══════════════════════════════════════════
+  // SAVE CONTRACT
+  // ═══════════════════════════════════════════
   const saveContract = async (contractData) => {
     try {
       let validClientId = actualId;
