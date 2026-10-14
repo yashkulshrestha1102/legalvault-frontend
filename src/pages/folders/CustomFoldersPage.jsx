@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'; // ✅ useRef add किया
+import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import {
   FaFolderPlus, FaUpload, FaFileDownload, FaTrash, FaEdit,
   FaSearch, FaFilePdf, FaFileImage, FaFileWord, FaFileExcel, FaFileAlt,
@@ -8,8 +8,9 @@ import api, { cachedGet, invalidateCache } from '../../utils/api'; // ✅ FIXED
 import FolderTree from '../../components/folders/FolderTree';
 import CreateFolderModal from '../../components/folders/CreateFolderModal';
 import BulkUploadModal from '../../components/folders/BulkUploadModal';
-import FilePreviewModal from '../../components/folders/FilePreviewModal';
 import RenameModal from '../../components/folders/RenameModal';
+// ✅ Lazy load heavy modal (jszip + xlsx + mammoth = ~1 MB)
+const FilePreviewModal = lazy(() => import('../../components/folders/FilePreviewModal'));
 
 // ═══════════════════════════════════════════
 // HELPERS
@@ -565,11 +566,25 @@ export default function CustomFoldersPage({ clientId, clientName }) {
         }}
       />
 
-      <FilePreviewModal
-        open={!!previewFile}
-        onClose={() => setPreviewFile(null)}
-        file={previewFile}
-      />
+      {/* ✅ Lazy loaded with Suspense fallback */}
+{previewFile && (
+  <Suspense
+    fallback={
+      <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/80 backdrop-blur-md">
+        <div className="glass p-6 rounded-2xl">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-400 mx-auto mb-3"></div>
+          <p className="text-white text-sm">Loading preview...</p>
+        </div>
+      </div>
+    }
+  >
+    <FilePreviewModal
+      open={!!previewFile}
+      onClose={() => setPreviewFile(null)}
+      file={previewFile}
+    />
+  </Suspense>
+)}
 
       <RenameModal
         open={!!renamingItem}
