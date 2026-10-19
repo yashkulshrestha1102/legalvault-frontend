@@ -31,6 +31,9 @@ function ComplianceCalendar() {
   useEffect(() => { fetchData(); }, []);
 
   const handleManualSend = async (item) => {
+    if (item.status === 'Filed' || item.status === 'Overdue') {
+      return alert(`Cannot send. Status is already ${item.status}.`);
+    }
     if (!window.confirm(`Send reminder now for "${item.complianceType === 'Custom' ? item.customName : item.complianceType}"?`)) return;
     try {
       setSending(item._id);
@@ -54,7 +57,6 @@ function ComplianceCalendar() {
     }
   };
 
-  // Days left calculation
   const daysLeft = (due) => {
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const d = new Date(due); d.setHours(0, 0, 0, 0);
@@ -68,16 +70,10 @@ function ComplianceCalendar() {
           <FaCalendarAlt className="text-cyan-400" /> Compliance Calendar
         </h1>
         <div className="flex gap-3">
-          <button
-            onClick={fetchData}
-            className="glass-card px-4 py-2 flex items-center gap-2"
-          >
+          <button onClick={fetchData} className="glass-card px-4 py-2 flex items-center gap-2">
             <FaSync /> Refresh
           </button>
-          <button
-            onClick={() => { setEditData(null); setShowModal(true); }}
-            className="glass-card px-4 py-2 blue-glow flex items-center gap-2"
-          >
+          <button onClick={() => { setEditData(null); setShowModal(true); }} className="glass-card px-4 py-2 blue-glow flex items-center gap-2">
             <FaPlus /> Add Compliance
           </button>
         </div>
@@ -91,15 +87,15 @@ function ComplianceCalendar() {
         </div>
       ) : (
         <div className="glass-card p-4 overflow-x-auto">
-          <table className="w-full min-w-[900px]">
+          <table className="w-full min-w-[1100px]">
             <thead>
               <tr className="border-b border-white/10">
+                <th className="p-3 text-left">Company</th>
                 <th className="p-3 text-left">Type</th>
                 <th className="p-3 text-left">Period</th>
                 <th className="p-3 text-left">Due Date</th>
                 <th className="p-3 text-left">Days Left</th>
-                <th className="p-3 text-left">Reminder</th>
-                <th className="p-3 text-left">Email</th>
+                <th className="p-3 text-left">Status</th>
                 <th className="p-3 text-left">Recipients</th>
                 <th className="p-3 text-left">Actions</th>
               </tr>
@@ -108,9 +104,12 @@ function ComplianceCalendar() {
               {list.map((item) => {
                 const dl = daysLeft(item.dueDate);
                 const color = dl < 0 ? 'text-red-400' : dl <= 5 ? 'text-yellow-400' : 'text-green-400';
+                const isClosed = item.status === 'Filed' || item.status === 'Overdue';
                 return (
                   <tr key={item._id} className="border-b border-white/5 hover:bg-white/5">
-                    <td className="p-3 font-medium">
+                    {/* ✅ Company Column */}
+                    <td className="p-3 font-medium">{item.companyName}</td>
+                    <td className="p-3 text-sm">
                       {item.complianceType === 'Custom' ? item.customName : item.complianceType}
                     </td>
                     <td className="p-3 text-sm">{item.period || '-'}</td>
@@ -118,39 +117,30 @@ function ComplianceCalendar() {
                     <td className={`p-3 font-bold ${color}`}>
                       {dl < 0 ? `Overdue ${Math.abs(dl)}d` : `${dl}d`}
                     </td>
-                    <td className="p-3 text-sm">{item.reminderDays} days before</td>
+                    {/* ✅ Status Column with Color */}
                     <td className="p-3 text-sm">
-                      {item.channels?.email ? (
-                        <FaEnvelope className="text-green-400" title="Email enabled" />
-                      ) : (
-                        <span className="text-gray-500 text-xs">Off</span>
-                      )}
+                      <span className={`px-2 py-1 rounded text-xs ${
+                        item.status === 'Filed' ? 'bg-green-500/20 text-green-400' :
+                        item.status === 'Overdue' ? 'bg-red-500/20 text-red-400' : 'bg-yellow-500/20 text-yellow-400'
+                      }`}>
+                        {item.status}
+                      </span>
                     </td>
-                    <td className="p-3 text-sm">
-                      {item.recipients?.length || 0} member(s)
-                    </td>
+                    <td className="p-3 text-sm">{item.recipients?.length || 0} member(s)</td>
                     <td className="p-3">
                       <div className="flex gap-3">
                         <button
                           onClick={() => handleManualSend(item)}
-                          disabled={sending === item._id}
-                          className="text-cyan-400 hover:scale-110 transition disabled:opacity-50"
-                          title="Send email reminder now (manual test)"
+                          disabled={sending === item._id || isClosed}
+                          className="text-cyan-400 hover:scale-110 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                          title={isClosed ? `Status is ${item.status}` : "Send email reminder now"}
                         >
                           <FaPaperPlane />
                         </button>
-                        <button
-                          onClick={() => { setEditData(item); setShowModal(true); }}
-                          className="text-yellow-400 hover:scale-110 transition"
-                          title="Edit"
-                        >
+                        <button onClick={() => { setEditData(item); setShowModal(true); }} className="text-yellow-400 hover:scale-110 transition" title="Edit">
                           <FaEdit />
                         </button>
-                        <button
-                          onClick={() => handleDelete(item._id)}
-                          className="text-red-400 hover:scale-110 transition"
-                          title="Delete"
-                        >
+                        <button onClick={() => handleDelete(item._id)} className="text-red-400 hover:scale-110 transition" title="Delete">
                           <FaTrash />
                         </button>
                       </div>
@@ -176,17 +166,20 @@ function ComplianceCalendar() {
 }
 
 // ═══════════════════════════════════════════
-// MODAL — Add / Edit (Email ONLY)
+// MODAL — Add / Edit
 // ═══════════════════════════════════════════
 function ComplianceModal({ open, onClose, editData, onSaved }) {
   const [form, setForm] = useState({
+    companyName: '',
     complianceType: 'GSTR-1',
     customName: '',
     period: '',
     dueDate: '',
     reminderDays: 5,
-    channels: { email: true },          // ✅ sirf email
-    recipients: [{ name: '', email: '' }], // ✅ phone hata diya
+    channels: { email: true },
+    recipients: [{ name: '', email: '' }],
+    attachmentUrl: '',
+    assignedTo: '',
     notes: '',
     status: 'Pending',
   });
@@ -195,6 +188,7 @@ function ComplianceModal({ open, onClose, editData, onSaved }) {
   useEffect(() => {
     if (editData) {
       setForm({
+        companyName: editData.companyName || '',
         complianceType: editData.complianceType || 'GSTR-1',
         customName: editData.customName || '',
         period: editData.period || '',
@@ -204,6 +198,8 @@ function ComplianceModal({ open, onClose, editData, onSaved }) {
         recipients: editData.recipients?.length
           ? editData.recipients.map(r => ({ name: r.name || '', email: r.email || '' }))
           : [{ name: '', email: '' }],
+        attachmentUrl: editData.attachmentUrl || '',
+        assignedTo: editData.assignedTo?._id || editData.assignedTo || '',
         notes: editData.notes || '',
         status: editData.status || 'Pending',
       });
@@ -227,6 +223,7 @@ function ComplianceModal({ open, onClose, editData, onSaved }) {
   };
 
   const handleSave = async () => {
+    if (!form.companyName.trim()) return alert('Company Name required');
     if (!form.dueDate) return alert('Due date required');
     if (form.complianceType === 'Custom' && !form.customName.trim()) {
       return alert('Custom name required');
@@ -268,6 +265,18 @@ function ComplianceModal({ open, onClose, editData, onSaved }) {
 
         <div className="space-y-4">
           <div className="grid md:grid-cols-2 gap-4">
+            {/* ✅ Company Name */}
+            <div className="md:col-span-2">
+              <label className="block text-sm text-gray-300 mb-1">Company Name *</label>
+              <input
+                type="text"
+                value={form.companyName}
+                onChange={(e) => setForm({ ...form, companyName: e.target.value })}
+                className="w-full glass-card p-3"
+                placeholder="e.g., ABC Pvt Ltd"
+              />
+            </div>
+
             <div>
               <label className="block text-sm text-gray-300 mb-1">Type *</label>
               <select
@@ -325,9 +334,6 @@ function ComplianceModal({ open, onClose, editData, onSaved }) {
                 onChange={(e) => setForm({ ...form, reminderDays: Number(e.target.value) })}
                 className="w-full glass-card p-3"
               />
-              <p className="text-xs text-gray-400 mt-1">
-                Reminder from D-{form.reminderDays} to D-0 (daily)
-              </p>
             </div>
 
             <div>
@@ -342,25 +348,45 @@ function ComplianceModal({ open, onClose, editData, onSaved }) {
                 <option>Overdue</option>
               </select>
             </div>
+
+            {/* ✅ Attachment URL */}
+            <div className="md:col-span-2">
+              <label className="block text-sm text-gray-300 mb-1">Invoice / Attachment URL</label>
+              <input
+                type="text"
+                value={form.attachmentUrl}
+                onChange={(e) => setForm({ ...form, attachmentUrl: e.target.value })}
+                className="w-full glass-card p-3"
+                placeholder="https://... (PDF link)"
+              />
+            </div>
+            
+            {/* ✅ Assigned To (User ID) */}
+            <div className="md:col-span-2">
+              <label className="block text-sm text-gray-300 mb-1">Assign To (User ID)</label>
+              <input
+                type="text"
+                value={form.assignedTo}
+                onChange={(e) => setForm({ ...form, assignedTo: e.target.value })}
+                className="w-full glass-card p-3"
+                placeholder="User ID"
+              />
+            </div>
           </div>
 
-          {/* Channels — Email only */}
           <div className="glass-card p-3">
             <p className="text-sm text-gray-300 mb-2">Channels</p>
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="checkbox"
                 checked={form.channels.email}
-                onChange={(e) =>
-                  setForm({ ...form, channels: { email: e.target.checked } })
-                }
+                onChange={(e) => setForm({ ...form, channels: { email: e.target.checked } })}
                 className="accent-cyan-500"
               />
               <FaEnvelope /> Email
             </label>
           </div>
 
-          {/* Recipients — no phone */}
           <div className="glass-card p-3">
             <div className="flex justify-between items-center mb-2">
               <p className="text-sm text-gray-300">Recipients *</p>
