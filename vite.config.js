@@ -32,21 +32,7 @@ export default defineConfig({
     minify: 'esbuild',
     sourcemap: false,
     cssMinify: true,
-    // ✅ NEW: Manual chunking for faster initial load
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          // React core
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          // UI libraries
-          'ui-vendor': ['framer-motion', 'react-icons', 'lucide-react'],
-          // Export libraries (lazy loaded)
-          'export-vendor': ['jspdf', 'jspdf-autotable', 'xlsx'],
-          // File preview libraries (lazy loaded)
-          'preview-vendor': ['mammoth', 'jszip'],
-        },
-      },
-    },
+    // ✅ FIX: manualChunks hata diya — Vite 8 (Rolldown) object form support nahi karta
     chunkSizeWarningLimit: 1000,
   },
 })
