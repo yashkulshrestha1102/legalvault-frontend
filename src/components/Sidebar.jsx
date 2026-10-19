@@ -5,6 +5,7 @@ import {
   FaBars,
   FaUserCircle,
   FaHistory,
+  FaCalendarAlt
 } from "react-icons/fa";
 
 import {
@@ -71,6 +72,8 @@ function Sidebar() {
   const menuItems = [
     { id: 'dashboard', path: "/", label: "Dashboard", icon: <FaTachometerAlt /> },
     { id: 'clients', path: "/clients", label: "Clients", icon: <FaUsers /> },
+    {id: 'compliance',path: "/compliance",label: "Compliance",  icon: <FaCalendarAlt />
+}
   ];
 
   if (role === 'admin') {

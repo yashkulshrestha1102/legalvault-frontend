@@ -22,6 +22,8 @@ const HRDetails = lazy(() => import("../pages/folders/HRDetails"));
 const CorporateSecretariatDetails = lazy(() => import("../pages/folders/CorporateSecretariatDetails"));
 const FinancialsDetails = lazy(() => import("../pages/folders/FinancialsDetails"));
 const ResetPassword = lazy(() => import("../pages/ResetPassword")); 
+const ComplianceCalendar = lazy(() => import("../pages/ComplianceCalendar"));
+
 
 // ✅ Loading component
 const PageLoader = () => (
@@ -106,6 +108,11 @@ const AppRoutes = () => {
 
 <Route path="/client/:clientId/financials/:id" element={
   <ProtectedRoute><FinancialsDetails /></ProtectedRoute>
+} />
+
+
+<Route path="/compliance" element={
+  <ProtectedRoute><ComplianceCalendar /></ProtectedRoute>
 } />
 
 {/* ✅ 404 - NOT FOUND */}
