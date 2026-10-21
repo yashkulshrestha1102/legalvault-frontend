@@ -6,6 +6,7 @@ import {
   FaEnvelope, FaTimes, FaSync, FaUpload, FaEye, FaDownload
 } from 'react-icons/fa';
 import Select from 'react-select';
+import SmartFileViewer from '../components/SmartFileViewer';
 
 const TYPES = ['GSTR-1', 'GSTR-3B', 'TDS', 'TCS', 'ITR', 'Advance Tax', 'GSTR-9', 'Custom'];
 
@@ -16,7 +17,6 @@ function ComplianceCalendar() {
   const [editData, setEditData] = useState(null);
   const [sending, setSending] = useState(null);
 
-  // ✅ NAYA: Company suggestions aur Users ki state
   const [companySuggestions, setCompanySuggestions] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
 
@@ -33,7 +33,6 @@ function ComplianceCalendar() {
     }
   };
 
-  // ✅ NAYA: Dropdown data fetch karne ka function
   const fetchDropdownData = async () => {
     try {
       const [companiesRes, usersRes] = await Promise.all([
@@ -49,7 +48,7 @@ function ComplianceCalendar() {
 
   useEffect(() => { 
     fetchData(); 
-    fetchDropdownData(); // ✅ NAYA
+    fetchDropdownData(); 
   }, []);
 
   const handleManualSend = async (item) => {
@@ -109,7 +108,7 @@ function ComplianceCalendar() {
         </div>
       ) : (
         <div className="glass-card p-4 overflow-x-auto">
-          <table className="w-full min-w-[1100px]">
+          <table className="w-full min-w-[1200px]">
             <thead>
               <tr className="border-b border-white/10">
                 <th className="p-3 text-left">Company</th>
@@ -119,6 +118,8 @@ function ComplianceCalendar() {
                 <th className="p-3 text-left">Days Left</th>
                 <th className="p-3 text-left">Status</th>
                 <th className="p-3 text-left">Recipients</th>
+                {/* ✅ NAYA COLUMN: Invoice View/Download */}
+                <th className="p-3 text-left">Invoice</th>
                 <th className="p-3 text-left">Actions</th>
               </tr>
             </thead>
@@ -129,7 +130,6 @@ function ComplianceCalendar() {
                 const isClosed = item.status === 'Filed' || item.status === 'Overdue';
                 return (
                   <tr key={item._id} className="border-b border-white/5 hover:bg-white/5">
-                    {/* ✅ Company Column */}
                     <td className="p-3 font-medium">{item.companyName}</td>
                     <td className="p-3 text-sm">
                       {item.complianceType === 'Custom' ? item.customName : item.complianceType}
@@ -139,7 +139,6 @@ function ComplianceCalendar() {
                     <td className={`p-3 font-bold ${color}`}>
                       {dl < 0 ? `Overdue ${Math.abs(dl)}d` : `${dl}d`}
                     </td>
-                    {/* ✅ Status Column with Color */}
                     <td className="p-3 text-sm">
                       <span className={`px-2 py-1 rounded text-xs ${
                         item.status === 'Filed' ? 'bg-green-500/20 text-green-400' :
@@ -149,6 +148,19 @@ function ComplianceCalendar() {
                       </span>
                     </td>
                     <td className="p-3 text-sm">{item.recipients?.length || 0} member(s)</td>
+
+                    {/* ✅ NAYA: Invoice Column */}
+                    <td className="p-3 text-sm">
+                      {item.attachmentUrl ? (
+                        <SmartFileViewer 
+                          fileUrl={item.attachmentUrl} 
+                          fileName={`Invoice_${item.companyName || 'Document'}`} 
+                        />
+                      ) : (
+                        <span className="text-gray-500">-</span>
+                      )}
+                    </td>
+
                     <td className="p-3">
                       <div className="flex gap-3">
                         <button
@@ -181,8 +193,8 @@ function ComplianceCalendar() {
           onClose={() => setShowModal(false)}
           editData={editData}
           onSaved={() => { setShowModal(false); fetchData(); }}
-          companySuggestions={companySuggestions} // ✅ Pass kiya
-          allUsers={allUsers}                     // ✅ Pass kiya
+          companySuggestions={companySuggestions} 
+          allUsers={allUsers}                     
         />
       )}
     </MainLayout>
@@ -203,7 +215,7 @@ function ComplianceModal({ open, onClose, editData, onSaved, companySuggestions,
     channels: { email: true },
     recipients: [{ name: '', email: '' }],
     attachmentUrl: '',
-    assignedTo: [], // ✅ Array for multi-select
+    assignedTo: [], 
     notes: '',
     status: 'Pending',
   });
@@ -211,7 +223,6 @@ function ComplianceModal({ open, onClose, editData, onSaved, companySuggestions,
   const [uploading, setUploading] = useState(false);
   const [uploadedFile, setUploadedFile] = useState(null);
 
-  // ✅ Convert allUsers to react-select options
   const userOptions = allUsers.map(u => ({
     value: u._id,
     label: `${u.name} (${u.email})`
@@ -231,7 +242,6 @@ function ComplianceModal({ open, onClose, editData, onSaved, companySuggestions,
           ? editData.recipients.map(r => ({ name: r.name || '', email: r.email || '' }))
           : [{ name: '', email: '' }],
         attachmentUrl: editData.attachmentUrl || '',
-        // ✅ Handle existing assignedTo (single ya array)
         assignedTo: Array.isArray(editData.assignedTo) 
           ? editData.assignedTo.map(u => u._id || u) 
           : (editData.assignedTo ? [editData.assignedTo._id || editData.assignedTo] : []),
@@ -261,7 +271,7 @@ function ComplianceModal({ open, onClose, editData, onSaved, companySuggestions,
     setForm((p) => ({ ...p, recipients: p.recipients.filter((_, idx) => idx !== i) }));
   };
 
-  // ✅ 1. Invoice Upload Function
+  // ✅ Invoice Upload (Har format support)
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -269,9 +279,9 @@ function ComplianceModal({ open, onClose, editData, onSaved, companySuggestions,
     try {
       setUploading(true);
       const formData = new FormData();
-      formData.append('pdf', file);
+      // Backend ke universal upload route pe bhej rahe hain
+      formData.append('pdf', file); 
 
-      // Backend ka universal PDF upload route
       const res = await api.post('/api/pdfs/pdf', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
@@ -279,16 +289,15 @@ function ComplianceModal({ open, onClose, editData, onSaved, companySuggestions,
       const url = res.data.url || res.data.urls?.[0] || res.data.fileUrl;
       setForm(prev => ({ ...prev, attachmentUrl: url }));
       setUploadedFile({ url, name: file.name });
-      alert('✅ Invoice uploaded successfully!');
+      alert('✅ File uploaded successfully!');
     } catch (err) {
       console.error('Upload error:', err);
-      alert('❌ Failed to upload invoice');
+      alert('❌ Failed to upload file');
     } finally {
       setUploading(false);
     }
   };
 
-  // ✅ 2. View/Download Functions
   const handleViewFile = () => {
     if (form.attachmentUrl) {
       window.open(form.attachmentUrl, '_blank');
@@ -355,7 +364,6 @@ function ComplianceModal({ open, onClose, editData, onSaved, companySuggestions,
         <div className="space-y-4">
           <div className="grid md:grid-cols-2 gap-4">
             
-            {/* ✅ Company Name with Suggestions (Datalist) */}
             <div className="md:col-span-2">
               <label className="block text-sm text-gray-300 mb-1">Company Name *</label>
               <input
@@ -452,10 +460,10 @@ function ComplianceModal({ open, onClose, editData, onSaved, companySuggestions,
                 {!uploadedFile ? (
                   <label className={`glass-card px-4 py-2 cursor-pointer hover:scale-105 transition text-sm flex items-center gap-2 ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
                     <FaUpload size={14} />
-                    {uploading ? '⏳ Uploading...' : '📎 Choose Invoice'}
+                    {uploading ? '⏳ Uploading...' : '📎 Choose File (PDF, Image, Word)'}
                     <input
                       type="file"
-                      accept=".pdf,.jpg,.jpeg,.png"
+                      accept=".pdf, .jpg, .jpeg, .png, .doc, .docx, .xls, .xlsx"
                       onChange={handleFileUpload}
                       disabled={uploading}
                       className="hidden"
