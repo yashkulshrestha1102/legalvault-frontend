@@ -3,8 +3,9 @@ import MainLayout from '../layouts/MainLayout';
 import api from '../utils/api';
 import {
   FaPlus, FaEdit, FaTrash, FaPaperPlane, FaCalendarAlt,
-  FaEnvelope, FaTimes, FaSync
+  FaEnvelope, FaTimes, FaSync, FaUpload, FaEye, FaDownload
 } from 'react-icons/fa';
+import Select from 'react-select';
 
 const TYPES = ['GSTR-1', 'GSTR-3B', 'TDS', 'TCS', 'ITR', 'Advance Tax', 'GSTR-9', 'Custom'];
 
@@ -14,6 +15,10 @@ function ComplianceCalendar() {
   const [showModal, setShowModal] = useState(false);
   const [editData, setEditData] = useState(null);
   const [sending, setSending] = useState(null);
+
+  // ✅ NAYA: Company suggestions aur Users ki state
+  const [companySuggestions, setCompanySuggestions] = useState([]);
+  const [allUsers, setAllUsers] = useState([]);
 
   const fetchData = async () => {
     try {
@@ -28,7 +33,24 @@ function ComplianceCalendar() {
     }
   };
 
-  useEffect(() => { fetchData(); }, []);
+  // ✅ NAYA: Dropdown data fetch karne ka function
+  const fetchDropdownData = async () => {
+    try {
+      const [companiesRes, usersRes] = await Promise.all([
+        api.get('/api/compliance/companies'),
+        api.get('/api/users/dropdown/all')
+      ]);
+      setCompanySuggestions(companiesRes.data);
+      setAllUsers(usersRes.data);
+    } catch (err) {
+      console.error('Dropdown data fetch error:', err);
+    }
+  };
+
+  useEffect(() => { 
+    fetchData(); 
+    fetchDropdownData(); // ✅ NAYA
+  }, []);
 
   const handleManualSend = async (item) => {
     if (item.status === 'Filed' || item.status === 'Overdue') {
@@ -159,6 +181,8 @@ function ComplianceCalendar() {
           onClose={() => setShowModal(false)}
           editData={editData}
           onSaved={() => { setShowModal(false); fetchData(); }}
+          companySuggestions={companySuggestions} // ✅ Pass kiya
+          allUsers={allUsers}                     // ✅ Pass kiya
         />
       )}
     </MainLayout>
@@ -168,7 +192,7 @@ function ComplianceCalendar() {
 // ═══════════════════════════════════════════
 // MODAL — Add / Edit
 // ═══════════════════════════════════════════
-function ComplianceModal({ open, onClose, editData, onSaved }) {
+function ComplianceModal({ open, onClose, editData, onSaved, companySuggestions, allUsers }) {
   const [form, setForm] = useState({
     companyName: '',
     complianceType: 'GSTR-1',
@@ -179,11 +203,19 @@ function ComplianceModal({ open, onClose, editData, onSaved }) {
     channels: { email: true },
     recipients: [{ name: '', email: '' }],
     attachmentUrl: '',
-    assignedTo: '',
+    assignedTo: [], // ✅ Array for multi-select
     notes: '',
     status: 'Pending',
   });
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadedFile, setUploadedFile] = useState(null);
+
+  // ✅ Convert allUsers to react-select options
+  const userOptions = allUsers.map(u => ({
+    value: u._id,
+    label: `${u.name} (${u.email})`
+  }));
 
   useEffect(() => {
     if (editData) {
@@ -199,10 +231,17 @@ function ComplianceModal({ open, onClose, editData, onSaved }) {
           ? editData.recipients.map(r => ({ name: r.name || '', email: r.email || '' }))
           : [{ name: '', email: '' }],
         attachmentUrl: editData.attachmentUrl || '',
-        assignedTo: editData.assignedTo?._id || editData.assignedTo || '',
+        // ✅ Handle existing assignedTo (single ya array)
+        assignedTo: Array.isArray(editData.assignedTo) 
+          ? editData.assignedTo.map(u => u._id || u) 
+          : (editData.assignedTo ? [editData.assignedTo._id || editData.assignedTo] : []),
         notes: editData.notes || '',
         status: editData.status || 'Pending',
       });
+      
+      if (editData.attachmentUrl) {
+        setUploadedFile({ url: editData.attachmentUrl, name: 'Existing Invoice' });
+      }
     }
   }, [editData]);
 
@@ -220,6 +259,56 @@ function ComplianceModal({ open, onClose, editData, onSaved }) {
 
   const removeRecipient = (i) => {
     setForm((p) => ({ ...p, recipients: p.recipients.filter((_, idx) => idx !== i) }));
+  };
+
+  // ✅ 1. Invoice Upload Function
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+      setUploading(true);
+      const formData = new FormData();
+      formData.append('pdf', file);
+
+      // Backend ka universal PDF upload route
+      const res = await api.post('/api/pdfs/pdf', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      const url = res.data.url || res.data.urls?.[0] || res.data.fileUrl;
+      setForm(prev => ({ ...prev, attachmentUrl: url }));
+      setUploadedFile({ url, name: file.name });
+      alert('✅ Invoice uploaded successfully!');
+    } catch (err) {
+      console.error('Upload error:', err);
+      alert('❌ Failed to upload invoice');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // ✅ 2. View/Download Functions
+  const handleViewFile = () => {
+    if (form.attachmentUrl) {
+      window.open(form.attachmentUrl, '_blank');
+    }
+  };
+
+  const handleDownloadFile = async () => {
+    try {
+      const response = await api.get(form.attachmentUrl, { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', uploadedFile?.name || 'Invoice.pdf');
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) {
+      console.error('Download error:', err);
+      alert('Failed to download file');
+    }
   };
 
   const handleSave = async () => {
@@ -265,16 +354,23 @@ function ComplianceModal({ open, onClose, editData, onSaved }) {
 
         <div className="space-y-4">
           <div className="grid md:grid-cols-2 gap-4">
-            {/* ✅ Company Name */}
+            
+            {/* ✅ Company Name with Suggestions (Datalist) */}
             <div className="md:col-span-2">
               <label className="block text-sm text-gray-300 mb-1">Company Name *</label>
               <input
                 type="text"
+                list="company-suggestions"
                 value={form.companyName}
                 onChange={(e) => setForm({ ...form, companyName: e.target.value })}
                 className="w-full glass-card p-3"
                 placeholder="e.g., ABC Pvt Ltd"
               />
+              <datalist id="company-suggestions">
+                {companySuggestions.map((c, i) => (
+                  <option key={i} value={c} />
+                ))}
+              </datalist>
             </div>
 
             <div>
@@ -349,27 +445,81 @@ function ComplianceModal({ open, onClose, editData, onSaved }) {
               </select>
             </div>
 
-            {/* ✅ Attachment URL */}
+            {/* ✅ Invoice / Attachment Upload System */}
             <div className="md:col-span-2">
-              <label className="block text-sm text-gray-300 mb-1">Invoice / Attachment URL</label>
-              <input
-                type="text"
-                value={form.attachmentUrl}
-                onChange={(e) => setForm({ ...form, attachmentUrl: e.target.value })}
-                className="w-full glass-card p-3"
-                placeholder="https://... (PDF link)"
-              />
+              <label className="block text-sm text-gray-300 mb-1">Invoice / Attachment</label>
+              <div className="flex items-center gap-3 flex-wrap">
+                {!uploadedFile ? (
+                  <label className={`glass-card px-4 py-2 cursor-pointer hover:scale-105 transition text-sm flex items-center gap-2 ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                    <FaUpload size={14} />
+                    {uploading ? '⏳ Uploading...' : '📎 Choose Invoice'}
+                    <input
+                      type="file"
+                      accept=".pdf,.jpg,.jpeg,.png"
+                      onChange={handleFileUpload}
+                      disabled={uploading}
+                      className="hidden"
+                    />
+                  </label>
+                ) : (
+                  <div className="glass-card px-4 py-2 flex items-center gap-3 w-full">
+                    <span className="text-sm text-green-400 truncate flex-1">
+                      ✅ {uploadedFile.name}
+                    </span>
+                    <button type="button" onClick={handleViewFile} className="text-cyan-400 hover:text-cyan-300" title="View">
+                      <FaEye />
+                    </button>
+                    <button type="button" onClick={handleDownloadFile} className="text-green-400 hover:text-green-300" title="Download">
+                      <FaDownload />
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={() => { setUploadedFile(null); setForm(prev => ({ ...prev, attachmentUrl: '' })); }}
+                      className="text-red-400 hover:text-red-300 ml-2" title="Remove"
+                    >
+                      <FaTimes />
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
-            
-            {/* ✅ Assigned To (User ID) */}
+
+            {/* ✅ Assign To with Auto-fetch Users & Multi-Select */}
             <div className="md:col-span-2">
-              <label className="block text-sm text-gray-300 mb-1">Assign To (User ID)</label>
-              <input
-                type="text"
-                value={form.assignedTo}
-                onChange={(e) => setForm({ ...form, assignedTo: e.target.value })}
-                className="w-full glass-card p-3"
-                placeholder="User ID"
+              <label className="block text-sm text-gray-300 mb-1">Assign To (Users)</label>
+              <Select
+                isMulti
+                options={userOptions}
+                value={userOptions.filter(u => form.assignedTo.includes(u.value))}
+                onChange={(selected) => setForm({ ...form, assignedTo: selected ? selected.map(s => s.value) : [] })}
+                placeholder="Select users to assign..."
+                className="react-select-container"
+                classNamePrefix="react-select"
+                styles={{
+                  control: (base) => ({
+                    ...base,
+                    backgroundColor: 'rgba(255,255,255,0.04)',
+                    borderColor: 'rgba(255,255,255,0.08)',
+                    color: '#fff',
+                  }),
+                  menu: (base) => ({
+                    ...base,
+                    backgroundColor: '#1e293b',
+                  }),
+                  option: (base, state) => ({
+                    ...base,
+                    backgroundColor: state.isFocused ? 'rgba(59,130,246,0.2)' : 'transparent',
+                    color: '#fff',
+                  }),
+                  multiValue: (base) => ({
+                    ...base,
+                    backgroundColor: 'rgba(13, 148, 136, 0.3)',
+                  }),
+                  multiValueLabel: (base) => ({
+                    ...base,
+                    color: '#fff',
+                  }),
+                }}
               />
             </div>
           </div>
@@ -438,7 +588,7 @@ function ComplianceModal({ open, onClose, editData, onSaved }) {
           </button>
           <button
             onClick={handleSave}
-            disabled={saving}
+            disabled={saving || uploading}
             className="glass-card px-6 py-3 blue-glow disabled:opacity-50"
           >
             {saving ? 'Saving...' : editData ? 'Update' : 'Create'}
