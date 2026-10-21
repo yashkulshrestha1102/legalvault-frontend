@@ -108,7 +108,7 @@ function ComplianceCalendar() {
         </div>
       ) : (
         <div className="glass-card p-4 overflow-x-auto">
-          <table className="w-full min-w-[1200px]">
+          <table className="w-full text-sm whitespace-nowrap">
             <thead>
               <tr className="border-b border-white/10">
                 <th className="p-3 text-left">Company</th>
@@ -150,16 +150,17 @@ function ComplianceCalendar() {
                     <td className="p-3 text-sm">{item.recipients?.length || 0} member(s)</td>
 
                     {/* ✅ NAYA: Invoice Column */}
-                    <td className="p-3 text-sm">
-                      {item.attachmentUrl ? (
-                        <SmartFileViewer 
-                          fileUrl={item.attachmentUrl} 
-                          fileName={`Invoice_${item.companyName || 'Document'}`} 
-                        />
-                      ) : (
-                        <span className="text-gray-500">-</span>
-                      )}
-                    </td>
+                    <td className="p-2">
+  {item.attachmentUrl ? (
+    <SmartFileViewer 
+      fileUrl={item.attachmentUrl} 
+      // File ka naam URL se nikal lo, taaki download sahi naam se ho
+      fileName={item.attachmentUrl.split('/').pop().split('?')[0] || 'Invoice'} 
+    />
+  ) : (
+    <span className="text-gray-500">-</span>
+  )}
+</td>
 
                     <td className="p-3">
                       <div className="flex gap-3">
