@@ -118,8 +118,7 @@ function ComplianceCalendar() {
                 <th className="p-3 text-left">Days Left</th>
                 <th className="p-3 text-left">Status</th>
                 <th className="p-3 text-left">Recipients</th>
-                {/* ✅ NAYA COLUMN: Invoice View/Download */}
-                <th className="p-3 text-left">Invoice</th>
+                <th className="p-3 text-left">Invoices</th>
                 <th className="p-3 text-left">Actions</th>
               </tr>
             </thead>
@@ -128,6 +127,12 @@ function ComplianceCalendar() {
                 const dl = daysLeft(item.dueDate);
                 const color = dl < 0 ? 'text-red-400' : dl <= 5 ? 'text-yellow-400' : 'text-green-400';
                 const isClosed = item.status === 'Filed' || item.status === 'Overdue';
+                
+                // ✅ Purane single attachment aur naye array dono ko handle karega
+                const files = item.attachmentUrls?.length > 0 
+                  ? item.attachmentUrls 
+                  : (item.attachmentUrl ? [item.attachmentUrl] : []);
+
                 return (
                   <tr key={item._id} className="border-b border-white/5 hover:bg-white/5">
                     <td className="p-3 font-medium">{item.companyName}</td>
@@ -149,18 +154,22 @@ function ComplianceCalendar() {
                     </td>
                     <td className="p-3 text-sm">{item.recipients?.length || 0} member(s)</td>
 
-                    {/* ✅ NAYA: Invoice Column */}
-                    <td className="p-2">
-  {item.attachmentUrl ? (
-    <SmartFileViewer 
-      fileUrl={item.attachmentUrl} 
-      // File ka naam URL se nikal lo, taaki download sahi naam se ho
-      fileName={item.attachmentUrl.split('/').pop().split('?')[0] || 'Invoice'} 
-    />
-  ) : (
-    <span className="text-gray-500">-</span>
-  )}
-</td>
+                    {/* ✅ Multiple Files Display Column */}
+                    <td className="p-3">
+                      {files.length > 0 ? (
+                        <div className="flex flex-col gap-2">
+                          {files.map((url, idx) => (
+                            <SmartFileViewer 
+                              key={idx}
+                              fileUrl={url} 
+                              fileName={`Invoice_${item.companyName}_${idx + 1}`} 
+                            />
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-gray-500">-</span>
+                      )}
+                    </td>
 
                     <td className="p-3">
                       <div className="flex gap-3">
@@ -215,14 +224,14 @@ function ComplianceModal({ open, onClose, editData, onSaved, companySuggestions,
     reminderDays: 5,
     channels: { email: true },
     recipients: [{ name: '', email: '' }],
-    attachmentUrl: '',
+    attachmentUrls: [], // ✅ Array for multiple files
     assignedTo: [], 
     notes: '',
     status: 'Pending',
   });
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [uploadedFile, setUploadedFile] = useState(null);
+  const [uploadedFiles, setUploadedFiles] = useState([]);
 
   const userOptions = allUsers.map(u => ({
     value: u._id,
@@ -231,6 +240,10 @@ function ComplianceModal({ open, onClose, editData, onSaved, companySuggestions,
 
   useEffect(() => {
     if (editData) {
+      const existingUrls = editData.attachmentUrls?.length > 0 
+        ? editData.attachmentUrls 
+        : (editData.attachmentUrl ? [editData.attachmentUrl] : []);
+
       setForm({
         companyName: editData.companyName || '',
         complianceType: editData.complianceType || 'GSTR-1',
@@ -242,16 +255,19 @@ function ComplianceModal({ open, onClose, editData, onSaved, companySuggestions,
         recipients: editData.recipients?.length
           ? editData.recipients.map(r => ({ name: r.name || '', email: r.email || '' }))
           : [{ name: '', email: '' }],
-        attachmentUrl: editData.attachmentUrl || '',
+        attachmentUrls: existingUrls,
         assignedTo: Array.isArray(editData.assignedTo) 
           ? editData.assignedTo.map(u => u._id || u) 
           : (editData.assignedTo ? [editData.assignedTo._id || editData.assignedTo] : []),
         notes: editData.notes || '',
         status: editData.status || 'Pending',
       });
-      
-      if (editData.attachmentUrl) {
-        setUploadedFile({ url: editData.attachmentUrl, name: 'Existing Invoice' });
+
+      if (existingUrls.length > 0) {
+        setUploadedFiles(existingUrls.map((url, i) => ({ 
+          url, 
+          name: url.split('/').pop().split('?')[0] || `File ${i+1}` 
+        })));
       }
     }
   }, [editData]);
@@ -272,53 +288,50 @@ function ComplianceModal({ open, onClose, editData, onSaved, companySuggestions,
     setForm((p) => ({ ...p, recipients: p.recipients.filter((_, idx) => idx !== i) }));
   };
 
-  // ✅ Invoice Upload (Har format support)
+  // ✅ Multiple File Upload System
   const handleFileUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
 
     try {
       setUploading(true);
       const formData = new FormData();
-      // Backend ke universal upload route pe bhej rahe hain
-      formData.append('pdf', file); 
+      files.forEach(file => {
+        formData.append('pdf', file); 
+      });
 
       const res = await api.post('/api/pdfs/pdf', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
-      const url = res.data.url || res.data.urls?.[0] || res.data.fileUrl;
-      setForm(prev => ({ ...prev, attachmentUrl: url }));
-      setUploadedFile({ url, name: file.name });
-      alert('✅ File uploaded successfully!');
+      const newUrls = res.data.urls || [];
+      
+      setForm(prev => ({ 
+        ...prev, 
+        attachmentUrls: [...prev.attachmentUrls, ...newUrls] 
+      }));
+      
+      const newFiles = files.map((file, i) => ({ 
+        url: newUrls[i], 
+        name: file.name 
+      }));
+      
+      setUploadedFiles(prev => [...prev, ...newFiles]);
+      alert(`✅ ${files.length} file(s) uploaded successfully!`);
     } catch (err) {
       console.error('Upload error:', err);
-      alert('❌ Failed to upload file');
+      alert('❌ Failed to upload files');
     } finally {
       setUploading(false);
     }
   };
 
-  const handleViewFile = () => {
-    if (form.attachmentUrl) {
-      window.open(form.attachmentUrl, '_blank');
-    }
-  };
-
-  const handleDownloadFile = async () => {
-    try {
-      const response = await api.get(form.attachmentUrl, { responseType: 'blob' });
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', uploadedFile?.name || 'Invoice.pdf');
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-    } catch (err) {
-      console.error('Download error:', err);
-      alert('Failed to download file');
-    }
+  const removeFile = (index) => {
+    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+    setForm(prev => ({
+      ...prev,
+      attachmentUrls: prev.attachmentUrls.filter((_, i) => i !== index)
+    }));
   };
 
   const handleSave = async () => {
@@ -454,43 +467,40 @@ function ComplianceModal({ open, onClose, editData, onSaved, companySuggestions,
               </select>
             </div>
 
-            {/* ✅ Invoice / Attachment Upload System */}
+            {/* ✅ Multiple File Upload UI */}
             <div className="md:col-span-2">
-              <label className="block text-sm text-gray-300 mb-1">Invoice / Attachment</label>
-              <div className="flex items-center gap-3 flex-wrap">
-                {!uploadedFile ? (
-                  <label className={`glass-card px-4 py-2 cursor-pointer hover:scale-105 transition text-sm flex items-center gap-2 ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                    <FaUpload size={14} />
-                    {uploading ? '⏳ Uploading...' : '📎 Choose File (PDF, Image, Word)'}
-                    <input
-                      type="file"
-                      accept=".pdf, .jpg, .jpeg, .png, .doc, .docx, .xls, .xlsx"
-                      onChange={handleFileUpload}
-                      disabled={uploading}
-                      className="hidden"
-                    />
-                  </label>
-                ) : (
-                  <div className="glass-card px-4 py-2 flex items-center gap-3 w-full">
-                    <span className="text-sm text-green-400 truncate flex-1">
-                      ✅ {uploadedFile.name}
-                    </span>
-                    <button type="button" onClick={handleViewFile} className="text-cyan-400 hover:text-cyan-300" title="View">
-                      <FaEye />
-                    </button>
-                    <button type="button" onClick={handleDownloadFile} className="text-green-400 hover:text-green-300" title="Download">
-                      <FaDownload />
-                    </button>
-                    <button 
-                      type="button" 
-                      onClick={() => { setUploadedFile(null); setForm(prev => ({ ...prev, attachmentUrl: '' })); }}
-                      className="text-red-400 hover:text-red-300 ml-2" title="Remove"
-                    >
-                      <FaTimes />
-                    </button>
-                  </div>
-                )}
-              </div>
+              <label className="block text-sm text-gray-300 mb-1">Invoices / Attachments (Multiple)</label>
+              
+              <label className={`inline-flex glass-card px-4 py-2 cursor-pointer hover:scale-105 transition text-sm items-center gap-2 ${uploading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                <FaUpload size={14} />
+                {uploading ? '⏳ Uploading...' : '📎 Choose Files'}
+                <input
+                  type="file"
+                  multiple
+                  accept=".pdf, .jpg, .jpeg, .png, .doc, .docx, .xls, .xlsx"
+                  onChange={handleFileUpload}
+                  disabled={uploading}
+                  className="hidden"
+                />
+              </label>
+
+              {uploadedFiles.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  {uploadedFiles.map((file, index) => (
+                    <div key={index} className="glass-card px-3 py-2 flex items-center gap-3 text-sm">
+                      <span className="text-green-400 truncate flex-1">✅ {file.name}</span>
+                      <SmartFileViewer fileUrl={file.url} fileName={file.name} />
+                      <button 
+                        type="button" 
+                        onClick={() => removeFile(index)} 
+                        className="text-red-400 hover:text-red-300 ml-2"
+                      >
+                        <FaTimes />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* ✅ Assign To with Auto-fetch Users & Multi-Select */}
