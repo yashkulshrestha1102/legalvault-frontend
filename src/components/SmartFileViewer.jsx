@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { FaEye, FaDownload, FaFilePdf, FaFileImage, FaFileAlt, FaTimes, FaSpinner } from 'react-icons/fa';
-import api from '../utils/api'; // 👈 Tera main axios instance
 
 export default function SmartFileViewer({ fileUrl, fileName = "Attachment" }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -8,55 +7,58 @@ export default function SmartFileViewer({ fileUrl, fileName = "Attachment" }) {
 
   if (!fileUrl) return null;
 
-  // ✅ File type detect karo
   const lowerUrl = fileUrl.toLowerCase();
-  const isPdf = lowerUrl.includes('.pdf') || lowerUrl.includes('application/pdf');
+  const isPdf = lowerUrl.includes('.pdf');
   const isImage = /\.(jpg|jpeg|png|webp|gif|bmp|svg)(\?|$)/i.test(lowerUrl);
   const isDoc = /\.(doc|docx|xls|xlsx|txt|csv)(\?|$)/i.test(lowerUrl);
 
-  // ✅ Force Download (Blob method - naye tab me open nahi hoga)
+  // ✅ Force Download Function (Naya tab nahi khulega)
   const handleDownload = async () => {
     try {
       setDownloading(true);
       
       let finalUrl = fileUrl;
-      // Agar Cloudinary hai toh fl_attachment laga do
+      // Cloudinary ke liye force download flag
       if (finalUrl.includes('cloudinary.com') && !finalUrl.includes('fl_attachment')) {
         finalUrl = finalUrl.replace('/upload/', '/upload/fl_attachment:/');
       }
 
-      // API se file blob format me fetch karo
-      const response = await api.get(finalUrl, { 
-        responseType: 'blob',
-        timeout: 600000 // 10 mins for large files
-      });
-
-      // Blob URL create karke download trigger karo
-      const blob = new Blob([response.data]);
+      // Native fetch use kar rahe hain taaki CORS cross-origin download ho sake
+      const response = await fetch(finalUrl, { method: 'GET' });
+      if (!response.ok) throw new Error('Network response was not ok');
+      
+      const blob = await response.blob();
       const downloadUrl = window.URL.createObjectURL(blob);
+      
       const link = document.createElement('a');
       link.href = downloadUrl;
       
-      // File extension nikal ke name set karo
-      const ext = isPdf ? '.pdf' : isImage ? '.jpg' : isDoc ? '.docx' : '';
-      link.setAttribute('download', fileName.includes('.') ? fileName : `${fileName}${ext}`);
+      // File extension nikal kar sahi naam set karo
+      const urlParts = fileUrl.split('/');
+      let originalFileName = urlParts[urlParts.length - 1].split('?')[0];
+      
+      // Agar file name URL se nahi mila toh generic naam do
+      if (!originalFileName || originalFileName.length > 50) {
+         originalFileName = fileName.includes('.') ? fileName : `${fileName}.file`;
+      }
+
+      link.setAttribute('download', originalFileName); 
       
       document.body.appendChild(link);
       link.click();
       link.remove();
       
-      // Memory clean karo
       setTimeout(() => window.URL.revokeObjectURL(downloadUrl), 10000);
     } catch (err) {
       console.error("Download failed:", err);
-      // Agar API fail ho jaye (CORS etc), toh direct open kardo fallback me
+      // Fallback: Agar fetch fail ho jaye toh direct open kar do
       window.open(fileUrl, '_blank');
     } finally {
       setDownloading(false);
     }
   };
 
-  // ✅ View render logic
+  // ✅ Preview Render Logic
   const renderPreview = () => {
     if (isImage) {
       return <img src={fileUrl} alt={fileName} className="max-w-full max-h-full object-contain mx-auto rounded-lg" />;
@@ -64,20 +66,18 @@ export default function SmartFileViewer({ fileUrl, fileName = "Attachment" }) {
     
     if (isPdf) {
       return (
-        <object data={fileUrl} type="application/pdf" className="w-full h-full rounded-lg">
-          <iframe src={fileUrl} className="w-full h-full rounded-lg bg-white" title="PDF Preview" />
-        </object>
+        <iframe src={fileUrl} className="w-full h-full bg-white rounded-lg" title="PDF Preview" />
       );
     }
 
     if (isDoc) {
       const officeViewerUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(fileUrl)}`;
-      return <iframe src={officeViewerUrl} className="w-full h-full rounded-lg bg-white" title="Doc Preview" />;
+      return <iframe src={officeViewerUrl} className="w-full h-full bg-white rounded-lg" title="Doc Preview" />;
     }
 
-    // Fallback (HTML, txt, etc)
+    // HTML aur baaki files ke liye
     return (
-      <iframe src={fileUrl} className="w-full h-full rounded-lg bg-white" title="File Preview" />
+      <iframe src={fileUrl} className="w-full h-full bg-white rounded-lg" title="File Preview" />
     );
   };
 
@@ -89,11 +89,10 @@ export default function SmartFileViewer({ fileUrl, fileName = "Attachment" }) {
 
   return (
     <>
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-2">
         <button
           onClick={() => setIsOpen(true)}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 bg-blue-600/20 text-blue-400 border border-blue-500/30 rounded-lg hover:bg-blue-600/40 transition text-xs font-medium"
-          title="View File"
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600/20 text-blue-400 border border-blue-500/30 rounded hover:bg-blue-600/40 transition text-xs"
         >
           <FaEye /> View
         </button>
@@ -101,33 +100,49 @@ export default function SmartFileViewer({ fileUrl, fileName = "Attachment" }) {
         <button
           onClick={handleDownload}
           disabled={downloading}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 bg-green-600/20 text-green-400 border border-green-500/30 rounded-lg hover:bg-green-600/40 transition text-xs font-medium disabled:opacity-50"
-          title="Download File"
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600/20 text-green-400 border border-green-500/30 rounded hover:bg-green-600/40 transition text-xs disabled:opacity-50"
         >
           {downloading ? <FaSpinner className="animate-spin" /> : <FaDownload />} 
-          {downloading ? 'Wait' : 'Download'}
+          {downloading ? 'Downloading...' : 'Download'}
         </button>
       </div>
 
-      {/* MODAL */}
+      {/* ✅ FULL SCREEN MODAL FOR PREVIEW */}
       {isOpen && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
-          <div className="bg-slate-900 border border-white/10 w-full max-w-5xl h-[85vh] rounded-2xl flex flex-col overflow-hidden relative shadow-2xl">
-            <div className="flex justify-between items-center p-3 border-b border-white/10 bg-slate-800">
-              <div className="flex items-center gap-2 truncate max-w-[70%]">
+        <div 
+          className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/90 p-4 backdrop-blur-sm"
+          onClick={() => setIsOpen(false)} // Kahi bhi bahar click karne pe close ho jayega
+        >
+          <div 
+            className="bg-slate-900 border border-white/10 w-full max-w-6xl h-[90vh] rounded-xl flex flex-col overflow-hidden shadow-2xl relative"
+            onClick={(e) => e.stopPropagation()} // Andar click karne pe close na ho
+          >
+            {/* Modal Header */}
+            <div className="flex justify-between items-center p-3 border-b border-white/10 bg-slate-800 shrink-0">
+              <div className="flex items-center gap-2 overflow-hidden">
                 <span className="text-xl">{getFileIcon()}</span>
                 <h3 className="text-white text-sm font-medium truncate">{fileName}</h3>
               </div>
-              <div className="flex items-center gap-2">
-                <button onClick={handleDownload} disabled={downloading} className="text-green-400 hover:text-green-300 p-2 text-sm disabled:opacity-50">
-                  {downloading ? 'Downloading...' : 'Download'}
+              <div className="flex items-center gap-4">
+                <button 
+                  onClick={handleDownload} 
+                  disabled={downloading} 
+                  className="text-green-400 hover:text-green-300 text-sm flex items-center gap-1 disabled:opacity-50"
+                >
+                  <FaDownload /> Download
                 </button>
-                <button onClick={() => setIsOpen(false)} className="text-red-400 hover:text-red-300 p-2">
-                  <FaTimes size={18} />
+                <button 
+                  onClick={() => setIsOpen(false)} 
+                  className="text-red-400 hover:text-red-300 p-1 bg-red-500/10 rounded-full hover:bg-red-500/20 transition"
+                  title="Close"
+                >
+                  <FaTimes size={20} />
                 </button>
               </div>
             </div>
-            <div className="flex-1 bg-slate-800/50 p-1 overflow-hidden">
+
+            {/* Modal Body */}
+            <div className="flex-1 bg-slate-950 p-2 overflow-hidden">
               {renderPreview()}
             </div>
           </div>

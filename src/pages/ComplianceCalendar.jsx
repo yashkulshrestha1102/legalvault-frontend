@@ -131,9 +131,16 @@ function ComplianceCalendar() {
                 return (
                   <tr key={item._id} className="border-b border-white/5 hover:bg-white/5">
                     <td className="p-3 font-medium">{item.companyName}</td>
-                    <td className="p-3 text-sm">
-                      {item.complianceType === 'Custom' ? item.customName : item.complianceType}
-                    </td>
+                    <td className="p-3">
+  {item.attachmentUrl ? (
+    <SmartFileViewer 
+      fileUrl={item.attachmentUrl} 
+      fileName={`Invoice_${item.companyName}`} 
+    />
+  ) : (
+    <span className="text-gray-500">-</span>
+  )}
+</td>
                     <td className="p-3 text-sm">{item.period || '-'}</td>
                     <td className="p-3 text-sm">{new Date(item.dueDate).toLocaleDateString('en-IN')}</td>
                     <td className={`p-3 font-bold ${color}`}>
