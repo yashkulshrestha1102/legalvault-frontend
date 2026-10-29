@@ -23,7 +23,7 @@ const CorporateSecretariatDetails = lazy(() => import("../pages/folders/Corporat
 const FinancialsDetails = lazy(() => import("../pages/folders/FinancialsDetails"));
 const ResetPassword = lazy(() => import("../pages/ResetPassword")); 
 const ComplianceCalendar = lazy(() => import("../pages/ComplianceCalendar"));
-
+const ConfirmFiling = lazy(() => import("../pages/ConfirmFiling"));
 
 // ✅ Loading component
 const PageLoader = () => (
@@ -109,6 +109,8 @@ const AppRoutes = () => {
 <Route path="/client/:clientId/financials/:id" element={
   <ProtectedRoute><FinancialsDetails /></ProtectedRoute>
 } />
+
+<Route path="/confirm-filing/:id" element={<ConfirmFiling />} />
 
 
 <Route path="/compliance" element={
